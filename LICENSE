@@ -1,0 +1,20 @@
+usicrypt, a unified simple interface crypto library wrapper
+
+(c) 2017 Andreas Steinmetz
+
+License:
+You may include this code in any project as long as the project is
+licensed only by one or more OSI approved licenses, e.g. you cannot
+include this code in any project with an OSI approved and a commercial
+license.
+
+See https://opensource.org/licenses for the list of applicable licenses.
+
+The only exception to the above rule is a project that is put in the
+public domain. In this case you have to pick a proper OSI approved
+license for the usicrypt code only, i.e. you cannot put the usicrypt
+code in the public domain.
+
+And, well, yes, it is up to you to ensure that the licence you pick for
+your project is compatible with the crypto library you do actually select.
+
