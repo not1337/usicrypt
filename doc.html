@@ -1,0 +1,1320 @@
+<html>
+<head>
+</head>
+<style>
+body {
+	background-color: white;
+	color: black;
+}
+h2 {
+	font-size: 2em;
+}
+#desc {
+	font-family: "Verdana";
+	font-size: 1em;
+}
+#proto {
+	background-color: seashell;
+	font-family: "Lucida Console";
+	font-weight: bold;
+}
+#params {
+	width: 100%;
+	border: 0px;
+}
+#param {
+	width: 100px;
+	font-family: "Verdana";
+	font-size: 1em;
+}
+#pdesc {
+	font-family: "Verdana";
+	font-size: 1em;
+}
+#return {
+	font-weight: bold;
+	font-family: "Verdana";
+	font-size: 1em;
+}
+#note {
+	background-color: gainsboro;
+	font-family: "Verdana";
+	font-size: 1em;
+}
+tr:hover {background-color: #f5f5f5}
+a:link {
+	color: navy;
+	text-decoration: none;
+}
+a:visited {
+	color: navy;
+	text-decoration: none;
+}
+a:hover {
+	color: navy;
+	text-decoration: none;
+}
+a:active {
+	color: navy;
+	text-decoration: none;
+}
+li {
+	font-family: "Lucida Console";
+	font-weight: bold;
+}
+pre {
+	font-family: "Lucida Console";
+	font-weight: bold;
+}
+</style>
+<body>
+<h1>usicrypt, a unified simple interface crypto library wrapper</h1>
+<p>&copy; 2017 Andreas Steinmetz</p>
+<h2>Table Of Contents</h2>
+<h3>Definitions</h3>
+<ul>
+<li><a href="#Digest Selection">Digest Selection</a></li>
+<li><a href="#Standard Cipher Selection">Standard Cipher Selection</a></li>
+<li><a href="#Stream Cipher Selection">Stream Cipher Selection</a></li>
+<li><a href="#AEAD Cipher Selection">AEAD Cipher Selection</a></li>
+<li><a href="#Mode Selection (standard block cipher modes)">Mode Selection (standard block cipher modes)</a></li>
+<li><a href="#Mode Selection (block cipher disk storage modes)">Mode Selection (block cipher disk storage modes)</a></li>
+<li><a href="#Predefined DH Parameters">Predefined DH Parameters</a></li>
+<li><a href="#Elliptic Curve Identifiers">Elliptic Curve Identifiers</a></li>
+<li><a href="#Other Identifiers">Other Identifiers</a></li>
+<li><a href="#IO Vector Array">IO Vector Array</a></li>
+</ul>
+<h3>Miscellaneous Functions</h3>
+<ul>
+<li><a href="#usicrypt_memclear">usicrypt_memclear</a></li>
+<li><a href="#usicrypt_random">usicrypt_random</a></li>
+</ul>
+<h3>BASE64 Functions</H3>
+<ul>
+<li><a href="#usicrypt_base64_encode">usicrypt_base64_encode</a></li>
+<li><a href="#usicrypt_base64_decode">usicrypt_base64_decode</a></li>
+</ul>
+<h3>Linear Feedback Shift Register Functions</H3>
+<ul>
+<li><a href="#usicrypt_lfsr_next">usicrypt_lfsr_next</a></li>
+<li><a href="#usicrypt_lfsr_init">usicrypt_lfsr_init</a></li>
+<li><a href="#usicrypt_lfsr_exit">usicrypt_lfsr_exit</a></li>
+</ul>
+<h3>Digest And HMAC Functions</H3>
+<ul>
+<li><a href="#usicrypt_digest_size">usicrypt_digest_size</a></li>
+<li><a href="#usicrypt_digest">usicrypt_digest</a></li>
+<li><a href="#usicrypt_digest_iov">usicrypt_digest_iov</a></li>
+<li><a href="#usicrypt_hmac">usicrypt_hmac</a></li>
+<li><a href="#usicrypt_hmac_iov">usicrypt_hmac_iov</a></li>
+</ul>
+<h3>CMAC Functions</H3>
+<ul>
+<li><a href="#usicrypt_cmac">usicrypt_cmac</a></li>
+<li><a href="#usicrypt_cmac_iov">usicrypt_cmac_iov</a></li>
+</ul>
+<h3>KDF Functions</H3>
+<ul>
+<li><a href="#usicrypt_pbkdf2">usicrypt_pbkdf2</a></li>
+<li><a href="#usicrypt_hkdf">usicrypt_hkdf</a></li>
+</ul>
+<h3>RSA Functions</H3>
+<ul>
+<li><a href="#usicrypt_rsa_generate">usicrypt_rsa_generate</a></li>
+<li><a href="#usicrypt_rsa_size">usicrypt_rsa_size</a></li>
+<li><a href="#usicrypt_rsa_get_pub">usicrypt_rsa_get_pub</a></li>
+<li><a href="#usicrypt_rsa_set_pub">usicrypt_rsa_set_pub</a></li>
+<li><a href="#usicrypt_rsa_get_key">usicrypt_rsa_get_key</a></li>
+<li><a href="#usicrypt_rsa_set_key">usicrypt_rsa_set_key</a></li>
+<li><a href="#usicrypt_rsa_sign_v15">usicrypt_rsa_sign_v15</a></li>
+<li><a href="#usicrypt_rsa_sign_v15_iov">usicrypt_rsa_sign_v15_iov</a></li>
+<li><a href="#usicrypt_rsa_verify_v15">usicrypt_rsa_verify_v15</a></li>
+<li><a href="#usicrypt_rsa_verify_v15_iov">usicrypt_rsa_verify_v15_iov</a></li>
+<li><a href="#usicrypt_rsa_sign_pss">usicrypt_rsa_sign_pss</a></li>
+<li><a href="#usicrypt_rsa_sign_pss_iov">usicrypt_rsa_sign_pss_iov</a></li>
+<li><a href="#usicrypt_rsa_verify_pss">usicrypt_rsa_verify_pss</a></li>
+<li><a href="#usicrypt_rsa_verify_pss_iov">usicrypt_rsa_verify_pss_iov</a></li>
+<li><a href="#usicrypt_rsa_encrypt_v15">usicrypt_rsa_encrypt_v15</a></li>
+<li><a href="#usicrypt_rsa_decrypt_v15">usicrypt_rsa_decrypt_v15</a></li>
+<li><a href="#usicrypt_rsa_encrypt_oaep">usicrypt_rsa_encrypt_oaep</a></li>
+<li><a href="#usicrypt_rsa_decrypt_oaep">usicrypt_rsa_decrypt_oaep</a></li>
+<li><a href="#usicrypt_rsa_free">usicrypt_rsa_free</a></li>
+</ul>
+<h3>DH Functions</H3>
+<ul>
+<li><a href="#usicrypt_dh_params">usicrypt_dh_params</a></li>
+<li><a href="#usicrypt_dh_generate">usicrypt_dh_generate</a></li>
+<li><a href="#usicrypt_dh_init">usicrypt_dh_init</a></li>
+<li><a href="#usicrypt_dh_genex">usicrypt_dh_genex</a></li>
+<li><a href="#usicrypt_dh_get_pub">usicrypt_dh_get_pub</a></li>
+<li><a href="#usicrypt_dh_set_pub">usicrypt_dh_set_pub</a></li>
+<li><a href="#usicrypt_dh_cmp_params">usicrypt_dh_cmp_params</a></li>
+<li><a href="#usicrypt_dh_to_pem">usicrypt_dh_to_pem</a></li>
+<li><a href="#usicrypt_pem_to_dh">usicrypt_pem_to_dh</a></li>
+<li><a href="#usicrypt_dh_derive">usicrypt_dh_derive</a></li>
+<li><a href="#usicrypt_dh_free">usicrypt_dh_free</a></li>
+</ul>
+<h3>Elliptic Curve Functions</H3>
+<ul>
+<li><a href="#usicrypt_ec_generate">usicrypt_ec_generate</a></li>
+<li><a href="#usicrypt_ec_identifier">usicrypt_ec_identifier</a></li>
+<li><a href="#usicrypt_ec_derive">usicrypt_ec_derive</a></li>
+<li><a href="#usicrypt_ec_get_pub">usicrypt_ec_get_pub</a></li>
+<li><a href="#usicrypt_ec_set_pub">usicrypt_ec_set_pub</a></li>
+<li><a href="#usicrypt_ec_get_key">usicrypt_ec_get_key</a></li>
+<li><a href="#usicrypt_ec_set_key">usicrypt_ec_set_key</a></li>
+<li><a href="#usicrypt_ec_sign">usicrypt_ec_sign</a></li>
+<li><a href="#usicrypt_ec_sign_iov">usicrypt_ec_sign_iov</a></li>
+<li><a href="#usicrypt_ec_verify">usicrypt_ec_verify</a></li>
+<li><a href="#usicrypt_ec_verify_iov">usicrypt_ec_verify_iov</a></li>
+<li><a href="#usicrypt_ec_free">usicrypt_ec_free</a></li>
+</ul>
+<h3>Curve 25519 Functions</H3>
+<ul>
+<li><a href="#usicrypt_x25519_generate">usicrypt_x25519_generate</a></li>
+<li><a href="#usicrypt_x25519_derive">usicrypt_x25519_derive</a></li>
+<li><a href="#usicrypt_x25519_get_pub">usicrypt_x25519_get_pub</a></li>
+<li><a href="#usicrypt_x25519_set_pub">usicrypt_x25519_set_pub</a></li>
+<li><a href="#usicrypt_x25519_get_key">usicrypt_x25519_get_key</a></li>
+<li><a href="#usicrypt_x25519_set_key">usicrypt_x25519_set_key</a></li>
+<li><a href="#usicrypt_x25519_free">usicrypt_x25519_free</a></li>
+</ul>
+<h3>PKCS#8 Functions</H3>
+<ul>
+<li><a href="#usicrypt_pub_type_from_p8">usicrypt_pub_type_from_p8</a></li>
+<li><a href="#usicrypt_key_type_from_p8">usicrypt_key_type_from_p8</a></li>
+<li><a href="#usicrypt_rsa_key_to_p8">usicrypt_rsa_key_to_p8</a></li>
+<li><a href="#usicrypt_p8_to_rsa_key">usicrypt_p8_to_rsa_key</a></li>
+<li><a href="#usicrypt_ec_key_to_p8">usicrypt_ec_key_to_p8</a></li>
+<li><a href="#usicrypt_p8_to_ec_key">usicrypt_p8_to_ec_key</a></li>
+<li><a href="#usicrypt_encrypt_p8">usicrypt_encrypt_p8</a></li>
+<li><a href="#usicrypt_decrypt_p8">usicrypt_decrypt_p8</a></li>
+<li><a href="#usicrypt_p8_to_pem">usicrypt_p8_to_pem</a></li>
+<li><a href="#usicrypt_pem_to_p8">usicrypt_pem_to_p8</a></li>
+</ul>
+<h3>Block Cipher Functions</H3>
+<ul>
+<li><a href="#usicrypt_cipher_block_size">usicrypt_cipher_block_size</a></li>
+<li><a href="#usicrypt_cipher_padding_add">usicrypt_cipher_padding_add</a></li>
+<li><a href="#usicrypt_cipher_padding_get">usicrypt_cipher_padding_get</a></li>
+<li><a href="#usicrypt_blkcipher_encrypt">usicrypt_blkcipher_encrypt</a></li>
+<li><a href="#usicrypt_blkcipher_decrypt">usicrypt_blkcipher_decrypt</a></li>
+<li><a href="#usicrypt_blkcipher_init">usicrypt_blkcipher_init</a></li>
+<li><a href="#usicrypt_blkcipher_reset">usicrypt_blkcipher_reset</a></li>
+<li><a href="#usicrypt_blkcipher_exit">usicrypt_blkcipher_exit</a></li>
+</ul>
+<h3>Disk Block Cipher Functions</H3>
+<ul>
+<li><a href="#usicrypt_dskcipher_encrypt">usicrypt_dskcipher_encrypt</a></li>
+<li><a href="#usicrypt_dskcipher_decrypt">usicrypt_dskcipher_decrypt</a></li>
+<li><a href="#usicrypt_dskcipher_init">usicrypt_dskcipher_init</a></li>
+<li><a href="#usicrypt_dskcipher_exit">usicrypt_dskcipher_exit</a></li>
+</ul>
+<h3>AEAD Cipher Functions</H3>
+<ul>
+<li><a href="#usicrypt_aeadcipher_encrypt">usicrypt_aeadcipher_encrypt</a></li>
+<li><a href="#usicrypt_aeadcipher_encrypt_iov">usicrypt_aeadcipher_encrypt_iov</a></li>
+<li><a href="#usicrypt_aeadcipher_decrypt">usicrypt_aeadcipher_decrypt</a></li>
+<li><a href="#usicrypt_aeadcipher_decrypt_iov">usicrypt_aeadcipher_decrypt_iov</a></li>
+<li><a href="#usicrypt_aeadcipher_init">usicrypt_aeadcipher_init</a></li>
+<li><a href="#usicrypt_aeadcipher_exit">usicrypt_aeadcipher_exit</a></li>
+</ul>
+<h3>General Functions</H3>
+<ul>
+<li><a href="#usicrypt_thread_init">usicrypt_thread_init</a></li>
+<li><a href="#usicrypt_thread_exit">usicrypt_thread_exit</a></li>
+<li><a href="#usicrypt_global_init">usicrypt_global_init</a></li>
+<li><a href="#usicrypt_global_exit">usicrypt_global_exit</a></li>
+</ul>
+<h2>Definitions</h2>
+<h3 id="#Digest Selection">Digest Selection</h3>
+<ul>
+<li>USICRYPT_SHA1</li>
+<li>USICRYPT_SHA256</li>
+<li>USICRYPT_SHA384</li>
+<li>USICRYPT_SHA512</li>
+</ul>
+<h3 id="#Standard Cipher Selection">Standard Cipher Selection</h3>
+<ul>
+<li>USICRYPT_AES</li>
+<li>USICRYPT_CAMELLIA</li>
+</ul>
+<h3 id="#Stream Cipher Selection">Stream Cipher Selection</h3>
+<ul>
+<li>USICRYPT_CHACHA20</li>
+</ul>
+<h3 id="#AEAD Cipher Selection">AEAD Cipher Selection</h3>
+<ul>
+<li>USICRYPT_AES_GCM</li>
+<li>USICRYPT_AES_CCM</li>
+<li>USICRYPT_CHACHA20_POLY1305</li>
+</ul>
+<h3 id="#Mode Selection (standard block cipher modes)">Mode Selection (standard block cipher modes)</h3>
+<ul>
+<li>USICRYPT_STREAM</li>
+<li>USICRYPT_ECB</li>
+<li>USICRYPT_CBC</li>
+<li>USICRYPT_CTS</li>
+<li>USICRYPT_CFB</li>
+<li>USICRYPT_CFB8</li>
+<li>USICRYPT_OFB</li>
+<li>USICRYPT_CTR</li>                   
+</ul>
+<h3 id="#Mode Selection (block cipher disk storage modes)">Mode Selection (block cipher disk storage modes)</h3>
+<ul>
+<li>USICRYPT_XTS</li>
+<li>USICRYPT_ESSIV</li>                 
+</ul>
+<h3 id="#Predefined DH Parameters">Predefined DH Parameters</h3>
+<ul>
+<li>USICRYPT_RFC5114_1024_160</li>
+<li>USICRYPT_RFC5114_2048_224</li>      
+<li>USICRYPT_RFC5114_2048_256</li>      
+</ul>
+<h3 id="#Elliptic Curve Identifiers">Elliptic Curve Identifiers</h3>
+<ul>
+<li>USICRYPT_BRAINPOOLP512R1</li>
+<li>USICRYPT_BRAINPOOLP384R1</li>
+<li>USICRYPT_BRAINPOOLP256R1</li>
+<li>USICRYPT_SECP521R1</li>
+<li>USICRYPT_SECP384R1</li>
+<li>USICRYPT_SECP256R1</li>
+</ul>
+<h3 id="#Other Identifiers">Other Identifiers</h3>
+<ul>
+<li>USICRYPT_RSA</li>
+<li>USICRYPT_DH</li>
+<li>USICRYPT_X25519</li>
+<li>USICRYPT_PBES2</li>
+</ul>
+<h3 id="#IO Vector Array">IO Vector Array</h3>
+<pre>
+struct usicrypt_iov
+{
+        void *data;
+        int length;
+};
+</pre>
+<h2 id="usicrypt_memclear">usicrypt_memclear</h2>
+<p id="desc">clear memory</p>
+<div id="proto">void usicrypt_memclear(void *ctx,void *data,int len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the data to be cleared</td></tr>
+<tr><td id="param">len</td><td id="pdesc">the length of the data on bytes</td></tr>
+</table>
+<p id="note">Note: this function is guaranteed not to be optimized away by the compiler.</p>
+<h2 id="usicrypt_base64_encode">usicrypt_base64_encode</h2>
+<p id="desc">base64 encode binary data as a zero terminated string</p>
+<div id="proto">void *usicrypt_base64_encode(void *ctx,void *in,int ilen,int *olen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">in</td><td id="pdesc">the data to be encoded</td></tr>
+<tr><td id="param">ilen</td><td id="pdesc">the data length in bytes</td></tr>
+<tr><td id="param">olen</td><td id="pdesc">the base64 encoded string length excluding the terminator</td></tr>
+<tr><td colspan="2" id="return">returns a pointer to allocated memory of NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_base64_decode">usicrypt_base64_decode</h2>
+<p id="desc">base64 decode a string to binary data</p>
+<div id="proto">void *usicrypt_base64_decode(void *ctx,void *in,int ilen,int *olen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">in</td><td id="pdesc">the base64 string to be decoded</td></tr>
+<tr><td id="param">ilen</td><td id="pdesc">the string length in bytes</td></tr>
+<tr><td id="param">olen</td><td id="pdesc">the base64 decoded data length</td></tr>
+<tr><td colspan="2" id="return">returns a pointer to allocated memory of NULL in case of an error</td></tr>
+</table>
+<p id="note">Note: only a pure base64 string is allowed, i.e. no padding or line wraps/newlines.</p>
+<h2 id="usicrypt_random">usicrypt_random</h2>
+<p id="desc">get random data</p>
+<div id="proto">int usicrypt_random(void *ctx,void *data,int len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the random data storage location</td></tr>
+<tr><td id="param">len</td><td id="pdesc">the amount of random data in bytes</td></tr>
+<tr><td colspan="2" id="return">returns 0 in case of success and -1 in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_lfsr_next">usicrypt_lfsr_next</h2>
+<p id="desc">get the next linear feedback shift register value</p>
+<div id="proto">void usicrypt_lfsr_next(void *ctx,void *out)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_lfsr_init">ctx</a></td><td id="pdesc">an allocated LFSR context</td></tr>
+<tr><td id="param">out</td><td id="pdesc">storage area for LFSR value (length specified during <a href="#usicrypt_lfsr_init">init</a>)</td></tr>
+</table>
+<h2 id="usicrypt_lfsr_init">usicrypt_lfsr_init</h2>
+<p id="desc">initialize a linear feedback shift register</p>
+<div id="proto">void *usicrypt_lfsr_init(void *ctx,int bits,void *preset)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">bits</td><td id="pdesc">LFSR length in bits, 8 to 128 in multiples of 8</td></tr>
+<tr><td id="param">preset</td><td id="pdesc">initial value, must not be all zeroes, can be NULL for random</td></tr>
+<tr><td colspan="2" id="return">returns an allocated LFSR context or NULL in case of an error</td></tr>
+</table>
+<p id="note">Note: the primitive polynomials used guarantee a deterministic sequence of (2^n)-1 different values for a LFSR length of n bits.</p>
+<h2 id="usicrypt_lfsr_exit">usicrypt_lfsr_exit</h2>
+<p id="desc">release a linear feedback shift register</p>
+<div id="proto">void usicrypt_lfsr_exit(void *ctx)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_lfsr_init">ctx</a></td><td id="pdesc">an allocated LFSR context</td></tr>
+</table>
+<h2 id="usicrypt_digest_size">usicrypt_digest_size</h2>
+<p id="desc">digest size in bytes</p>
+<div id="proto">int usicrypt_digest_size(void *ctx,int md)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Digest Selection">md</a></td><td id="pdesc">the selected digest</td></tr>
+<tr><td colspan="2" id="return">returns the storage space in bytes required for the selected digest or -1 in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_digest">usicrypt_digest</h2>
+<p id="desc">execute digest</p>
+<div id="proto">int usicrypt_digest(void *ctx,int md,void *in,int len,void *out)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Digest Selection">md</a></td><td id="pdesc">the selected digest</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the data to be processed</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the lengh of the data in bytes</td></tr>
+<tr><td id="param">out</td><td id="pdesc">pointer to result storage location, size of selected digest</td></tr>
+<tr><td colspan="2" id="return">returns 0 in case of success and -1 in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_digest_iov">usicrypt_digest_iov</h2>
+<p id="desc">execute digest</p>
+<div id="proto">int usicrypt_digest_iov(void *ctx,int md,struct usicrypt_iov *iov,int niov,void *out)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Digest Selection">md</a></td><td id="pdesc">the selected digest</td></tr>
+<tr><td id="param"><a href="#IO Vector Array">iov</a></td><td id="pdesc">pointer to an iov array defining the data to be processed</td></tr>
+<tr><td id="param">niov</td><td id="pdesc">total elements of the iov array</td></tr>
+<tr><td id="param">out</td><td id="pdesc">pointer to result storage location, size of selected digest</td></tr>
+<tr><td colspan="2" id="return">returns 0 in case of success and -1 in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_hmac">usicrypt_hmac</h2>
+<p id="desc">execute HMAC</p>
+<div id="proto">int usicrypt_hmac(void *ctx,int md,void *data,int dlen,void *key,int klen,void *out)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Digest Selection">md</a></td><td id="pdesc">the selected digest</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the data to be processed</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the lengh of the data in bytes</td></tr>
+<tr><td id="param">key</td><td id="pdesc">the key data</td></tr>
+<tr><td id="param">klen</td><td id="pdesc">the key data length in bytes</td></tr>
+<tr><td id="param">out</td><td id="pdesc">pointer to result storage location, size of selected digest</td></tr>
+<tr><td colspan="2" id="return">returns 0 in case of success and -1 in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_hmac_iov">usicrypt_hmac_iov</h2>
+<p id="desc">execute HMAC</p>
+<div id="proto">int usicrypt_hmac_iov(void *ctx,int md,struct usicrypt_iov *iov,int niov,void *key,int klen,void *out)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Digest Selection">md</a></td><td id="pdesc">the selected digest</td></tr>
+<tr><td id="param"><a href="#IO Vector Array">iov</a></td><td id="pdesc">pointer to an iov array defining the data to be processed</td></tr>
+<tr><td id="param">niov</td><td id="pdesc">total elements of the iov array</td></tr>
+<tr><td id="param">key</td><td id="pdesc">the key data</td></tr>
+<tr><td id="param">klen</td><td id="pdesc">the key data length in bytes</td></tr>
+<tr><td id="param">out</td><td id="pdesc">pointer to result storage location, size of selected digest</td></tr>
+<tr><td colspan="2" id="return">returns 0 in case of success and -1 in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_cmac">usicrypt_cmac</h2>
+<p id="desc">execute CMAC</p>
+<div id="proto">int usicrypt_cmac(void *ctx,int cipher,void *key,int klen,void *src,int slen,void *dst)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Standard Cipher Selection">cipher</a></td><td id="pdesc">the selected cipher, either AES or Camellia</td></tr>
+<tr><td id="param">key</td><td id="pdesc">the key data</td></tr>
+<tr><td id="param">klen</td><td id="pdesc">the key data length in bits (128/192/256)</td></tr>
+<tr><td id="param">src</td><td id="pdesc">the data to be authenticated</td></tr>
+<tr><td id="param">slen</td><td id="pdesc">the data length in bytes</td></tr>
+<tr><td id="param">dst</td><td id="pdesc">the resulting message authentication code, cipher block size</td></tr>
+<tr><td colspan="2" id="return">returns 0 in case of success and -1 in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_cmac_iov">usicrypt_cmac_iov</h2>
+<p id="desc">execute CMAC</p>
+<div id="proto">int usicrypt_cmac_iov(void *ctx,int cipher,void *key,int klen,struct usicrypt_iov *iov,int niov,void *dst)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Standard Cipher Selection">cipher</a></td><td id="pdesc">the selected cipher, either AES or Camellia</td></tr>
+<tr><td id="param">key</td><td id="pdesc">the key data</td></tr>
+<tr><td id="param">klen</td><td id="pdesc">the key data length in bits (128/192/256)</td></tr>
+<tr><td id="param"><a href="#IO Vector Array">iov</a></td><td id="pdesc">pointer to an iov array defining the data to be authenticated</td></tr>
+<tr><td id="param">niov</td><td id="pdesc">total elements of the iov array</td></tr>
+<tr><td id="param">dst</td><td id="pdesc">the resulting message authentication code, cipher block size</td></tr>
+<tr><td colspan="2" id="return">returns 0 in case of success and -1 in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_pbkdf2">usicrypt_pbkdf2</h2>
+<p id="desc">execute PBKDF2</p>
+<div id="proto">int usicrypt_pbkdf2(void *ctx,int md,void *key,int klen,void *salt,int slen,int iter,void *out)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Digest Selection">md</a></td><td id="pdesc">the selected digest</td></tr>
+<tr><td id="param">key</td><td id="pdesc">the key data</td></tr>
+<tr><td id="param">klen</td><td id="pdesc">the key data length in bytes</td></tr>
+<tr><td id="param">salt</td><td id="pdesc">the salt data</td></tr>
+<tr><td id="param">slen</td><td id="pdesc">the salt data length in bytes</td></tr>
+<tr><td id="param">iter</td><td id="pdesc">the amount of iterations</td></tr>
+<tr><td id="param">out</td><td id="pdesc">pointer to result storage location, size of selected digest</td></tr>
+<tr><td colspan="2" id="return">returns 0 in case of success and -1 in case of an error</td></tr>
+</table>
+<p id="note">Note: the key data will always be cleared.</p>
+<h2 id="usicrypt_hkdf">usicrypt_hkdf</h2>
+<p id="desc">execute HKDF</p>
+<div id="proto">int usicrypt_hkdf(void *ctx,int md,void *key,int klen,void *salt,int slen,void *info,int ilen,void *out)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Digest Selection">md</a></td><td id="pdesc">the selected digest</td></tr>
+<tr><td id="param">key</td><td id="pdesc">the key data</td></tr>
+<tr><td id="param">klen</td><td id="pdesc">the key data length in bytes</td></tr>
+<tr><td id="param">salt</td><td id="pdesc">the salt data, can be NULL</td></tr>
+<tr><td id="param">slen</td><td id="pdesc">the salt data length in bytes</td></tr>
+<tr><td id="param">info</td><td id="pdesc">the info data, can be NULL</td></tr>
+<tr><td id="param">ilen</td><td id="pdesc">the info data length in bytes</td></tr>
+<tr><td id="param">out</td><td id="pdesc">pointer to result storage location, size of selected digest</td></tr>
+<tr><td colspan="2" id="return">returns 0 in case of success and -1 in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_rsa_generate">usicrypt_rsa_generate</h2>
+<p id="desc">generate a RSA private key</p>
+<div id="proto">void *usicrypt_rsa_generate(void *ctx,int bits)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">bits</td><td id="pdesc">the key size in bits (&gt;=1024 and a multiple of 8)</td></tr>
+<tr><td colspan="2" id="return">returns an allocated private key or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_rsa_size">usicrypt_rsa_size</h2>
+<p id="desc">size of the public key</p>
+<div id="proto">int usicrypt_rsa_size(void *ctx,void *key)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated public or private key</td></tr>
+<tr><td colspan="2" id="return">returns the public key size in bits</td></tr>
+</table>
+<h2 id="usicrypt_rsa_get_pub">usicrypt_rsa_get_pub</h2>
+<p id="desc">export a RSA public key in SubjectPublicKeyInfo DER format</p>
+<div id="proto">void *usicrypt_rsa_get_pub(void *ctx,void *key,int *len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated public or private key</td></tr>
+<tr><td id="param">len</td><td id="pdesc">the exported data length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated exported data or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_rsa_set_pub">usicrypt_rsa_set_pub</h2>
+<p id="desc">import a RSA public key in SubjectPublicKeyInfo DER format</p>
+<div id="proto">void *usicrypt_rsa_set_pub(void *ctx,void *key,int len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">key</td><td id="pdesc">the public key data</td></tr>
+<tr><td id="param">len</td><td id="pdesc">the public key data length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns an allocated public key or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_rsa_get_key">usicrypt_rsa_get_key</h2>
+<p id="desc">export a RSA public/private keypair in PKCS#1 DER format</p>
+<div id="proto">void *usicrypt_rsa_get_key(void *ctx,void *key,int *len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated private key</td></tr>
+<tr><td id="param">len</td><td id="pdesc">the exported data length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated exported data or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_rsa_set_key">usicrypt_rsa_set_key</h2>
+<p id="desc">import a RSA public/private keypair in PKCS#1 DER format</p>
+<div id="proto">void *usicrypt_rsa_set_key(void *ctx,void *key,int len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">key</td><td id="pdesc">the private key data</td></tr>
+<tr><td id="param">len</td><td id="pdesc">the private key data length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns an allocated private key or NULL in case of an error</td></tr>
+</table>
+<p id="note">Note: the key data will always be cleared.</p>
+<h2 id="usicrypt_rsa_sign_v15">usicrypt_rsa_sign_v15</h2>
+<p id="desc">sign data with a private RSA key using RSA PKCS#1 v1.5</p>
+<div id="proto">void *usicrypt_rsa_sign_v15(void *ctx,int md,void *key,void *data,int dlen,int *slen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Digest Selection">md</a></td><td id="pdesc">the selected digest</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated private key</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the data to be signed</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the data length in bytes</td></tr>
+<tr><td id="param">slen</td><td id="pdesc">the signature length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated signature or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_rsa_sign_v15_iov">usicrypt_rsa_sign_v15_iov</h2>
+<p id="desc">sign data with a private RSA key using RSA PKCS#1 v1.5</p>
+<div id="proto">void *usicrypt_rsa_sign_v15_iov(void *ctx,int md,void *key,struct usicrypt_iov *iov,int niov,int *slen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Digest Selection">md</a></td><td id="pdesc">the selected digest</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated private key</td></tr>
+<tr><td id="param"><a href="#IO Vector Array">iov</a></td><td id="pdesc">pointer to an iov array defining the data to be signed</td></tr>
+<tr><td id="param">niov</td><td id="pdesc">total elements of the iov array</td></tr>
+<tr><td id="param">slen</td><td id="pdesc">the signature length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated signature or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_rsa_verify_v15">usicrypt_rsa_verify_v15</h2>
+<p id="desc">verify signature with a public RSA key using RSA PKCS#1 v1.5</p>
+<div id="proto">int usicrypt_rsa_verify_v15(void *ctx,int md,void *key,void *data,int dlen,void *sig,int slen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Digest Selection">md</a></td><td id="pdesc">the selected digest</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated public or private key</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the data to be verified</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the data length in bytes</td></tr>
+<tr><td id="param">sig</td><td id="pdesc">the signature</td></tr>
+<tr><td id="param">slen</td><td id="pdesc">the signature length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns 0 in case of succes and -1 in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_rsa_verify_v15_iov">usicrypt_rsa_verify_v15_iov</h2>
+<p id="desc">verify signature with a public RSA key using RSA PKCS#1 v1.5</p>
+<div id="proto">int usicrypt_rsa_verify_v15_iov(void *ctx,int md,void *key,struct usicrypt_iov *iov,int niov,void *sig,int slen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Digest Selection">md</a></td><td id="pdesc">the selected digest</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated public or private key</td></tr>
+<tr><td id="param"><a href="#IO Vector Array">iov</a></td><td id="pdesc">pointer to an iov array defining the data to be verified</td></tr>
+<tr><td id="param">niov</td><td id="pdesc">total elements of the iov array</td></tr>
+<tr><td id="param">sig</td><td id="pdesc">the signature</td></tr>
+<tr><td id="param">slen</td><td id="pdesc">the signature length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns 0 in case of succes and -1 in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_rsa_sign_pss">usicrypt_rsa_sign_pss</h2>
+<p id="desc">sign data with a private RSA key using RSASSA-PSS</p>
+<div id="proto">void *usicrypt_rsa_sign_pss(void *ctx,int md,void *key,void *data,int dlen,int *slen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Digest Selection">md</a></td><td id="pdesc">the selected digest</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated private key</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the data to be signed</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the data length in bytes</td></tr>
+<tr><td id="param">slen</td><td id="pdesc">the signature length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated signature or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_rsa_sign_pss_iov">usicrypt_rsa_sign_pss_iov</h2>
+<p id="desc">sign data with a private RSA key using RSASSA-PSS</p>
+<div id="proto">void *usicrypt_rsa_sign_pss_iov(void *ctx,int md,void *key,struct usicrypt_iov *iov,int niov,int *slen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Digest Selection">md</a></td><td id="pdesc">the selected digest</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated private key</td></tr>
+<tr><td id="param"><a href="#IO Vector Array">iov</a></td><td id="pdesc">pointer to an iov array defining the data to be signed</td></tr>
+<tr><td id="param">niov</td><td id="pdesc">total elements of the iov array</td></tr>
+<tr><td id="param">slen</td><td id="pdesc">the signature length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated signature or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_rsa_verify_pss">usicrypt_rsa_verify_pss</h2>
+<p id="desc">verify signature with a public RSA key using RSASSA-PSS</p>
+<div id="proto">int usicrypt_rsa_verify_pss(void *ctx,int md,void *key,void *data,int dlen,void *sig,int slen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Digest Selection">md</a></td><td id="pdesc">the selected digest</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated public or private key</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the data to be verified</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the data length in bytes</td></tr>
+<tr><td id="param">sig</td><td id="pdesc">the signature</td></tr>
+<tr><td id="param">slen</td><td id="pdesc">the signature length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns 0 in case of succes and -1 in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_rsa_verify_pss_iov">usicrypt_rsa_verify_pss_iov</h2>
+<p id="desc">verify signature with a public RSA key using RSASSA-PSS</p>
+<div id="proto">int usicrypt_rsa_verify_pss_iov(void *ctx,int md,void *key,struct usicrypt_iov *iov,int niov,void *sig,int slen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Digest Selection">md</a></td><td id="pdesc">the selected digest</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated public or private key</td></tr>
+<tr><td id="param"><a href="#IO Vector Array">iov</a></td><td id="pdesc">pointer to an iov array defining the data to be verified</td></tr>
+<tr><td id="param">niov</td><td id="pdesc">total elements of the iov array</td></tr>
+<tr><td id="param">sig</td><td id="pdesc">the signature</td></tr>
+<tr><td id="param">slen</td><td id="pdesc">the signature length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns 0 in case of succes and -1 in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_rsa_encrypt_v15">usicrypt_rsa_encrypt_v15</h2>
+<p id="desc">encrypt with a public RSA key using PKCS#1 v1.5 padding</p>
+<div id="proto">void *usicrypt_rsa_encrypt_v15(void *ctx,void *key,void *data,int dlen,int *olen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated public or private key</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the data to be encrypted</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the data length in bytes</td></tr>
+<tr><td id="param">olen</td><td id="pdesc">the encrypted data length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated encrypted data or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_rsa_decrypt_v15">usicrypt_rsa_decrypt_v15</h2>
+<p id="desc">decrypt with a private RSA key using PKCS#1 v1.5 padding</p>
+<div id="proto">void *usicrypt_rsa_decrypt_v15(void *ctx,void *key,void *data,int dlen,int *olen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated private key</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the data to be decrypted</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the data length in bytes</td></tr>
+<tr><td id="param">olen</td><td id="pdesc">the decrypted data length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated decrypted data or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_rsa_encrypt_oaep">usicrypt_rsa_encrypt_oaep</h2>
+<p id="desc">encrypt with a public RSA key using RSAES-OAEP</p>
+<div id="proto">void *usicrypt_rsa_encrypt_oaep(void *ctx,int md,void *key,void *data,int dlen,int *olen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Digest Selection">md</a></td><td id="pdesc">the selected digest</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated public or private key</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the data to be encrypted</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the data length in bytes</td></tr>
+<tr><td id="param">olen</td><td id="pdesc">the encrypted data length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated encrypted data or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_rsa_decrypt_oaep">usicrypt_rsa_decrypt_oaep</h2>
+<p id="desc">decrypt with a private RSA key using RSAES-OAEP</p>
+<div id="proto">void *usicrypt_rsa_decrypt_oaep(void *ctx,int md,void *key,void *data,int dlen,int *olen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Digest Selection">md</a></td><td id="pdesc">the selected digest</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated private key</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the data to be decrypted</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the data length in bytes</td></tr>
+<tr><td id="param">olen</td><td id="pdesc">the decrypted data length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated decrypted data or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_rsa_free">usicrypt_rsa_free</h2>
+<p id="desc">release an allocated RSA key</p>
+<div id="proto">void usicrypt_rsa_free(void *ctx,void *key)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated public or private key</td></tr>
+</table>
+<h2 id="usicrypt_dh_params">usicrypt_dh_params</h2>
+<p id="desc">get predefined DH parameters in PKCS#3 DER format</p>
+<div id="proto">void *usicrypt_dh_params(void *ctx,int which,int *len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Predefined DH Parameters">which</a></td><td id="pdesc">a predefined parameter identifier</td></tr>
+<tr><td id="param">len</td><td id="pdesc">the length of the returned data in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the statically allocated DH data or NULL in case of an error</td></tr>
+</table>
+<p id="note">Note: the following predefined parameters are available: rfc5114-1024-160,rfc5114-2048-224,rfc5114-2048-256</p>
+<h2 id="usicrypt_dh_generate">usicrypt_dh_generate</h2>
+<p id="desc">generate DH parameters in PKCS#3 DER format</p>
+<div id="proto">void *usicrypt_dh_generate(void *ctx,int bits,int generator,int *len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">bits</td><td id="pdesc">the prime length in bits (&gt;=1024 and a multiple of 8)</td></tr>
+<tr><td id="param">generator</td><td id="pdesc">the generator value, must be 2 or 5</td></tr>
+<tr><td id="param">len</td><td id="pdesc">the length of the returned data in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated DH data or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_dh_init">usicrypt_dh_init</h2>
+<p id="desc">initialize a DH context from PKCS#3 DER formatted DH parameters</p>
+<div id="proto">void *usicrypt_dh_init(void *ctx,void *params,int len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">params</td><td id="pdesc">the DH parameters</td></tr>
+<tr><td id="param">len</td><td id="pdesc">the DH parameters length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns an allocated DH context or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_dh_genex">usicrypt_dh_genex</h2>
+<p id="desc">generate a DH keypair and export the public value</p>
+<div id="proto">void *usicrypt_dh_genex(void *ctx,void *dh,int *len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#usicrypt_dh_init">dh</a></td><td id="pdesc">an allocated DH context</td></tr>
+<tr><td id="param">len</td><td id="pdesc">the length of the public value in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated public value or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_dh_get_pub">usicrypt_dh_get_pub</h2>
+<p id="desc">export a DH public value and DH parameters in SubjectPublicKeyInfo DER format</p>
+<div id="proto">void *usicrypt_dh_get_pub(void *ctx,void *pub,int publen,void *params,int plen,int *len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">pub</td><td id="pdesc">a public value</td></tr>
+<tr><td id="param">publen</td><td id="pdesc">the length of the public value in bytes</td></tr>
+<tr><td id="param">params</td><td id="pdesc">the DH parameters in PKCS#3 DER format</td></tr>
+<tr><td id="param">plen</td><td id="pdesc">the DH parameters length in bytes</td></tr>
+<tr><td id="param">len</td><td id="pdesc">receives the exported data length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated exported data or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_dh_set_pub">usicrypt_dh_set_pub</h2>
+<p id="desc">import a DH public value and DH parameters in SubjectPublicKeyInfo DER format</p>
+<div id="proto">void *usicrypt_dh_set_pub(void *ctx,void *data,int dlen,void **params,int *plen,int *len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the SubjectPublicKeyInfo formatted public value and parameters</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the length of the SubjectPublicKeyInfo formatted data in bytes</td></tr>
+<tr><td id="param">params</td><td id="pdesc">receives the allocated DH parameters in PKCS#3 DER format</td></tr>
+<tr><td id="param">plen</td><td id="pdesc">receives the length of the DH parameters in bytes</td></tr>
+<tr><td id="param">len</td><td id="pdesc">receives the length of the public value in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated public value or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_dh_cmp_params">usicrypt_dh_cmp_params</h2>
+<p id="desc">compare two DH parameters in PKCS#3 DER format</p>
+<div id="proto">int usicrypt_dh_cmp_params(void *ctx,void *p1,int p1len,void *p2,int p2len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">p1</td><td id="pdesc">the first set of DH parameters</td></tr>
+<tr><td id="param">p1len</td><td id="pdesc">the length of the first set of DH parameters in bytes</td></tr>
+<tr><td id="param">p2</td><td id="pdesc">the second set of DH parameters</td></tr>
+<tr><td id="param">p2len</td><td id="pdesc">the length of the second set of DH parameters in bytes</td></tr>
+<tr><td colspan="2" id="return">returns 0 if the parameters are equal and -1 if not or an error occured</td></tr>
+</table>
+<h2 id="usicrypt_dh_to_pem">usicrypt_dh_to_pem</h2>
+<p id="desc">convert DH parameters from PKCS#3 DER format to PKCS#3 PEM format</p>
+<div id="proto">void *usicrypt_dh_to_pem(void *ctx,void *data,int dlen,int *rlen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the PKCS#3 DER encoded DH parameters</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the length of the PKCS#3 DER encoded DH parameters in bytes</td></tr>
+<tr><td id="param">rlen</td><td id="pdesc">the length of the PKCS#3 PEM encoded DH parameters in bytes excluding the terminating zero byte</td></tr>
+<tr><td colspan="2" id="return">returns the allocated and zero terminated PKCS#3 PEM encoded DH parameters or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_pem_to_dh">usicrypt_pem_to_dh</h2>
+<p id="desc">convert DH parameters from PKCS#3 PEM format to PKCS#3 DER format</p>
+<div id="proto">void *usicrypt_pem_to_dh(void *ctx,void *data,int dlen,int *rlen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the PKCS#3 PEM encoded DH parameters</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the length of the PKCS#3 PEM encoded DH parameters in bytes</td></tr>
+<tr><td id="param">rlen</td><td id="pdesc">the length of the PKCS#3 DER encoded DH parameters in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated PKCS#3 DER encoded DH parameters or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_dh_derive">usicrypt_dh_derive</h2>
+<p id="desc">derives a DH shared secret</p>
+<div id="proto">void *usicrypt_dh_derive(void *ctx,void *dh,void *pub,int plen,int *slen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#usicrypt_dh_init">dh</a></td><td id="pdesc">an allocated DH context</td></tr>
+<tr><td id="param">pub</td><td id="pdesc">the peer's public value</td></tr>
+<tr><td id="param">plen</td><td id="pdesc">the peer's public value length in bytes</td></tr>
+<tr><td id="param">slen</td><td id="pdesc">the shared secret length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated shared secret or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_dh_free">usicrypt_dh_free</h2>
+<p id="desc">release an allocated DH context</p>
+<div id="proto">void usicrypt_dh_free(void *ctx,void *dh)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#usicrypt_dh_init">dh</a></td><td id="pdesc">an allocated dh context</td></tr>
+</table>
+<h2 id="usicrypt_ec_generate">usicrypt_ec_generate</h2>
+<p id="desc">generate an EC private key</p>
+<div id="proto">void *usicrypt_ec_generate(void *ctx,int curve)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Elliptic Curve Identifiers">curve</a></td><td id="pdesc">a curve identifier</td></tr>
+<tr><td colspan="2" id="return">returns the allocated private key or NULL in case of an error</td></tr>
+</table>
+<p id="note">Note: the following curves are supported: brainpoolP512r1, brainpoolP384r1, brainpoolP256r1, secp521r1, secp384r1, secp256r1</p>
+<p id="note">Note: the curves starting with "secp" contain NSA defined parameters of undisclosed origin and should thus be considered weak. If in doubt and when possible these curves should not be used.</p>
+<h2 id="usicrypt_ec_identifier">usicrypt_ec_identifier</h2>
+<p id="desc">get the curve identifier</p>
+<div id="proto">int usicrypt_ec_identifier(void *ctx,void *key)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated public or private key</td></tr>
+<tr><td colspan="2" id="return">returns the curve identifier or -1 in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_ec_derive">usicrypt_ec_derive</h2>
+<p id="desc">derive an EC shared secret</p>
+<div id="proto">void *usicrypt_ec_derive(void *ctx,void *key,void *pub,int *klen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">key</td><td id="pdesc">the allocated local private key</td></tr>
+<tr><td id="param">pub</td><td id="pdesc">the allocated public key of the peer</td></tr>
+<tr><td id="param">klen</td><td id="pdesc">the length of the shared secret in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated shared secret or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_ec_get_pub">usicrypt_ec_get_pub</h2>
+<p id="desc">export an EC public key in SubjectPublicKeyInfo DER format</p>
+<div id="proto">void *usicrypt_ec_get_pub(void *ctx,void *key,int *len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated public or private key</td></tr>
+<tr><td id="param">len</td><td id="pdesc">the exported data length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated exported data or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_ec_set_pub">usicrypt_ec_set_pub</h2>
+<p id="desc">import an EC public key in SubjectPublicKeyInfo DER format</p>
+<div id="proto">void *usicrypt_ec_set_pub(void *ctx,void *key,int len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">key</td><td id="pdesc">the public key data</td></tr>
+<tr><td id="param">len</td><td id="pdesc">the public key data length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns an allocated key or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_ec_get_key">usicrypt_ec_get_key</h2>
+<p id="desc">export an EC key pair in PKCS#1 DER format</p>
+<div id="proto">void *usicrypt_ec_get_key(void *ctx,void *key,int *len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated private key</td></tr>
+<tr><td id="param">len</td><td id="pdesc">the exported data length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated exported data or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_ec_set_key">usicrypt_ec_set_key</h2>
+<p id="desc">import an EC key pair in PKCS#1 DER format</p>
+<div id="proto">void *usicrypt_ec_set_key(void *ctx,void *key,int len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">key</td><td id="pdesc">the private key data</td></tr>
+<tr><td id="param">len</td><td id="pdesc">the private key data length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns an allocated key or NULL in case of an error</td></tr>
+</table>
+<p id="note">Note: the key data will always be cleared.</p>
+<h2 id="usicrypt_ec_sign">usicrypt_ec_sign</h2>
+<p id="desc">sign data with a private EC key using ECDSA</p>
+<div id="proto">void *usicrypt_ec_sign(void *ctx,int md,void *key,void *data,int dlen,int *slen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Digest Selection">md</a></td><td id="pdesc">the selected digest</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated private key</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the data to be signed</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the data length in bytes</td></tr>
+<tr><td id="param">slen</td><td id="pdesc">the signature length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated signature or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_ec_sign_iov">usicrypt_ec_sign_iov</h2>
+<p id="desc">sign data with a private EC key using ECDSA</p>
+<div id="proto">void *usicrypt_ec_sign_iov(void *ctx,int md,void *key,struct usicrypt_iov *iov,int niov,int *slen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Digest Selection">md</a></td><td id="pdesc">the selected digest</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated private key</td></tr>
+<tr><td id="param"><a href="#IO Vector Array">iov</a></td><td id="pdesc">pointer to an iov array defining the data to be signed</td></tr>
+<tr><td id="param">niov</td><td id="pdesc">total elements of the iov array</td></tr>
+<tr><td id="param">slen</td><td id="pdesc">the signature length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated signature or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_ec_verify">usicrypt_ec_verify</h2>
+<p id="desc">verify signature with a public EC key using ECDSA</p>
+<div id="proto">int usicrypt_ec_verify(void *ctx,int md,void *key,void *data,int dlen,void *sig,int slen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Digest Selection">md</a></td><td id="pdesc">the selected digest</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated public or private key</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the data to be verified</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the data length in bytes</td></tr>
+<tr><td id="param">sig</td><td id="pdesc">the signature</td></tr>
+<tr><td id="param">slen</td><td id="pdesc">the signature length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns 0 in case of success and -1 in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_ec_verify_iov">usicrypt_ec_verify_iov</h2>
+<p id="desc">verify signature with a public EC key using ECDSA</p>
+<div id="proto">int usicrypt_ec_verify_iov(void *ctx,int md,void *key,struct usicrypt_iov *iov,int niov,void *sig,int slen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Digest Selection">md</a></td><td id="pdesc">the selected digest</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated public or private key</td></tr>
+<tr><td id="param"><a href="#IO Vector Array">iov</a></td><td id="pdesc">pointer to an iov array defining the data to be verified</td></tr>
+<tr><td id="param">niov</td><td id="pdesc">total elements of the iov array</td></tr>
+<tr><td id="param">sig</td><td id="pdesc">the signature</td></tr>
+<tr><td id="param">slen</td><td id="pdesc">the signature length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns 0 in case of success and -1 in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_ec_free">usicrypt_ec_free</h2>
+<p id="desc">release an allocated EC key</p>
+<div id="proto">void usicrypt_ec_free(void *ctx,void *key)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated public or private key</td></tr>
+</table>
+<h2 id="usicrypt_x25519_generate">usicrypt_x25519_generate</h2>
+<p id="desc">generate an X25519 private key</p>
+<div id="proto">void *usicrypt_x25519_generate(void *ctx)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td colspan="2" id="return">returns the allocated private key or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_x25519_derive">usicrypt_x25519_derive</h2>
+<p id="desc">derive an X25519 shared secret</p>
+<div id="proto">void *usicrypt_x25519_derive(void *ctx,void *key,void *pub,int *klen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">key</td><td id="pdesc">the allocated local private key</td></tr>
+<tr><td id="param">pub</td><td id="pdesc">the allocated public key of the peer</td></tr>
+<tr><td id="param">klen</td><td id="pdesc">the length of the shared secret in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated shared secret or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_x25519_get_pub">usicrypt_x25519_get_pub</h2>
+<p id="desc">export an X25519 public key in SubjectPublicKeyInfo DER format</p>
+<div id="proto">void *usicrypt_x25519_get_pub(void *ctx,void *key,int *len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated public or private key</td></tr>
+<tr><td id="param">len</td><td id="pdesc">the exported data length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated data or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_x25519_set_pub">usicrypt_x25519_set_pub</h2>
+<p id="desc">import an X25519 public key in SubjectPublicKeyInfo DER format</p>
+<div id="proto">void *usicrypt_x25519_set_pub(void *ctx,void *key,int len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">key</td><td id="pdesc">the public key data</td></tr>
+<tr><td id="param">len</td><td id="pdesc">the public key data length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns an allocated key or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_x25519_get_key">usicrypt_x25519_get_key</h2>
+<p id="desc">export a X25519 private key in PKCS#8 DER format</p>
+<div id="proto">void *usicrypt_x25519_get_key(void *ctx,void *key,int *len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated private key</td></tr>
+<tr><td id="param">len</td><td id="pdesc">the exported data length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated exported data or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_x25519_set_key">usicrypt_x25519_set_key</h2>
+<p id="desc">import a X25519 private key in PKCS#8 DER format</p>
+<div id="proto">void *usicrypt_x25519_set_key(void *ctx,void *key,int len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">key</td><td id="pdesc">the private key data</td></tr>
+<tr><td id="param">len</td><td id="pdesc">the private key data length in bytes</td></tr>
+<tr><td colspan="2" id="return">returns an allocated key or NULL in case of an error</td></tr>
+</table>
+<p id="note">Note: the key data will always be cleared.</p>
+<h2 id="usicrypt_x25519_free">usicrypt_x25519_free</h2>
+<p id="desc">release an allocated X25519 key</p>
+<div id="proto">void usicrypt_x25519_free(void *ctx,void *key)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">key</td><td id="pdesc">an allocated public or private key</td></tr>
+</table>
+<h2 id="usicrypt_pub_type_from_p8">usicrypt_pub_type_from_p8</h2>
+<p id="desc">determine the type of a public key in SubjectPublicKeyInfo DER format</p>
+<div id="proto">int usicrypt_pub_type_from_p8(void *ctx,void *data,int dlen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the public key data to be processed</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the length of the public key data in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the public key identifier or -1 in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_key_type_from_p8">usicrypt_key_type_from_p8</h2>
+<p id="desc">determine the type of a private key in PKCS#8 DER format</p>
+<div id="proto">int usicrypt_key_type_from_p8(void *ctx,void *data,int dlen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the private key data to be processed</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the length of the private key data in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the private key identifier or -1 in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_rsa_key_to_p8">usicrypt_rsa_key_to_p8</h2>
+<p id="desc">convert a PKCS#1 encoded RSA key to PKCS#8</p>
+<div id="proto">void *usicrypt_rsa_key_to_p8(void *ctx,void *data,int dlen,int *p8len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the PKCS#1 encoded RSA key</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the length of the PKCS#1 encoded RSA key in bytes</td></tr>
+<tr><td id="param">p8len</td><td id="pdesc">the length of the PKCS#8 encoded RSA key in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated PKCS#8 encoded RSA key or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_p8_to_rsa_key">usicrypt_p8_to_rsa_key</h2>
+<p id="desc">convert a PKCS#8 encoded RSA key to PKCS#1</p>
+<div id="proto">void *usicrypt_p8_to_rsa_key(void *ctx,void *data,int dlen,int *klen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the PKCS#8 encoded RSA key</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the length of the PKCS#8 encoded RSA key in bytes</td></tr>
+<tr><td id="param">klen</td><td id="pdesc">the length of the PKCS#1 encoded RSA key in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated PKCS#1 encoded RSA key or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_ec_key_to_p8">usicrypt_ec_key_to_p8</h2>
+<p id="desc">convert a PKCS#1 encoded EC key to PKCS#8</p>
+<div id="proto">void *usicrypt_ec_key_to_p8(void *ctx,void *data,int dlen,int *p8len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the PKCS#1 encoded EC key</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the length of the PKCS#1 encoded EC key in bytes</td></tr>
+<tr><td id="param">p8len</td><td id="pdesc">the length of the PKCS#8 encoded EC key in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated PKCS#8 encoded EC key or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_p8_to_ec_key">usicrypt_p8_to_ec_key</h2>
+<p id="desc">convert a PKCS#8 encoded EC key to PKCS#1</p>
+<div id="proto">void *usicrypt_p8_to_ec_key(void *ctx,void *data,int dlen,int *klen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the PKCS#8 encoded EC key</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the length of the PKCS#8 encoded EC key in bytes</td></tr>
+<tr><td id="param">klen</td><td id="pdesc">the length of the PKCS#1 encoded EC key in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated PKCS#1 encoded EC key or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_encrypt_p8">usicrypt_encrypt_p8</h2>
+<p id="desc">encrypt a PKCS#8 encoded key using PBES2 and PBKDF2</p>
+<div id="proto">void *usicrypt_encrypt_p8(void *ctx,void *key,int klen,void *data,int dlen,int cipher,int mode,int bits,int digest,int iter,int *rlen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">key</td><td id="pdesc">the encryption key</td></tr>
+<tr><td id="param">klen</td><td id="pdesc">the encryption key length in bytes</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the data to be encrypted</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the length of the data to be encrypted in bytes</td></tr>
+<tr><td id="param"><a href="#Standard Cipher Selection">cipher</a></td><td id="pdesc">the cipher to be used, AES or Camellia</td></tr>
+<tr><td id="param"><a href="#Mode Selection (standard block cipher modes)">mode</a></td><td id="pdesc">the cipher mode, ECB, CBC ,CFB or OFB</td></tr>
+<tr><td id="param">bits</td><td id="pdesc">the cipher bits, 128, 192 or 256</td></tr>
+<tr><td id="param"><a href="#Digest Selection">digest</a></td><td id="pdesc">the PBKDF2 digest, SHA1, SHA256, SHA384 or SHA512</td></tr>
+<tr><td id="param">iter</td><td id="pdesc">the amount of PBKDF2 iterations (&gt;=1, &gt;=10000 recommended)</td></tr>
+<tr><td id="param">rlen</td><td id="pdesc">the length of the returned encrypted key in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated encrypted key or NULL in case of an error</td></tr>
+</table>
+<p id="note">Note: key encryption is only available using PBES2 encoding and PBKDF2 with SHA1/SHA256/SHA384/SHA512 and using AES or Camellia with 128/192/256 bits key and ECB/CBC/CFB/OFB mode and for PKCS#8 encoded keys.</p>
+<p id="note">Note: SHA1 is only available for 128 bit cipher keys.</p>
+<p id="note">Note: the key data will always be cleared.</p>
+<h2 id="usicrypt_decrypt_p8">usicrypt_decrypt_p8</h2>
+<p id="desc">decrypt a PKCS#8 encoded key using PBES2 and PBKDF2</p>
+<div id="proto">void *usicrypt_decrypt_p8(void *ctx,void *key,int klen,void *data,int dlen,int *rlen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">key</td><td id="pdesc">the decryption key</td></tr>
+<tr><td id="param">klen</td><td id="pdesc">the decryption key length in bytes</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the encrypted data</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the length of the encrypted data in bytes</td></tr>
+<tr><td id="param">rlen</td><td id="pdesc">the length of the returned decrypted key in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated decrypted key or NULL in case of an error</td></tr>
+</table>
+<p id="note">Note: only a PBES2 encoded encrypted key using PBKDF2 with SHA1/SHA256/SHA384/SHA512 and using AES or Camellia with 128/192/256 bits key and ECB/CBC/CFB/OFB mode can be decrypted.</p>
+<p id="note">Note: SHA1 is only available for 128 bit cipher keys.</p>
+<p id="note">Note: the key data will always be cleared.</p>
+<h2 id="usicrypt_p8_to_pem">usicrypt_p8_to_pem</h2>
+<p id="desc">convert PKCS#8 DER encoded data to PEM format</p>
+<div id="proto">void *usicrypt_p8_to_pem(void *ctx,void *data,int dlen,int *rlen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the PKCS#8 DER encoded data</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the length of the PKCS#8 DER encoded data in bytes</td></tr>
+<tr><td id="param">rlen</td><td id="pdesc">the length of the PKCS#8 PEM encoded data in bytes excluding the terminating zero byte</td></tr>
+<tr><td colspan="2" id="return">returns the allocated and zero terminated PKCS#8 PEM encoded data or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_pem_to_p8">usicrypt_pem_to_p8</h2>
+<p id="desc">convert PKCS#8 PEM encoded data to DER format</p>
+<div id="proto">void *usicrypt_pem_to_p8(void *ctx,void *data,int dlen,int *rlen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the PKCS#8 PEM encoded data</td></tr>
+<tr><td id="param">dlen</td><td id="pdesc">the length of the PKCS#8 PEM encoded data in bytes</td></tr>
+<tr><td id="param">rlen</td><td id="pdesc">the length of the PKCS#8 DER encoded data in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the allocated PKCS#8 DER encoded data or NULL in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_cipher_block_size">usicrypt_cipher_block_size</h2>
+<p id="desc">get block size of cipher</p>
+<div id="proto">int usicrypt_cipher_block_size(void *ctx,int cipher)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Standard Cipher Selection">cipher</a></td><td id="pdesc">a cipher identifier</td></tr>
+<tr><td colspan="2" id="return">returns the cipher block size in bytes or -1 in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_cipher_padding_add">usicrypt_cipher_padding_add</h2>
+<p id="desc">perform PKCS#7 padding</p>
+<div id="proto">int usicrypt_cipher_padding_add(void *ctx,void *data,int len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the data to be padded or NULL</td></tr>
+<tr><td id="param">len</td><td id="pdesc">the length of the data to be padded in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the amount of padding bytes or -1 in case of an error</td></tr>
+</table>
+<p id="note">Note: the specified data must have sufficient room for the padding to be added.</p>
+<p id="note">Note: the amount of bytes required for padding can be retrieved by calling this function with NULL for data.</p>
+<p id="note">Note: this routine supports 128 bit ciphers only.</p>
+<h2 id="usicrypt_cipher_padding_get">usicrypt_cipher_padding_get</h2>
+<p id="desc">check the PKCS#7 padding and return the padding length</p>
+<div id="proto">int usicrypt_cipher_padding_get(void *ctx,void *data,int len)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param">data</td><td id="pdesc">the padded data</td></tr>
+<tr><td id="param">len</td><td id="pdesc">the length of the padded data in bytes</td></tr>
+<tr><td colspan="2" id="return">returns the amount of padding in bytes or -1 in case of an error</td></tr>
+</table>
+<p id="note">Note: this routine supports 128 bit ciphers only.</p>
+<h2 id="usicrypt_blkcipher_encrypt">usicrypt_blkcipher_encrypt</h2>
+<p id="desc">encrypt data using a standard block cipher mode</p>
+<div id="proto">int usicrypt_blkcipher_encrypt(void *ctx,void *src,int slen,void *dst)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_blkcipher_init">ctx</a></td><td id="pdesc">an allocated standard block cipher context</td></tr>
+<tr><td id="param">src</td><td id="pdesc">the data to be encrypted</td></tr>
+<tr><td id="param">slen</td><td id="pdesc">the data length in bytes</td></tr>
+<tr><td id="param">dst</td><td id="pdesc">storage area for the encrypted data</td></tr>
+<tr><td colspan="2" id="return">returns 0 in case of success and -1 in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_blkcipher_decrypt">usicrypt_blkcipher_decrypt</h2>
+<p id="desc">decrypt data using a standard block cipher mode</p>
+<div id="proto">int usicrypt_blkcipher_decrypt(void *ctx,void *src,int slen,void *dst)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_blkcipher_init">ctx</a></td><td id="pdesc">an allocated standard block cipher context</td></tr>
+<tr><td id="param">src</td><td id="pdesc">the data to be decrypted</td></tr>
+<tr><td id="param">slen</td><td id="pdesc">the data length in bytes</td></tr>
+<tr><td id="param">dst</td><td id="pdesc">storage area for the decrypted data</td></tr>
+<tr><td colspan="2" id="return">returns 0 in case of success and -1 in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_blkcipher_init">usicrypt_blkcipher_init</h2>
+<p id="desc">allocate a standard block cipher context</p>
+<div id="proto">void *usicrypt_blkcipher_init(void *ctx,int cipher,int mode,void *key,int klen,void *iv)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Standard Cipher Selection">cipher</a></td><td id="pdesc">the selected cipher, either AES, Camellia or ChaCha20</td></tr>
+<tr><td id="param"><a href="#Mode Selection (standard block cipher modes)">mode</a></td><td id="pdesc">the cipher mode, Stream, ECB, CBC, CTS, CFB, CFB8, OFB or CTR</td></tr>
+<tr><td id="param">key</td><td id="pdesc">the key data</td></tr>
+<tr><td id="param">klen</td><td id="pdesc">the key data length in bits (128/192/256)</td></tr>
+<tr><td id="param">iv</td><td id="pdesc">the initial IV (ignored for ECB mode)</td></tr>
+<tr><td colspan="2" id="return">returns the allocated standard block cipher context or NULL in case of an error</td></tr>
+</table>
+<p id="note">Note: the key data will always be cleared.</p>
+<p id="note">AES/Camellia Notes:<br/>The IV length is 16 bytes. The Stream cipher mode is invalid.</p>
+<p id="note">ChaCha20 Notes:<br/>The key length must be 256 bits and the IV length is 8 bytes. The cipher mode must be Stream.<br/>Due to the vastly varying library implementations of ChaCha20 the following limitations are necessary for proper interworking:<br/><br/>The nonce when setting the IV will always be:<br/>CCCCZZZZIIIIIIII<br/>C=counter bytes, initialized to zero<br/>Z=all zero bytes<br/>I=IV bytes<br/>Always assume that the counter is 32 bits only</p>
+<h2 id="usicrypt_blkcipher_reset">usicrypt_blkcipher_reset</h2>
+<p id="desc">reset cipher state and set a new initial IV</p>
+<div id="proto">void usicrypt_blkcipher_reset(void *ctx,void *iv)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_blkcipher_init">ctx</a></td><td id="pdesc">an allocated standard block cipher context</td></tr>
+<tr><td id="param">iv</td><td id="pdesc">the new initial IV</td></tr>
+</table>
+<p id="note">Note: this is a NoOp for ECB mode.</p>
+<h2 id="usicrypt_blkcipher_exit">usicrypt_blkcipher_exit</h2>
+<p id="desc">release a standard block cipher context</p>
+<div id="proto">void usicrypt_blkcipher_exit(void *ctx)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_blkcipher_init">ctx</a></td><td id="pdesc">an allocated standard block cipher context</td></tr>
+</table>
+<h2 id="usicrypt_dskcipher_encrypt">usicrypt_dskcipher_encrypt</h2>
+<p id="desc">encrypt data using a disk storage block cipher mode</p>
+<div id="proto">int usicrypt_dskcipher_encrypt(void *ctx,void *iv,void *src,int slen,void *dst)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_dskcipher_init">ctx</a></td><td id="pdesc">an allocated disk storage block cipher context</td></tr>
+<tr><td id="param">iv</td><td id="pdesc">the iv/sector number</td></tr>
+<tr><td id="param">src</td><td id="pdesc">the data to be encrypted</td></tr>
+<tr><td id="param">slen</td><td id="pdesc">the data length in bytes</td></tr>
+<tr><td id="param">dst</td><td id="pdesc">storage area for the encrypted data</td></tr>
+<tr><td colspan="2" id="return">returns 0 in case of success and -1 in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_dskcipher_decrypt">usicrypt_dskcipher_decrypt</h2>
+<p id="desc">decrypt data using a disk storage block cipher mode</p>
+<div id="proto">int usicrypt_dskcipher_decrypt(void *ctx,void *iv,void *src,int slen,void *dst)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_dskcipher_init">ctx</a></td><td id="pdesc">an allocated disk storage block cipher context</td></tr>
+<tr><td id="param">iv</td><td id="pdesc">the iv/sector number</td></tr>
+<tr><td id="param">src</td><td id="pdesc">the data to be decrypted</td></tr>
+<tr><td id="param">slen</td><td id="pdesc">the data length in bytes</td></tr>
+<tr><td id="param">dst</td><td id="pdesc">storage area for the decrypted data</td></tr>
+<tr><td colspan="2" id="return">returns 0 in case of success and -1 in case of an error</td></tr>
+</table>
+<h2 id="usicrypt_dskcipher_init">usicrypt_dskcipher_init</h2>
+<p id="desc">allocate a disk storage block cipher context</p>
+<div id="proto">void *usicrypt_dskcipher_init(void *ctx,int cipher,int mode,void *key,int klen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#Standard Cipher Selection">cipher</a></td><td id="pdesc">the selected cipher, either AES or Camellia</td></tr>
+<tr><td id="param"><a href="#Mode Selection (block cipher disk storage modes)">mode</a></td><td id="pdesc">the cipher mode, XTS or ESSIV</td></tr>
+<tr><td id="param">key</td><td id="pdesc">the key data</td></tr>
+<tr><td id="param">klen</td><td id="pdesc">the key data length in bits (XTS: 256/512, ESSIV: 128/192/256)</td></tr>
+<tr><td colspan="2" id="return">returns the allocated disk storage block cipher context or NULL in case of an error</td></tr>
+</table>
+<p id="note">Note: the key data will always be cleared.</p>
+<h2 id="usicrypt_dskcipher_exit">usicrypt_dskcipher_exit</h2>
+<p id="desc">release a disk storage block cipher context</p>
+<div id="proto">void usicrypt_dskcipher_exit(void *ctx)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_dskcipher_init">ctx</a></td><td id="pdesc">an allocated disk storage block cipher context</td></tr>
+</table>
+<h2 id="usicrypt_aeadcipher_encrypt">usicrypt_aeadcipher_encrypt</h2>
+<p id="desc">encrypt data using a block cipher in AEAD mode</p>
+<div id="proto">int usicrypt_aeadcipher_encrypt(void *ctx,void *iv,void *src,int slen,void *aad,int alen,void *dst,void *tag)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_aeadcipher_init">ctx</a></td><td id="pdesc">an allocated AEAD block cipher context</td></tr>
+<tr><td id="param">iv</td><td id="pdesc">the nonce/iv (length specified at init time)</td></tr>
+<tr><td id="param">src</td><td id="pdesc">the data to be encrypted</td></tr>
+<tr><td id="param">slen</td><td id="pdesc">the data length in bytes</td></tr>
+<tr><td id="param">aad</td><td id="pdesc">the additional authenticated data, can be NULL</td></tr>
+<tr><td id="param">alen</td><td id="pdesc">the length of the additional authenticated data in bytes</td></tr>
+<tr><td id="param">dst</td><td id="pdesc">storage area for the encrypted data</td></tr>
+<tr><td id="param">tag</td><td id="pdesc">storage area for the tag (length specified at init time)</td></tr>
+<tr><td colspan="2" id="return">returns 0 in case of success and -1 in case of an error</td></tr>
+</table>
+<p id="note">Note: the nonce/iv must not repeat for any given key.</p>
+<h2 id="usicrypt_aeadcipher_encrypt_iov">usicrypt_aeadcipher_encrypt_iov</h2>
+<p id="desc">encrypt data using a block cipher in AEAD mode</p>
+<div id="proto">int usicrypt_aeadcipher_encrypt_iov(void *ctx,void *iv,void *src,int slen,struct usicrypt_iov *,int niov,void *dst,void *tag)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_aeadcipher_init">ctx</a></td><td id="pdesc">an allocated AEAD block cipher context</td></tr>
+<tr><td id="param">iv</td><td id="pdesc">the nonce/iv (length specified at init time)</td></tr>
+<tr><td id="param">src</td><td id="pdesc">the data to be encrypted</td></tr>
+<tr><td id="param">slen</td><td id="pdesc">the data length in bytes</td></tr>
+<tr><td id="param"><a href="#IO Vector Array">iov</a></td><td id="pdesc">pointer to an aad iov array defining the data to be processed</td></tr>
+<tr><td id="param">niov</td><td id="pdesc">total elements of the additional authenticated data iov array</td></tr>
+<tr><td id="param">dst</td><td id="pdesc">storage area for the encrypted data</td></tr>
+<tr><td id="param">tag</td><td id="pdesc">storage area for the tag (length specified at init time)</td></tr>
+<tr><td colspan="2" id="return">returns 0 in case of success and -1 in case of an error</td></tr>
+</table>
+<p id="note">Note: the nonce/iv must not repeat for any given key.</p>
+<h2 id="usicrypt_aeadcipher_decrypt">usicrypt_aeadcipher_decrypt</h2>
+<p id="desc">decrypt data using a block cipher in AEAD mode</p>
+<div id="proto">int usicrypt_aeadcipher_decrypt(void *ctx,void *iv,void *src,int slen,void *aad,int alen,void *dst,void *tag)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_aeadcipher_init">ctx</a></td><td id="pdesc">an allocated AEAD block cipher context context</td></tr>
+<tr><td id="param">iv</td><td id="pdesc">the nonce/iv (length specified at init time)</td></tr>
+<tr><td id="param">src</td><td id="pdesc">the data to be decrypted</td></tr>
+<tr><td id="param">slen</td><td id="pdesc">the data length in bytes</td></tr>
+<tr><td id="param">aad</td><td id="pdesc">the additional authenticated data, can be NULL</td></tr>
+<tr><td id="param">alen</td><td id="pdesc">the length of the additional authenticated data in bytes</td></tr>
+<tr><td id="param">dst</td><td id="pdesc">storage area for the decrypted data</td></tr>
+<tr><td id="param">tag</td><td id="pdesc">the authentication tag (length specified at init time)</td></tr>
+<tr><td colspan="2" id="return">returns 0 in case of success and -1 in case of an error</td></tr>
+</table>
+<p id="note">Note: the nonce/iv must not repeat for any given key.</p>
+<h2 id="usicrypt_aeadcipher_decrypt_iov">usicrypt_aeadcipher_decrypt_iov</h2>
+<p id="desc">decrypt data using a block cipher in AEAD mode</p>
+<div id="proto">int usicrypt_aeadcipher_decrypt_iov(void *ctx,void *iv,void *src,int slen,struct usicrypt_iov *,int niov,void *dst,void *tag)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_aeadcipher_init">ctx</a></td><td id="pdesc">an allocated AEAD block cipher context context</td></tr>
+<tr><td id="param">iv</td><td id="pdesc">the nonce/iv (length specified at init time)</td></tr>
+<tr><td id="param">src</td><td id="pdesc">the data to be decrypted</td></tr>
+<tr><td id="param">slen</td><td id="pdesc">the data length in bytes</td></tr>
+<tr><td id="param"><a href="#IO Vector Array">iov</a></td><td id="pdesc">pointer to an aad iov array defining the data to be processed</td></tr>
+<tr><td id="param">niov</td><td id="pdesc">total elements of the additional authenticated data iov array</td></tr>
+<tr><td id="param">dst</td><td id="pdesc">storage area for the decrypted data</td></tr>
+<tr><td id="param">tag</td><td id="pdesc">the authentication tag (length specified at init time)</td></tr>
+<tr><td colspan="2" id="return">returns 0 in case of success and -1 in case of an error</td></tr>
+</table>
+<p id="note">Note: the nonce/iv must not repeat for any given key.</p>
+<h2 id="usicrypt_aeadcipher_init">usicrypt_aeadcipher_init</h2>
+<p id="desc">allocate an AEAD block cipher context</p>
+<div id="proto">void *usicrypt_aeadcipher_init(void *ctx,int cipher,void *key,int klen,int ilen,int tlen)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">a thread context</td></tr>
+<tr><td id="param"><a href="#AEAD Cipher Selection">cipher</a></td><td id="pdesc">the AEAD block cipher (AES/GCM, AES/CCM, ChaCha20/Poly1305)</td></tr>
+<tr><td id="param">key</td><td id="pdesc">the key data</td></tr>
+<tr><td id="param">klen</td><td id="pdesc">the key data length in bits (128/192/256, see notes)</td></tr>
+<tr><td id="param">ilen</td><td id="pdesc">the nonce/iv length in bytes (see notes)</td></tr>
+<tr><td id="param">tlen</td><td id="pdesc">the authentication tag length in bytes (see notes)</td></tr>
+<tr><td colspan="2" id="return">returns the allocated AEAD block cipher context or NULL in case of an error</td></tr>
+</table>
+<p id="note">Note: the key data will always be cleared.</p>
+<p id="note">Note: the theoretical strength of the used block cipher with regard to precomputation attacks is 2^(n/2) where n is the key length in bits. Thus a minimum key length of 256 bits is recommended.</p>
+<p id="note">Notes for AES/GCM:<br/>Valid nonce/iv lengths in bytes are 1-16. Valid authentication tag lengths in bytes are 4-16. Portable authentication tag lengths in bytes are 4,8,12,13,14,15,16.<br/>The nonce/iv length should be set to 12, otherwise no more than 2^32 messages may be used with any given key. If the nonce/iv length is 12 and the nonce/iv contains a deterministic part the maximum amount of messages that may be used with any given key is specified by the maximum cycle of the deterministic part.</p>
+<p id="note">Notes for AES/CCM:<br/>Valid nonce/iv lengths in bytes are 7-13 =&gt; slen&lt;2^((15-IV)*8). Valid authentication tag lengths in bytes are 4-16 (only even values).</p>
+<p id="note">Note: due to operational restrictions one should not encrypt and authenticate more than 2^63 bytes with any given key (actually the real value is close to 2^64 but then 2^63 is an easy limit to test for).</p>
+<p id="note">Notes for ChaCha20/Poly1305:<br/>Valid key data length in bits is 256. Valid nonce/iv length in bytes is 12. Valid authentication tag length in bytes is 16.</p>
+<h2 id="usicrypt_aeadcipher_exit">usicrypt_aeadcipher_exit</h2>
+<p id="desc">release an AEAD block cipher context</p>
+<div id="proto">void usicrypt_aeadcipher_exit(void *ctx)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_aeadcipher_init">ctx</a></td><td id="pdesc">an allocated AEAD block cipher context</td></tr>
+</table>
+<h2 id="usicrypt_thread_init">usicrypt_thread_init</h2>
+<p id="desc">allocate a thread context</p>
+<div id="proto">void *usicrypt_thread_init(void *global)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_global_init">global</a></td><td id="pdesc">an allocated global context</td></tr>
+<tr><td colspan="2" id="return">returns the allocated thread context or NULL in case of an error</td></tr>
+</table>
+<p id="note">Note: thread contexts can be used in parallel but they are restricted to the thread they are created in.</p>
+<p id="note">Note: at least one thread context is required, even if no threads are used.</p>
+<h2 id="usicrypt_thread_exit">usicrypt_thread_exit</h2>
+<p id="desc">release a thread context</p>
+<div id="proto">void usicrypt_thread_exit(void *ctx)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_thread_init">ctx</a></td><td id="pdesc">an allocated thread context</td></tr>
+</table>
+<h2 id="usicrypt_global_init">usicrypt_global_init</h2>
+<p id="desc">allocate a global context</p>
+<div id="proto">void *usicrypt_global_init(int (*rng_seed)(void *data,int len),void (*memclear)(void *data,int len))</div>
+<table id="params">
+<tr><td id="param">rng_seed</td><td id="pdesc">a reentrant function that provides the requested amount of random data from a system random data source, the function must return 0 in case of success or -1 in case of error - can be NULL if the internal implementation shall be used</td></tr>
+<tr><td id="param">memclear</td><td id="pdesc">a reentrant function that clears the specified amount of memory to a zero value - can be NULL if the internal implementation shall be used</td></tr>
+<tr><td colspan="2" id="return">returns the allocated global context or NULL in case of an error</td></tr>
+</table>
+<p id="note">Note: a global context must be allocated once in any application.</p>
+<h2 id="usicrypt_global_exit">usicrypt_global_exit</h2>
+<p id="desc">release a global context</p>
+<div id="proto">void usicrypt_global_exit(void *ctx)</div>
+<table id="params">
+<tr><td id="param"><a href="#usicrypt_global_init">ctx</a></td><td id="pdesc">an allocated global context</td></tr>
+</table>
+<p id="note">Note: all allocated thread contexts must be released before global context release.</p>
+</body>
+</html>
