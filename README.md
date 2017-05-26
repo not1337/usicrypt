@@ -80,9 +80,14 @@ Implementation Overview:
 ========================
 
 |                         |OpenSSL|LibreSSL|mbedTLS|wolfSSL|Libgcrypt|Nettle|
+
 |                         |1.0.2k/|2.4.5/  |       |       |         |      |
+
 |                         |1.1.0e |2.5.3   |2.4.2  |3.10.2 |1.7.6    |3.3   |
-|---------------------------------------------------------------------------|
+
+
+| ----------------------- | ----- | ------ | ----- | ----- | ------- | ---- |
+
 |Random Numbers           |  x/x  |  x/x   |   x   |   x   |    x    |  x   |
 |SHA1                     |  x/x  |  x/x   |   x   |   x   |    x    |  x   |
 |SHA256                   |  x/x  |  x/x   |   x   |   x   |    x    |  x   |
@@ -152,7 +157,7 @@ Implementation Overview:
 |Camellia XTS             |  o/o  |  o/o   |   o   |   o   |    o    |  o   |
 |Camellia CBC/ESSIV/SHA256|  o/o  |  o/o   |   o   |   o   |    o    |  o   |
 |Camellia CMAC            |  x/x  |  x/x   |   o   |   o   |    x    |  o   |
-|---------------------------------------------------------------------------|
+| ----------------------- | ----- | ------ | ----- | ----- | ------- | ---- |
 
 x = native support
 o = available, no native support
