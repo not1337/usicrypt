@@ -62,17 +62,17 @@ CFLAGS+=-mrdrnd -mrdseed
 #CFLAGS+=-DUSICRYPT_NO_CCM
 #CFLAGS+=-DUSICRYPT_NO_POLY
 
-CFLAGS+=-I/tmp/wolfssl/include
-LDFLAGS+=-L/tmp/wolfssl/lib -Wl,-rpath,/tmp/wolfssl/lib
+CFLAGS+=-I/usr/local/test/wolfssl310/include
+LDFLAGS+=-L/usr/local/test/wolfssl310/lib -Wl,-rpath,/usr/local/test/wolfssl310/lib
 
-#CFLAGS+=-I/tmp/libressl/include
-#LDFLAGS+=-L/tmp/libressl/lib -Wl,-rpath,/tmp/libressl/lib
+#CFLAGS+=-I/usr/local/test/libressl24/include
+#LDFLAGS+=-L/usr/local/test/libressl24/lib -Wl,-rpath,/usr/local/test/libressl24/lib
 
-#CFLAGS+=-I/tmp/libressl25/include
-#LDFLAGS+=-L/tmp/libressl25/lib -Wl,-rpath,/tmp/libressl25/lib
+#CFLAGS+=-I/usr/local/test/libressl25/include
+#LDFLAGS+=-L/usr/local/test/libressl25/lib -Wl,-rpath,/usr/local/test/libressl25/lib
 
-CFLAGS+=-I/tmp/openssl/include
-LDFLAGS+=-L/tmp/openssl/lib -Wl,-rpath,/tmp/openssl/lib
+#CFLAGS+=-I/usr/local/test/openssl11/include
+#LDFLAGS+=-L/usr/local/test/openssl11/lib -Wl,-rpath,/usr/local/test/openssl11/lib
 
 all: libusicrypt.a libusicrypt-pic.a
 
