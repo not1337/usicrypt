@@ -38,6 +38,7 @@
 #undef USICRYPT
 
 #include <openssl/opensslv.h>
+#include <mbedtls/version.h>
 
 static int expensive=0;
 
@@ -2432,7 +2433,9 @@ static int test_x25519(void **ctx)
 		if(i==0||j==0)x=0;
 		else x=1;
 #endif
+#if MBEDTLS_VERSION_NUMBER < 0x02050000
 		if(i==1||j==1)x=0;
+#endif
 		if(x)test_x25519_pair(ctx[i],ctx[j],&cerr,&err[i],&err[j],
 			&x25519ops[i],&x25519ops[j]);
 	}
