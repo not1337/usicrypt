@@ -15,6 +15,16 @@
 #include <string.h>
 #include <stdlib.h>
 
+#if defined(USICRYPT_MBED)
+#include <mbedtls/hmac_drbg.h>
+#endif
+#if defined(USICRYPT_WOLF)
+#include <wolfssl/wolfcrypt/random.h>
+#endif
+#if defined(USICRYPT_NTTL)
+#include <nettle/yarrow.h>
+#endif
+
 #ifdef USICRYPT_TEST
 #undef USICRYPT_NO_RSA
 #undef USICRYPT_NO_DH
