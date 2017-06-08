@@ -21,6 +21,11 @@ AR=ar
 #TARGET=-DUSICRYPT_WOLF
 TARGET=-DUSICRYPT_XSSL
 #
+# Enable the following and add '-Wl,-gc-sections' to your link command
+# which links against the usicrypt library to actually remove all
+# unreferenced code:
+#CFLAGS+=-fdata-sections -ffunction-sections
+#
 # If you use OpenSSL 1.0.x or LibreSSL and don't intend to use threads
 # enable the following:
 #CFLAGS+=-DUSICRYPT_NO_THREADS
