@@ -29,9 +29,9 @@ TARGET=-DUSICRYPT_XSSL
 #
 # Enable the following and add '-flto -fuse-linker-plugin' to your link
 # command which links against the usicrypt library to enable the link time
-# optimizer - note that the plugin path may possibly vary
+# optimizer
 #CFLAGS+=-flto
-#ARFLAGS+=--plugin /usr/libexec/gcc/`uname -m`-pc-linux-gnu/`gcc -dumpversion`/liblto_plugin.so
+#ARFLAGS+=--plugin `./findliblto.sh $(CC)`
 #
 # If you use OpenSSL 1.0.x or LibreSSL and don't intend to use threads
 # enable the following:
