@@ -947,8 +947,10 @@ int usicrypt_key_type_from_p8(void *ctx,void *data,int dlen)
 
 	if(pbes2)
 	{
+#ifndef USICRYPT_NO_PBKDF2
 		if(l==sizeof(util_pbes2_oid)&&!memcmp(d,util_pbes2_oid,l))
 			return USICRYPT_PBES2;
+#endif
 		goto err1;
 	}
 
