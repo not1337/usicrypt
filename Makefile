@@ -12,6 +12,7 @@ CC=gcc
 CFLAGS=-O3 -g
 LDFLAGS=
 AR=ar
+ARFLAGS=
 #
 # Select any of the following targets
 #
@@ -25,6 +26,12 @@ TARGET=-DUSICRYPT_XSSL
 # which links against the usicrypt library to actually remove all
 # unreferenced code:
 #CFLAGS+=-fdata-sections -ffunction-sections
+#
+# Enable the following and add '-flto -fuse-linker-plugin' to your link
+# command which links against the usicrypt library to enable the link time
+# optimizer - note that the plugin path may possibly vary
+#CFLAGS+=-flto
+#ARFLAGS+=--plugin /usr/libexec/gcc/`uname -m`-pc-linux-gnu/`gcc -dumpversion`/liblto_plugin.so
 #
 # If you use OpenSSL 1.0.x or LibreSSL and don't intend to use threads
 # enable the following:
@@ -83,7 +90,7 @@ all: libusicrypt.a libusicrypt-pic.a
 
 libusicrypt.a: usicrypt_gcry.o usicrypt_mbed.o usicrypt_nttl.o \
 	usicrypt_wolf.o usicrypt_util.o usicrypt_xssl.o
-	$(AR) rcu $@ $^
+	$(AR) rcu $(ARFLAGS) $@ $^
 
 usicrypt_gcry.o: usicrypt_gcry.c usicrypt_internal.h usicrypt.h \
 	usicrypt_common.c
@@ -99,7 +106,7 @@ usicrypt_xssl.o: usicrypt_xssl.c usicrypt_internal.h usicrypt.h \
 
 libusicrypt-pic.a: usicrypt_gcry.po usicrypt_mbed.po usicrypt_nttl.po \
 	usicrypt_wolf.po usicrypt_util.po usicrypt_xssl.po
-	$(AR) rcu $@ $^
+	$(AR) rcu $(ARFLAGS) $@ $^
 
 usicrypt_gcry.po: usicrypt_gcry.c usicrypt_internal.h usicrypt.h \
 	usicrypt_common.c
