@@ -1141,10 +1141,11 @@ struct usicrypt_iov
 <tr><td id="param"><a href="#Mode Selection (standard block cipher modes)">mode</a></td><td id="pdesc">the cipher mode, Stream, ECB, CBC, CTS, CFB, CFB8, OFB or CTR</td></tr>
 <tr><td id="param">key</td><td id="pdesc">the key data</td></tr>
 <tr><td id="param">klen</td><td id="pdesc">the key data length in bits (128/192/256)</td></tr>
-<tr><td id="param">iv</td><td id="pdesc">the initial IV (ignored for ECB mode)</td></tr>
+<tr><td id="param">iv</td><td id="pdesc">the initial IV, can be NULL (ignored for ECB mode)</td></tr>
 <tr><td colspan="2" id="return">returns the allocated standard block cipher context or NULL in case of an error</td></tr>
 </table>
 <p id="note">Note: the key data will always be cleared.</p>
+<p id="note">Note: if the IV is NULL, an all zeroes IV is used internally.</p>
 <p id="note">AES/Camellia Notes:<br/>The IV length is 16 bytes. The Stream cipher mode is invalid.</p>
 <p id="note">ChaCha20 Notes:<br/>The key length must be 256 bits and the IV length is 8 bytes. The cipher mode must be Stream.<br/>Due to the vastly varying library implementations of ChaCha20 the following limitations are necessary for proper interworking:<br/><br/>The nonce when setting the IV will always be:<br/>CCCCZZZZIIIIIIII<br/>C=counter bytes, initialized to zero<br/>Z=all zero bytes<br/>I=IV bytes<br/>Always assume that the counter is 32 bits only</p>
 <h2 id="usicrypt_blkcipher_reset">usicrypt_blkcipher_reset</h2>

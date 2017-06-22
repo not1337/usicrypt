@@ -496,8 +496,8 @@ static int xssl_reseed(void *ctx)
 	int r=-1;
 	unsigned char bfr[32];
 
-	if(((struct usicrypt_thread *)ctx)->global->rng_seed(bfr,sizeof(bfr)))
-		goto err1;
+	if(U(((struct usicrypt_thread *)ctx)->global->
+		rng_seed(bfr,sizeof(bfr))))goto err1;
 	RAND_add(bfr,sizeof(bfr),sizeof(bfr));
 	r=0;
 err1:	((struct usicrypt_thread *)ctx)->global->memclear(bfr,sizeof(bfr));
@@ -574,13 +574,13 @@ static int xssl_asn_next(unsigned char *prm,int len,unsigned char id,
 	int n;
 
 	*hlen=2;
-	if(len<=1)goto err1;
-	if(prm[0]!=id)goto err1;
+	if(U(len<=1))goto err1;
+	if(U(prm[0]!=id))goto err1;
 	if(prm[1]&0x80)
 	{
 		*hlen=prm[1]&0x7f;
-		if(*hlen<1||*hlen>3)goto err1;
-		if(len<*hlen+2)goto err1;
+		if(U(*hlen<1)||U(*hlen>3))goto err1;
+		if(U(len<*hlen+2))goto err1;
 		*dlen=0;
 		n=2;
 		switch(*hlen)
@@ -594,7 +594,7 @@ static int xssl_asn_next(unsigned char *prm,int len,unsigned char id,
 		*hlen+=2;
 	}
 	else *dlen=prm[1];
-	if(*hlen+*dlen>len)goto err1;
+	if(U(*hlen+*dlen>len))goto err1;
 	return 0;
 
 err1:	return -1;
@@ -618,17 +618,17 @@ static int xssl_add_oaep_mgf1(unsigned char *dst,int dlen,
 	unsigned char sm[SHA512_DIGEST_LENGTH];
 
 	len=EVP_MD_size(md);
-	if(dlen-1<2*len+1)goto err1;
+	if(U(dlen-1<2*len+1))goto err1;
 	dst[0]=0x00;
-	if(RAND_bytes(dst+1,len)!=1)goto err1;
-	if(!EVP_Digest(p,plen,dst+len+1,NULL,md,NULL))goto err1;
+	if(U(RAND_bytes(dst+1,len)!=1))goto err1;
+	if(U(!EVP_Digest(p,plen,dst+len+1,NULL,md,NULL)))goto err1;
 	memset(dst+2*len+1,0,dlen-slen-2*len-2);
 	dst[dlen-slen-1]=0x01;
 	memcpy(dst+dlen-slen,src,slen);
-	if(!(dm=malloc(dlen-len-1)))goto err1;
-	if(PKCS1_MGF1(dm,dlen-len-1,dst+1,len,md))goto err2;
+	if(U(!(dm=malloc(dlen-len-1))))goto err1;
+	if(U(PKCS1_MGF1(dm,dlen-len-1,dst+1,len,md)))goto err2;
 	for(i=0;i<dlen-len-1;i++)dst[i+len+1]^=dm[i];
-	if(PKCS1_MGF1(sm,len,dst+len+1,dlen-len-1,md))goto err3;
+	if(U(PKCS1_MGF1(sm,len,dst+len+1,dlen-len-1,md)))goto err3;
 	for(i=0;i<len;i++)dst[i+1]^=sm[i];
 	OPENSSL_cleanse(sm,sizeof(sm));
 	OPENSSL_cleanse(dm,dlen-len-1);
@@ -655,19 +655,19 @@ static int xssl_check_oaep_mgf1(unsigned char *dst,int dlen,
 	unsigned char wrk[SHA512_DIGEST_LENGTH];
 
 	len=EVP_MD_size(md);
-	if(n<2*len+2||n-1<slen)goto err1;
-	if(!(mem=malloc(2*n-len-2)))goto err1;
+	if(U(n<2*len+2)||U(n-1<slen))goto err1;
+	if(U(!(mem=malloc(2*n-len-2))))goto err1;
 	memset(mem+n-len-1,0,n-slen-1);
 	memcpy(mem+2*n-slen-len-2,src,slen);
-	if(PKCS1_MGF1(wrk,len,mem+n-1,n-len-1,md))goto err2;
+	if(U(PKCS1_MGF1(wrk,len,mem+n-1,n-len-1,md)))goto err2;
 	for(i=0;i<len;i++)wrk[i]^=mem[i+n-len-1];
-	if(PKCS1_MGF1(mem,n-len-1,wrk,len,md))goto err2;
+	if(U(PKCS1_MGF1(mem,n-len-1,wrk,len,md)))goto err2;
 	for(i=0;i<n-len-1;i++)mem[i]^=mem[i+n-1];
 	if(!EVP_Digest(p,plen,wrk,NULL,md,NULL))goto err2;
 	if(memcmp(mem,wrk,len))goto err2;
 	for(i=len;i<n-len-1;i++)if(mem[i])break;
-	if(i==n-len-1||mem[i]!=0x01)goto err2;
-	if(dlen<(l=n-i-len-2))goto err2;
+	if(U(i==n-len-1)||U(mem[i]!=0x01))goto err2;
+	if(U(dlen<(l=n-i-len-2)))goto err2;
 	memcpy(dst,mem+i+1,l);
 	OPENSSL_cleanse(wrk,sizeof(wrk));
 	OPENSSL_cleanse(mem,2*n-len-2);
@@ -725,23 +725,23 @@ static void *xssl_rsa_do_sign_v15(void *ctx,int md,void *key,void *data,
 	default:goto err1;
 	}
 
-	if(!(c=EVP_MD_CTX_create()))goto err1;
-	if(!EVP_DigestInit_ex(c,digest,NULL))goto err2;
+	if(U(!(c=EVP_MD_CTX_create())))goto err1;
+	if(U(!EVP_DigestInit_ex(c,digest,NULL)))goto err2;
 	if(!mode)
 	{
-		if(!EVP_DigestUpdate(c,data,dlen))goto err2;
+		if(U(!EVP_DigestUpdate(c,data,dlen)))goto err2;
 	}
 	else for(i=0;i<dlen;i++)
-		if(!EVP_DigestUpdate(c,iov[i].data,iov[i].length))
+		if(U(!EVP_DigestUpdate(c,iov[i].data,iov[i].length)))
 			goto err2;
-	if(!EVP_DigestFinal_ex(c,hash,NULL))goto err2;
+	if(U(!EVP_DigestFinal_ex(c,hash,NULL)))goto err2;
 
-	if(!(rsa=EVP_PKEY_get1_RSA(key)))goto err2;
+	if(U(!(rsa=EVP_PKEY_get1_RSA(key))))goto err2;
 	*slen=RSA_size(rsa);
-	if(!(tmp=malloc(*slen)))goto err3;
-	if(!(sig=malloc(*slen)))goto err4;
-	if(!(RSA_padding_add_PKCS1_type_1(tmp,*slen,hash,len)))goto err6;
-	if(RSA_private_encrypt(*slen,tmp,sig,rsa,RSA_NO_PADDING)==*slen)
+	if(U(!(tmp=malloc(*slen))))goto err3;
+	if(U(!(sig=malloc(*slen))))goto err4;
+	if(U(!(RSA_padding_add_PKCS1_type_1(tmp,*slen,hash,len))))goto err6;
+	if(L(RSA_private_encrypt(*slen,tmp,sig,rsa,RSA_NO_PADDING)==*slen))
 		goto err5;
 
 	((struct usicrypt_thread *)ctx)->global->memclear(sig,*slen);
@@ -802,25 +802,26 @@ static int xssl_rsa_do_verify_v15(void *ctx,int md,void *key,void *data,
 	default:goto err1;
 	}
 
-	if(!(c=EVP_MD_CTX_create()))goto err1;
-	if(!EVP_DigestInit_ex(c,digest,NULL))goto err2;
+	if(U(!(c=EVP_MD_CTX_create())))goto err1;
+	if(U(!EVP_DigestInit_ex(c,digest,NULL)))goto err2;
 	if(!mode)
 	{
-		if(!EVP_DigestUpdate(c,data,dlen))goto err2;
+		if(U(!EVP_DigestUpdate(c,data,dlen)))goto err2;
 	}
 	else for(i=0;i<dlen;i++)
-		if(!EVP_DigestUpdate(c,iov[i].data,iov[i].length))
+		if(U(!EVP_DigestUpdate(c,iov[i].data,iov[i].length)))
 			goto err2;
-	if(!EVP_DigestFinal_ex(c,hash,NULL))goto err2;
+	if(U(!EVP_DigestFinal_ex(c,hash,NULL)))goto err2;
 
-	if(!(rsa=EVP_PKEY_get1_RSA(key)))goto err2;
-	if(RSA_size(rsa)!=slen)goto err3;
-	if(!(tmp=malloc(slen)))goto err3;
-	if(RSA_public_decrypt(slen,sig,tmp,rsa,RSA_NO_PADDING)!=slen)goto err4;
-	if(tmp[0])goto err4;
-	if(RSA_padding_check_PKCS1_type_1(cmp,sizeof(cmp),tmp+1,slen-1,slen)
-		!=len)goto err5;
-	if(memcmp(hash,cmp,len))goto err5;
+	if(U(!(rsa=EVP_PKEY_get1_RSA(key))))goto err2;
+	if(U(RSA_size(rsa)!=slen))goto err3;
+	if(U(!(tmp=malloc(slen))))goto err3;
+	if(U(RSA_public_decrypt(slen,sig,tmp,rsa,RSA_NO_PADDING)!=slen))
+		goto err4;
+	if(U(tmp[0]))goto err4;
+	if(U(RSA_padding_check_PKCS1_type_1(cmp,sizeof(cmp),tmp+1,slen-1,slen)
+		!=len))goto err5;
+	if(U(memcmp(hash,cmp,len)))goto err5;
 	r=0;
 
 err5:	((struct usicrypt_thread *)ctx)->global->memclear(cmp,sizeof(cmp));
@@ -878,25 +879,25 @@ static void *xssl_rsa_do_sign_pss(void *ctx,int md,void *key,void *data,
 	default:goto err1;
 	}
 
-	if(!(c=EVP_MD_CTX_create()))goto err1;
-	if(!EVP_DigestInit_ex(c,type,NULL))goto err2;
+	if(U(!(c=EVP_MD_CTX_create())))goto err1;
+	if(U(!EVP_DigestInit_ex(c,type,NULL)))goto err2;
 	if(!mode)
 	{
-		if(!EVP_DigestUpdate(c,data,dlen))goto err2;
+		if(U(!EVP_DigestUpdate(c,data,dlen)))goto err2;
 	}
 	else for(i=0;i<dlen;i++)
-		if(!EVP_DigestUpdate(c,iov[i].data,iov[i].length))
+		if(U(!EVP_DigestUpdate(c,iov[i].data,iov[i].length)))
 			goto err2;
-	if(!EVP_DigestFinal_ex(c,hash,NULL))goto err2;
+	if(U(!EVP_DigestFinal_ex(c,hash,NULL)))goto err2;
 
-	if(xssl_reseed(ctx))goto err2;
-	if(!(rsa=EVP_PKEY_get1_RSA(key)))goto err2;
+	if(U(xssl_reseed(ctx)))goto err2;
+	if(U(!(rsa=EVP_PKEY_get1_RSA(key))))goto err2;
 	*slen=RSA_size(rsa);
-	if(*slen-2*len-2<0)goto err3;
-	if(!(tmp=malloc(*slen)))goto err3;
-	if(!(sig=malloc(*slen)))goto err4;
-	if(!(RSA_padding_add_PKCS1_PSS(rsa,tmp,hash,type,-2)))goto err5;
-	if(RSA_private_encrypt(*slen,tmp,sig,rsa,RSA_NO_PADDING)==*slen)
+	if(U(*slen-2*len-2<0))goto err3;
+	if(U(!(tmp=malloc(*slen))))goto err3;
+	if(U(!(sig=malloc(*slen))))goto err4;
+	if(U(!(RSA_padding_add_PKCS1_PSS(rsa,tmp,hash,type,-2))))goto err5;
+	if(L(RSA_private_encrypt(*slen,tmp,sig,rsa,RSA_NO_PADDING)==*slen))
 		goto err4;
 
 	((struct usicrypt_thread *)ctx)->global->memclear(sig,*slen);
@@ -956,23 +957,24 @@ static int xssl_rsa_do_verify_pss(void *ctx,int md,void *key,void *data,
 	default:goto err1;
 	}
 
-	if(!(c=EVP_MD_CTX_create()))goto err1;
-	if(!EVP_DigestInit_ex(c,type,NULL))goto err2;
+	if(U(!(c=EVP_MD_CTX_create())))goto err1;
+	if(U(!EVP_DigestInit_ex(c,type,NULL)))goto err2;
 	if(!mode)
 	{
-		if(!EVP_DigestUpdate(c,data,dlen))goto err2;
+		if(U(!EVP_DigestUpdate(c,data,dlen)))goto err2;
 	}
 	else for(i=0;i<dlen;i++)
-		if(!EVP_DigestUpdate(c,iov[i].data,iov[i].length))
+		if(U(!EVP_DigestUpdate(c,iov[i].data,iov[i].length)))
 			goto err2;
-	if(!EVP_DigestFinal_ex(c,hash,NULL))goto err2;
+	if(U(!EVP_DigestFinal_ex(c,hash,NULL)))goto err2;
 
-	if(!(rsa=EVP_PKEY_get1_RSA(key)))goto err2;
-	if(RSA_size(rsa)!=slen)goto err2;
-	if(slen-2*len-2<0)goto err2;
-	if(!(tmp=malloc(slen)))goto err3;
-	if(RSA_public_decrypt(slen,sig,tmp,rsa,RSA_NO_PADDING)!=slen)goto err4;
-	if(RSA_verify_PKCS1_PSS(rsa,hash,type,tmp,-2)!=1)goto err4;
+	if(U(!(rsa=EVP_PKEY_get1_RSA(key))))goto err2;
+	if(U(RSA_size(rsa)!=slen))goto err2;
+	if(U(slen-2*len-2<0))goto err2;
+	if(U(!(tmp=malloc(slen))))goto err3;
+	if(U(RSA_public_decrypt(slen,sig,tmp,rsa,RSA_NO_PADDING)!=slen))
+		goto err4;
+	if(U(RSA_verify_PKCS1_PSS(rsa,hash,type,tmp,-2)!=1))goto err4;
 	r=0;
 
 err4:	((struct usicrypt_thread *)ctx)->global->memclear(tmp,slen);
@@ -1023,19 +1025,19 @@ static void *xssl_ec_do_sign(void *ctx,int md,void *key,void *data,int dlen,
 	default:goto err1;
 	}
 
-	if(xssl_reseed(ctx))goto err1;
-	if(!(c=EVP_MD_CTX_create()))goto err1;
-	if(EVP_DigestSignInit(c,NULL,type,NULL,key)!=1)goto err2;
+	if(U(xssl_reseed(ctx)))goto err1;
+	if(U(!(c=EVP_MD_CTX_create())))goto err1;
+	if(U(EVP_DigestSignInit(c,NULL,type,NULL,key)!=1))goto err2;
 	if(!mode)
 	{
-		if(EVP_DigestSignUpdate(c,data,dlen)!=1)goto err2;
+		if(U(EVP_DigestSignUpdate(c,data,dlen)!=1))goto err2;
 	}
 	else for(l=0;l<dlen;l++)
-		if(EVP_DigestSignUpdate(c,iov[l].data,iov[l].length)!=1)
+		if(U(EVP_DigestSignUpdate(c,iov[l].data,iov[l].length)!=1))
 			goto err2;
-	if(EVP_DigestSignFinal(c,NULL,&l)!=1)goto err2;
-	if(!(sig=malloc(l)))goto err2;
-	if(EVP_DigestSignFinal(c,sig,&l)!=1)goto err3;
+	if(U(EVP_DigestSignFinal(c,NULL,&l)!=1))goto err2;
+	if(U(!(sig=malloc(l))))goto err2;
+	if(U(EVP_DigestSignFinal(c,sig,&l)!=1))goto err3;
 	EVP_MD_CTX_destroy(c);
 	*slen=l;
 	return sig;
@@ -1080,16 +1082,16 @@ static int xssl_ec_do_verify(void *ctx,int md,void *key,void *data,int dlen,
 	default:goto err1;
 	}
 
-	if(!(c=EVP_MD_CTX_create()))goto err1;
-	if(EVP_DigestVerifyInit(c,NULL,type,NULL,key)!=1)goto err2;
+	if(U(!(c=EVP_MD_CTX_create())))goto err1;
+	if(U(EVP_DigestVerifyInit(c,NULL,type,NULL,key)!=1))goto err2;
 	if(!mode)
 	{
-		if(EVP_DigestVerifyUpdate(c,data,dlen)!=1)goto err2;
+		if(U(EVP_DigestVerifyUpdate(c,data,dlen)!=1))goto err2;
 	}
 	else for(i=0;i<dlen;i++)
-		if(EVP_DigestVerifyUpdate(c,iov[i].data,iov[i].length)!=1)
+		if(U(EVP_DigestVerifyUpdate(c,iov[i].data,iov[i].length))!=1)
 			goto err2;
-	if(EVP_DigestVerifyFinal(c,sig,slen)!=1)goto err2;
+	if(U(EVP_DigestVerifyFinal(c,sig,slen)!=1))goto err2;
 	r=0;
 err2:	EVP_MD_CTX_destroy(c);
 err1:	return r;
@@ -1119,10 +1121,10 @@ static int xssl_aes_cmac(void *ctx,void *key,int klen,void *src,int slen,
 		break;
 	default:goto err1;
 	}
-	if(!(c=CMAC_CTX_new()))goto err1;
-	if(CMAC_Init(c,key,klen>>3,type,NULL)!=1)goto err2;
-	if(CMAC_Update(c,src,slen)!=1)goto err2;
-	if(CMAC_Final(c,dst,&unused)!=1)goto err2;
+	if(U(!(c=CMAC_CTX_new())))goto err1;
+	if(U(CMAC_Init(c,key,klen>>3,type,NULL)!=1))goto err2;
+	if(U(CMAC_Update(c,src,slen)!=1))goto err2;
+	if(U(CMAC_Final(c,dst,&unused)!=1))goto err2;
 	CMAC_CTX_free(c);
 	return 0;
 
@@ -1153,11 +1155,11 @@ static int xssl_aes_cmac_iov(void *ctx,void *key,int klen,
 		break;
 	default:goto err1;
 	}
-	if(!(c=CMAC_CTX_new()))goto err1;
-	if(CMAC_Init(c,key,klen>>3,type,NULL)!=1)goto err2;
-	for(i=0;i<niov;i++)if(CMAC_Update(c,iov[i].data,iov[i].length)!=1)
+	if(U(!(c=CMAC_CTX_new())))goto err1;
+	if(U(CMAC_Init(c,key,klen>>3,type,NULL)!=1))goto err2;
+	for(i=0;i<niov;i++)if(U(CMAC_Update(c,iov[i].data,iov[i].length)!=1))
 		goto err2;
-	if(CMAC_Final(c,dst,&unused)!=1)goto err2;
+	if(U(CMAC_Final(c,dst,&unused)!=1))goto err2;
 	CMAC_CTX_free(c);
 	return 0;
 
@@ -1174,7 +1176,7 @@ static int xssl_aes_ecb_encrypt(void *ctx,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	for(;slen;s+=16,d+=16,slen-=16)AES_ecb_encrypt(s,d,
 		&((struct xssl_aes_ecb *)ctx)->enc,AES_ENCRYPT);
 	return 0;
@@ -1185,7 +1187,7 @@ static int xssl_aes_ecb_decrypt(void *ctx,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	for(;slen;s+=16,d+=16,slen-=16)AES_ecb_encrypt(s,d,
 		&((struct xssl_aes_ecb *)ctx)->dec,AES_DECRYPT);
 	return 0;
@@ -1195,10 +1197,10 @@ static void *xssl_aes_ecb_init(void *ctx,void *key,int klen)
 {
 	struct xssl_aes_ecb *aes;
 
-	if(!(aes=malloc(sizeof(struct xssl_aes_ecb))))goto err1;
+	if(U(!(aes=malloc(sizeof(struct xssl_aes_ecb)))))goto err1;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
-	if(AES_set_encrypt_key(key,klen,&aes->enc))goto err2;
-	if(AES_set_decrypt_key(key,klen,&aes->dec))goto err2;
+	if(U(AES_set_encrypt_key(key,klen,&aes->enc)))goto err2;
+	if(U(AES_set_decrypt_key(key,klen,&aes->dec)))goto err2;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
 
@@ -1226,7 +1228,7 @@ static int xssl_aes_cbc_encrypt(void *ctx,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	for(;slen;s+=16,d+=16,slen-=16)AES_cbc_encrypt(s,d,16,
 		&((struct xssl_aes_cbc *)ctx)->enc,
 		((struct xssl_aes_cbc *)ctx)->iv,AES_ENCRYPT);
@@ -1238,7 +1240,7 @@ static int xssl_aes_cbc_decrypt(void *ctx,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	for(;slen;s+=16,d+=16,slen-=16)AES_cbc_encrypt(s,d,16,
 		&((struct xssl_aes_cbc *)ctx)->dec,
 		((struct xssl_aes_cbc *)ctx)->iv,AES_DECRYPT);
@@ -1249,11 +1251,12 @@ static void *xssl_aes_cbc_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct xssl_aes_cbc *aes;
 
-	if(!(aes=malloc(sizeof(struct xssl_aes_cbc))))goto err1;
+	if(U(!(aes=malloc(sizeof(struct xssl_aes_cbc)))))goto err1;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
-	if(AES_set_encrypt_key(key,klen,&aes->enc))goto err2;
-	if(AES_set_decrypt_key(key,klen,&aes->dec))goto err2;
-	memcpy(aes->iv,iv,16);
+	if(U(AES_set_encrypt_key(key,klen,&aes->enc)))goto err2;
+	if(U(AES_set_decrypt_key(key,klen,&aes->dec)))goto err2;
+	if(iv)memcpy(aes->iv,iv,16);
+	else memset(aes->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
 
@@ -1283,7 +1286,7 @@ static void xssl_aes_cbc_exit(void *ctx)
 
 static int xssl_aes_cts_encrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen<=16)return -1;
+	if(U(slen<=16))return -1;
 	CRYPTO_cts128_encrypt(src,dst,slen,&((struct xssl_aes_cbc *)ctx)->enc,
 		((struct xssl_aes_cbc *)ctx)->iv,(void *)AES_cbc_encrypt);
 	return 0;
@@ -1291,7 +1294,7 @@ static int xssl_aes_cts_encrypt(void *ctx,void *src,int slen,void *dst)
 
 static int xssl_aes_cts_decrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen<=16)return -1;
+	if(U(slen<=16))return -1;
 	CRYPTO_cts128_decrypt(src,dst,slen,&((struct xssl_aes_cbc *)ctx)->dec,
 		((struct xssl_aes_cbc *)ctx)->iv,(void *)AES_cbc_encrypt);
 	return 0;
@@ -1301,11 +1304,12 @@ static void *xssl_aes_cts_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct xssl_aes_cbc *aes;
 
-	if(!(aes=malloc(sizeof(struct xssl_aes_cbc))))goto err1;
+	if(U(!(aes=malloc(sizeof(struct xssl_aes_cbc)))))goto err1;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
-	if(AES_set_encrypt_key(key,klen,&aes->enc))goto err2;
-	if(AES_set_decrypt_key(key,klen,&aes->dec))goto err2;
-	memcpy(aes->iv,iv,16);
+	if(U(AES_set_encrypt_key(key,klen,&aes->enc)))goto err2;
+	if(U(AES_set_decrypt_key(key,klen,&aes->dec)))goto err2;
+	if(iv)memcpy(aes->iv,iv,16);
+	else memset(aes->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
 
@@ -1353,11 +1357,12 @@ static void *xssl_aes_cfb_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct xssl_aes_cfb *aes;
 
-	if(!(aes=malloc(sizeof(struct xssl_aes_cfb))))goto err1;
+	if(U(!(aes=malloc(sizeof(struct xssl_aes_cfb)))))goto err1;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	aes->num=0;
-	if(AES_set_encrypt_key(key,klen,&aes->enc))goto err2;
-	memcpy(aes->iv,iv,16);
+	if(U(AES_set_encrypt_key(key,klen,&aes->enc)))goto err2;
+	if(iv)memcpy(aes->iv,iv,16);
+	else memset(aes->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
 
@@ -1401,10 +1406,11 @@ static void *xssl_aes_cfb8_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct xssl_aes_cfb8 *aes;
 
-	if(!(aes=malloc(sizeof(struct xssl_aes_cfb8))))goto err1;
+	if(U(!(aes=malloc(sizeof(struct xssl_aes_cfb8)))))goto err1;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
-	if(AES_set_encrypt_key(key,klen,&aes->enc))goto err2;
-	memcpy(aes->iv,iv,16);
+	if(U(AES_set_encrypt_key(key,klen,&aes->enc)))goto err2;
+	if(iv)memcpy(aes->iv,iv,16);
+	else memset(aes->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
 
@@ -1451,12 +1457,13 @@ static void *xssl_aes_ofb_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct xssl_aes_ofb *aes;
 
-	if(!(aes=malloc(sizeof(struct xssl_aes_ofb))))goto err1;
+	if(U(!(aes=malloc(sizeof(struct xssl_aes_ofb)))))goto err1;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	memset(aes->zero,0,16);
 	aes->n=0;
-	if(AES_set_encrypt_key(key,klen,&aes->enc))goto err2;
-	memcpy(aes->iv,iv,16);
+	if(U(AES_set_encrypt_key(key,klen,&aes->enc)))goto err2;
+	if(iv)memcpy(aes->iv,iv,16);
+	else memset(aes->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
 
@@ -1519,12 +1526,13 @@ static void *xssl_aes_ctr_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct xssl_aes_ctr *aes;
 
-	if(!(aes=malloc(sizeof(struct xssl_aes_ctr))))goto err1;
+	if(U(!(aes=malloc(sizeof(struct xssl_aes_ctr)))))goto err1;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	memset(aes->zero,0,16);
 	aes->n=0;
-	if(AES_set_encrypt_key(key,klen,&aes->enc))goto err2;
-	memcpy(aes->iv,iv,16);
+	if(U(AES_set_encrypt_key(key,klen,&aes->enc)))goto err2;
+	if(iv)memcpy(aes->iv,iv,16);
+	else memset(aes->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
 
@@ -1556,13 +1564,13 @@ static int xssl_aes_xts_encrypt(void *ctx,void *iv,void *src,int slen,void *dst)
 {
 	int len;
 
-	if(slen<16)goto err1;
-	if(EVP_EncryptInit_ex(((struct xssl_aes_xts *)ctx)->enc,NULL,NULL,NULL,
-		iv)!=1)goto err1;
-	if(EVP_EncryptUpdate(((struct xssl_aes_xts *)ctx)->enc,dst,&len,
-		src,slen)!=1)goto err1;
-	if(EVP_EncryptFinal_ex(((struct xssl_aes_xts *)ctx)->enc,
-		((unsigned char *)dst)+len,&len)!=1)goto err1;
+	if(U(slen<16))goto err1;
+	if(U(EVP_EncryptInit_ex(((struct xssl_aes_xts *)ctx)->enc,NULL,NULL,
+		NULL,iv)!=1))goto err1;
+	if(U(EVP_EncryptUpdate(((struct xssl_aes_xts *)ctx)->enc,dst,&len,
+		src,slen)!=1))goto err1;
+	if(U(EVP_EncryptFinal_ex(((struct xssl_aes_xts *)ctx)->enc,
+		((unsigned char *)dst)+len,&len)!=1))goto err1;
 	return 0;
 
 err1:	return -1;
@@ -1572,13 +1580,13 @@ static int xssl_aes_xts_decrypt(void *ctx,void *iv,void *src,int slen,void *dst)
 {
 	int len;
 
-	if(slen<16)goto err1;
-	if(EVP_DecryptInit_ex(((struct xssl_aes_xts *)ctx)->dec,NULL,NULL,NULL,
-		iv)!=1)goto err1;
-	if(EVP_DecryptUpdate(((struct xssl_aes_xts *)ctx)->dec,dst,&len,
-		src,slen)!=1)goto err1;
-	if(EVP_DecryptFinal_ex(((struct xssl_aes_xts *)ctx)->dec,
-		((unsigned char *)dst)+len,&len)!=1)goto err1;
+	if(U(slen<16))goto err1;
+	if(U(EVP_DecryptInit_ex(((struct xssl_aes_xts *)ctx)->dec,NULL,NULL,
+		NULL,iv)!=1))goto err1;
+	if(U(EVP_DecryptUpdate(((struct xssl_aes_xts *)ctx)->dec,dst,&len,
+		src,slen)!=1))goto err1;
+	if(U(EVP_DecryptFinal_ex(((struct xssl_aes_xts *)ctx)->dec,
+		((unsigned char *)dst)+len,&len)!=1))goto err1;
 	return 0;
 
 err1:	return -1;
@@ -1599,11 +1607,11 @@ static void *xssl_aes_xts_init(void *ctx,void *key,int klen)
 		break;
 	default:goto err1;
 	}
-	if(!(xts=malloc(sizeof(struct xssl_aes_xts))))goto err1;
-	if(!(xts->enc=EVP_CIPHER_CTX_new()))goto err2;
-	if(EVP_EncryptInit_ex(xts->enc,type,NULL,key,NULL)!=1)goto err3;
-	if(!(xts->dec=EVP_CIPHER_CTX_new()))goto err3;
-	if(EVP_DecryptInit_ex(xts->dec,type,NULL,key,NULL)!=1)goto err4;
+	if(U(!(xts=malloc(sizeof(struct xssl_aes_xts)))))goto err1;
+	if(U(!(xts->enc=EVP_CIPHER_CTX_new())))goto err2;
+	if(U(EVP_EncryptInit_ex(xts->enc,type,NULL,key,NULL)!=1))goto err3;
+	if(U(!(xts->dec=EVP_CIPHER_CTX_new())))goto err3;
+	if(U(EVP_DecryptInit_ex(xts->dec,type,NULL,key,NULL)!=1))goto err4;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return xts;
 
@@ -1657,12 +1665,12 @@ static void *xssl_aes_essiv_init(void *ctx,void *key,int klen)
 	struct xssl_aes_essiv *aes;
 	unsigned char tmp[SHA256_DIGEST_LENGTH];
 
-	if(!(aes=malloc(sizeof(struct xssl_aes_essiv))))goto err1;
+	if(U(!(aes=malloc(sizeof(struct xssl_aes_essiv)))))goto err1;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
-	if(AES_set_encrypt_key(key,klen,&aes->enc))goto err2;
-	if(AES_set_decrypt_key(key,klen,&aes->dec))goto err2;
-	if(!SHA256(key,klen>>3,tmp))goto err2;
-	if(AES_set_encrypt_key(tmp,256,&aes->aux))goto err3;
+	if(U(AES_set_encrypt_key(key,klen,&aes->enc)))goto err2;
+	if(U(AES_set_decrypt_key(key,klen,&aes->dec)))goto err2;
+	if(U(!SHA256(key,klen>>3,tmp)))goto err2;
+	if(U(AES_set_encrypt_key(tmp,256,&aes->aux)))goto err3;
 	((struct usicrypt_thread *)ctx)->global->memclear(tmp,sizeof(tmp));
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
@@ -1699,14 +1707,14 @@ static int xssl_aes_gcm_encrypt(void *ctx,void *iv,void *src,int slen,
 	int dlen;
 	EVP_CIPHER_CTX *c=((struct xssl_aes_xcm *)ctx)->enc;
 
-	if(EVP_EncryptInit_ex(c,NULL,NULL,NULL,iv)!=1)goto err1;
-	if(aad&&alen)if(EVP_EncryptUpdate(c,NULL,&l,aad,alen)!=1)goto err1;
-	if(EVP_EncryptUpdate(c,dst,&l,src,slen)!=1)goto err1;
+	if(U(EVP_EncryptInit_ex(c,NULL,NULL,NULL,iv)!=1))goto err1;
+	if(aad&&alen)if(U(EVP_EncryptUpdate(c,NULL,&l,aad,alen)!=1))goto err1;
+	if(U(EVP_EncryptUpdate(c,dst,&l,src,slen)!=1))goto err1;
 	dlen=l;
-	if(EVP_EncryptFinal_ex(c,((unsigned char *)dst)+l,&l)!=1)goto err1;
-	if(EVP_CIPHER_CTX_ctrl(c,EVP_CTRL_GCM_GET_TAG,
-		((struct xssl_aes_xcm *)ctx)->tlen,tag)!=1)goto err1;
-	if(dlen+l!=slen)goto err1;
+	if(U(EVP_EncryptFinal_ex(c,((unsigned char *)dst)+l,&l)!=1))goto err1;
+	if(U(EVP_CIPHER_CTX_ctrl(c,EVP_CTRL_GCM_GET_TAG,
+		((struct xssl_aes_xcm *)ctx)->tlen,tag)!=1))goto err1;
+	if(U(dlen+l!=slen))goto err1;
 	return 0;
 
 err1:	return -1;
@@ -1722,15 +1730,15 @@ static int xssl_aes_gcm_encrypt_iov(void *ctx,void *iv,void *src,int slen,
 	int dlen;
 	EVP_CIPHER_CTX *c=((struct xssl_aes_xcm *)ctx)->enc;
 
-	if(EVP_EncryptInit_ex(c,NULL,NULL,NULL,iv)!=1)goto err1;
-	for(i=0;i<niov;i++)if(EVP_EncryptUpdate(c,NULL,&l,iov[i].data,
-		iov[i].length)!=1)goto err1;
-	if(EVP_EncryptUpdate(c,dst,&l,src,slen)!=1)goto err1;
+	if(U(EVP_EncryptInit_ex(c,NULL,NULL,NULL,iv)!=1))goto err1;
+	for(i=0;i<niov;i++)if(U(EVP_EncryptUpdate(c,NULL,&l,iov[i].data,
+		iov[i].length)!=1))goto err1;
+	if(U(EVP_EncryptUpdate(c,dst,&l,src,slen)!=1))goto err1;
 	dlen=l;
-	if(EVP_EncryptFinal_ex(c,((unsigned char *)dst)+l,&l)!=1)goto err1;
-	if(EVP_CIPHER_CTX_ctrl(c,EVP_CTRL_GCM_GET_TAG,
-		((struct xssl_aes_xcm *)ctx)->tlen,tag)!=1)goto err1;
-	if(dlen+l!=slen)goto err1;
+	if(U(EVP_EncryptFinal_ex(c,((unsigned char *)dst)+l,&l)!=1))goto err1;
+	if(U(EVP_CIPHER_CTX_ctrl(c,EVP_CTRL_GCM_GET_TAG,
+		((struct xssl_aes_xcm *)ctx)->tlen,tag)!=1))goto err1;
+	if(U(dlen+l!=slen))goto err1;
 	return 0;
 
 err1:	return -1;
@@ -1745,14 +1753,14 @@ static int xssl_aes_gcm_decrypt(void *ctx,void *iv,void *src,int slen,
 	int dlen;
 	EVP_CIPHER_CTX *c=((struct xssl_aes_xcm *)ctx)->dec;
 
-	if(EVP_DecryptInit_ex(c,NULL,NULL,NULL,iv)!=1)goto err1;
-	if(aad&&alen)if(EVP_DecryptUpdate(c,NULL,&l,aad,alen)!=1)goto err1;
-	if(!EVP_DecryptUpdate(c,dst,&l,src,slen))goto err1;
+	if(U(EVP_DecryptInit_ex(c,NULL,NULL,NULL,iv)!=1))goto err1;
+	if(aad&&alen)if(U(EVP_DecryptUpdate(c,NULL,&l,aad,alen)!=1))goto err1;
+	if(U(!EVP_DecryptUpdate(c,dst,&l,src,slen)))goto err1;
 	dlen=l;
-	if(!EVP_CIPHER_CTX_ctrl(c,EVP_CTRL_GCM_SET_TAG,
-		((struct xssl_aes_xcm *)ctx)->tlen,tag))goto err1;
-	if(EVP_DecryptFinal_ex(c,((unsigned char *)dst)+l,&l)<=0)goto err1;
-	if(dlen+l!=slen)goto err1;
+	if(U(!EVP_CIPHER_CTX_ctrl(c,EVP_CTRL_GCM_SET_TAG,
+		((struct xssl_aes_xcm *)ctx)->tlen,tag)))goto err1;
+	if(U(EVP_DecryptFinal_ex(c,((unsigned char *)dst)+l,&l)<=0))goto err1;
+	if(U(dlen+l!=slen))goto err1;
 	return 0;
 
 err1:	return -1;
@@ -1768,15 +1776,15 @@ static int xssl_aes_gcm_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 	int dlen;
 	EVP_CIPHER_CTX *c=((struct xssl_aes_xcm *)ctx)->dec;
 
-	if(EVP_DecryptInit_ex(c,NULL,NULL,NULL,iv)!=1)goto err1;
-	for(i=0;i<niov;i++)if(EVP_DecryptUpdate(c,NULL,&l,iov[i].data,
-		iov[i].length)!=1)goto err1;
-	if(!EVP_DecryptUpdate(c,dst,&l,src,slen))goto err1;
+	if(U(EVP_DecryptInit_ex(c,NULL,NULL,NULL,iv)!=1))goto err1;
+	for(i=0;i<niov;i++)if(U(EVP_DecryptUpdate(c,NULL,&l,iov[i].data,
+		iov[i].length)!=1))goto err1;
+	if(U(!EVP_DecryptUpdate(c,dst,&l,src,slen)))goto err1;
 	dlen=l;
-	if(!EVP_CIPHER_CTX_ctrl(c,EVP_CTRL_GCM_SET_TAG,
-		((struct xssl_aes_xcm *)ctx)->tlen,tag))goto err1;
-	if(EVP_DecryptFinal_ex(c,((unsigned char *)dst)+l,&l)<=0)goto err1;
-	if(dlen+l!=slen)goto err1;
+	if(U(!EVP_CIPHER_CTX_ctrl(c,EVP_CTRL_GCM_SET_TAG,
+		((struct xssl_aes_xcm *)ctx)->tlen,tag)))goto err1;
+	if(U(EVP_DecryptFinal_ex(c,((unsigned char *)dst)+l,&l)<=0))goto err1;
+	if(U(dlen+l!=slen))goto err1;
 	return 0;
 
 err1:	return -1;
@@ -1802,14 +1810,14 @@ static void *xssl_aes_gcm_init(void *ctx,void *key,int klen,int ilen,int tlen)
 		break;
 	default:goto err1;
 	}
-	if(!(gcm=malloc(sizeof(struct xssl_aes_xcm))))goto err1;
-	if(!(gcm->enc=EVP_CIPHER_CTX_new()))goto err2;
-	if(EVP_EncryptInit_ex(gcm->enc,type,NULL,key,NULL)!=1)goto err3;
-	if(EVP_CIPHER_CTX_ctrl(gcm->enc,EVP_CTRL_GCM_SET_IVLEN,ilen,NULL)!=1)
+	if(U(!(gcm=malloc(sizeof(struct xssl_aes_xcm)))))goto err1;
+	if(U(!(gcm->enc=EVP_CIPHER_CTX_new())))goto err2;
+	if(U(EVP_EncryptInit_ex(gcm->enc,type,NULL,key,NULL)!=1))goto err3;
+	if(U(EVP_CIPHER_CTX_ctrl(gcm->enc,EVP_CTRL_GCM_SET_IVLEN,ilen,NULL)!=1))
 		goto err3;
-	if(!(gcm->dec=EVP_CIPHER_CTX_new()))goto err3;
-	if(EVP_DecryptInit_ex(gcm->dec,type,NULL,key,NULL)!=1)goto err4;
-	if(EVP_CIPHER_CTX_ctrl(gcm->dec,EVP_CTRL_GCM_SET_IVLEN,ilen,NULL)!=1)
+	if(U(!(gcm->dec=EVP_CIPHER_CTX_new())))goto err3;
+	if(U(EVP_DecryptInit_ex(gcm->dec,type,NULL,key,NULL)!=1))goto err4;
+	if(U(EVP_CIPHER_CTX_ctrl(gcm->dec,EVP_CTRL_GCM_SET_IVLEN,ilen,NULL)!=1))
 		goto err4;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	gcm->ilen=ilen;
@@ -1840,15 +1848,15 @@ static int xssl_aes_ccm_encrypt(void *ctx,void *iv,void *src,int slen,
 	int dlen;
 	EVP_CIPHER_CTX *c=((struct xssl_aes_xcm *)ctx)->enc;
 
-	if(EVP_EncryptInit_ex(c,NULL,NULL,NULL,iv)!=1)goto err1;
-	if(EVP_EncryptUpdate(c,NULL,&l,NULL,slen)!=1)goto err1;
-	if(aad&&alen)if(EVP_EncryptUpdate(c,NULL,&l,aad,alen)!=1)goto err1;
-	if(EVP_EncryptUpdate(c,dst,&l,src,slen)!=1)goto err1;
+	if(U(EVP_EncryptInit_ex(c,NULL,NULL,NULL,iv)!=1))goto err1;
+	if(U(EVP_EncryptUpdate(c,NULL,&l,NULL,slen)!=1))goto err1;
+	if(aad&&alen)if(U(EVP_EncryptUpdate(c,NULL,&l,aad,alen)!=1))goto err1;
+	if(U(EVP_EncryptUpdate(c,dst,&l,src,slen)!=1))goto err1;
 	dlen=l;
-	if(EVP_EncryptFinal_ex(c,((unsigned char *)dst)+l,&l)!=1)goto err1;
-	if(EVP_CIPHER_CTX_ctrl(c,EVP_CTRL_CCM_GET_TAG,
-		((struct xssl_aes_xcm *)ctx)->tlen,tag)!=1)goto err1;
-	if(dlen+l!=slen)goto err1;
+	if(U(EVP_EncryptFinal_ex(c,((unsigned char *)dst)+l,&l)!=1))goto err1;
+	if(U(EVP_CIPHER_CTX_ctrl(c,EVP_CTRL_CCM_GET_TAG,
+		((struct xssl_aes_xcm *)ctx)->tlen,tag)!=1))goto err1;
+	if(U(dlen+l!=slen))goto err1;
 	return 0;
 
 err1:	return -1;
@@ -1866,27 +1874,27 @@ static int xssl_aes_ccm_encrypt_iov(void *ctx,void *iv,void *src,int slen,
 	unsigned char *aad;
 	EVP_CIPHER_CTX *c=((struct xssl_aes_xcm *)ctx)->enc;
 
-	if(EVP_EncryptInit_ex(c,NULL,NULL,NULL,iv)!=1)goto err1;
-	if(EVP_EncryptUpdate(c,NULL,&l,NULL,slen)!=1)goto err1;
+	if(U(EVP_EncryptInit_ex(c,NULL,NULL,NULL,iv)!=1))goto err1;
+	if(U(EVP_EncryptUpdate(c,NULL,&l,NULL,slen)!=1))goto err1;
 	for(i=0,alen=0;i<niov;i++)alen+=iov[i].length;
 	if(alen)
 	{
-		if(!(aad=malloc(alen)))goto err1;
+		if(U(!(aad=malloc(alen))))goto err1;
 		for(i=0,alen=0;i<niov;i++)
 		{
 			memcpy(aad+alen,iov[i].data,iov[i].length);
 			alen+=iov[i].length;
 		}
-		if(EVP_EncryptUpdate(c,NULL,&l,aad,alen)!=1)goto err2;
+		if(U(EVP_EncryptUpdate(c,NULL,&l,aad,alen)!=1))goto err2;
 		OPENSSL_cleanse(aad,alen);
 		free(aad);
 	}
-	if(EVP_EncryptUpdate(c,dst,&l,src,slen)!=1)goto err1;
+	if(U(EVP_EncryptUpdate(c,dst,&l,src,slen)!=1))goto err1;
 	dlen=l;
-	if(EVP_EncryptFinal_ex(c,((unsigned char *)dst)+l,&l)!=1)goto err1;
-	if(EVP_CIPHER_CTX_ctrl(c,EVP_CTRL_CCM_GET_TAG,
-		((struct xssl_aes_xcm *)ctx)->tlen,tag)!=1)goto err1;
-	if(dlen+l!=slen)goto err1;
+	if(U(EVP_EncryptFinal_ex(c,((unsigned char *)dst)+l,&l)!=1))goto err1;
+	if(U(EVP_CIPHER_CTX_ctrl(c,EVP_CTRL_CCM_GET_TAG,
+		((struct xssl_aes_xcm *)ctx)->tlen,tag)!=1))goto err1;
+	if(U(dlen+l!=slen))goto err1;
 	return 0;
 
 err2:	OPENSSL_cleanse(aad,alen);
@@ -1902,13 +1910,13 @@ static int xssl_aes_ccm_decrypt(void *ctx,void *iv,void *src,int slen,
 	int l;
 	EVP_CIPHER_CTX *c=((struct xssl_aes_xcm *)ctx)->dec;
 
-	if(EVP_CIPHER_CTX_ctrl(c,EVP_CTRL_CCM_SET_TAG,
-		((struct xssl_aes_xcm *)ctx)->tlen,tag)!=1)goto err1;
-	if(EVP_DecryptInit_ex(c,NULL,NULL,NULL,iv)!=1)goto err1;
-	if(EVP_DecryptUpdate(c,NULL,&l,NULL,slen)!=1)goto err1;
-	if(aad&&alen)if(EVP_DecryptUpdate(c,NULL,&l,aad,alen)!=1)goto err1;
-	if(EVP_DecryptUpdate(c,dst,&l,src,slen)!=1)goto err1;
-	if(l!=slen)goto err1;
+	if(U(EVP_CIPHER_CTX_ctrl(c,EVP_CTRL_CCM_SET_TAG,
+		((struct xssl_aes_xcm *)ctx)->tlen,tag)!=1))goto err1;
+	if(U(EVP_DecryptInit_ex(c,NULL,NULL,NULL,iv)!=1))goto err1;
+	if(U(EVP_DecryptUpdate(c,NULL,&l,NULL,slen)!=1))goto err1;
+	if(aad&&alen)if(U(EVP_DecryptUpdate(c,NULL,&l,aad,alen)!=1))goto err1;
+	if(U(EVP_DecryptUpdate(c,dst,&l,src,slen)!=1))goto err1;
+	if(U(l!=slen))goto err1;
 	return 0;
 
 err1:	return -1;
@@ -1925,25 +1933,25 @@ static int xssl_aes_ccm_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 	unsigned char *aad;
 	EVP_CIPHER_CTX *c=((struct xssl_aes_xcm *)ctx)->dec;
 
-	if(EVP_CIPHER_CTX_ctrl(c,EVP_CTRL_CCM_SET_TAG,
-		((struct xssl_aes_xcm *)ctx)->tlen,tag)!=1)goto err1;
-	if(EVP_DecryptInit_ex(c,NULL,NULL,NULL,iv)!=1)goto err1;
-	if(EVP_DecryptUpdate(c,NULL,&l,NULL,slen)!=1)goto err1;
+	if(U(EVP_CIPHER_CTX_ctrl(c,EVP_CTRL_CCM_SET_TAG,
+		((struct xssl_aes_xcm *)ctx)->tlen,tag)!=1))goto err1;
+	if(U(EVP_DecryptInit_ex(c,NULL,NULL,NULL,iv)!=1))goto err1;
+	if(U(EVP_DecryptUpdate(c,NULL,&l,NULL,slen)!=1))goto err1;
 	for(i=0,alen=0;i<niov;i++)alen+=iov[i].length;
 	if(alen)
 	{
-		if(!(aad=malloc(alen)))goto err1;
+		if(U(!(aad=malloc(alen))))goto err1;
 		for(i=0,alen=0;i<niov;i++)
 		{
 			memcpy(aad+alen,iov[i].data,iov[i].length);
 			alen+=iov[i].length;
 		}
-		if(EVP_DecryptUpdate(c,NULL,&l,aad,alen)!=1)goto err2;
+		if(U(EVP_DecryptUpdate(c,NULL,&l,aad,alen)!=1))goto err2;
 		OPENSSL_cleanse(aad,alen);
 		free(aad);
 	}
-	if(EVP_DecryptUpdate(c,dst,&l,src,slen)!=1)goto err1;
-	if(l!=slen)goto err1;
+	if(U(EVP_DecryptUpdate(c,dst,&l,src,slen)!=1))goto err1;
+	if(U(l!=slen))goto err1;
 	return 0;
 
 err2:	OPENSSL_cleanse(aad,alen);
@@ -1972,22 +1980,22 @@ static void *xssl_aes_ccm_init(void *ctx,void *key,int klen,int ilen,int tlen)
 		break;
 	default:goto err1;
 	}
-	if(!(ccm=malloc(sizeof(struct xssl_aes_xcm))))goto err1;
-	if(!(ccm->enc=EVP_CIPHER_CTX_new()))goto err2;
-	if(EVP_EncryptInit_ex(ccm->enc,type,NULL,NULL,NULL)!=1)goto err3;
-	if(EVP_CIPHER_CTX_ctrl(ccm->enc,EVP_CTRL_CCM_SET_IVLEN,ilen,NULL)!=1)
+	if(U(!(ccm=malloc(sizeof(struct xssl_aes_xcm)))))goto err1;
+	if(U(!(ccm->enc=EVP_CIPHER_CTX_new())))goto err2;
+	if(U(EVP_EncryptInit_ex(ccm->enc,type,NULL,NULL,NULL)!=1))goto err3;
+	if(U(EVP_CIPHER_CTX_ctrl(ccm->enc,EVP_CTRL_CCM_SET_IVLEN,ilen,NULL)!=1))
 		goto err3;
-	if(EVP_CIPHER_CTX_ctrl(ccm->enc,EVP_CTRL_CCM_SET_TAG,tlen,NULL)!=1)
+	if(U(EVP_CIPHER_CTX_ctrl(ccm->enc,EVP_CTRL_CCM_SET_TAG,tlen,NULL)!=1))
 		goto err3;
-	if(EVP_EncryptInit_ex(ccm->enc,NULL,NULL,key,NULL)!=1)goto err3;
-	if(!(ccm->dec=EVP_CIPHER_CTX_new()))goto err3;
-	if(EVP_DecryptInit_ex(ccm->dec,type,NULL,NULL,NULL)!=1)goto err4;
-	if(EVP_CIPHER_CTX_ctrl(ccm->dec,EVP_CTRL_CCM_SET_IVLEN,ilen,NULL)!=1)
+	if(U(EVP_EncryptInit_ex(ccm->enc,NULL,NULL,key,NULL)!=1))goto err3;
+	if(U(!(ccm->dec=EVP_CIPHER_CTX_new())))goto err3;
+	if(U(EVP_DecryptInit_ex(ccm->dec,type,NULL,NULL,NULL)!=1))goto err4;
+	if(U(EVP_CIPHER_CTX_ctrl(ccm->dec,EVP_CTRL_CCM_SET_IVLEN,ilen,NULL)!=1))
 		goto err4;
 	/* libreSSL refuses to prepare tag length without a dummy tag, doh */
-	if(EVP_CIPHER_CTX_ctrl(ccm->dec,EVP_CTRL_CCM_SET_TAG,tlen,&dummy)!=1)
+	if(U(EVP_CIPHER_CTX_ctrl(ccm->dec,EVP_CTRL_CCM_SET_TAG,tlen,&dummy)!=1))
 		goto err4;
-	if(EVP_DecryptInit_ex(ccm->dec,NULL,NULL,key,NULL)!=1)goto err4;
+	if(U(EVP_DecryptInit_ex(ccm->dec,NULL,NULL,key,NULL)!=1))goto err4;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	ccm->ilen=ilen;
 	ccm->tlen=tlen;
@@ -2019,9 +2027,9 @@ static int xssl_chacha_poly_encrypt(void *ctx,void *iv,void *src,int slen,
 	size_t l=0;
 	unsigned char *tmp;
 
-	if(!(tmp=malloc(slen+16)))goto err1;
-	if(!EVP_AEAD_CTX_seal(&((struct xssl_chacha_poly *)ctx)->enc,
-		tmp,&l,slen+16,iv,12,src,slen,aad,alen))goto err2;
+	if(U(!(tmp=malloc(slen+16))))goto err1;
+	if(U(!EVP_AEAD_CTX_seal(&((struct xssl_chacha_poly *)ctx)->enc,
+		tmp,&l,slen+16,iv,12,src,slen,aad,alen)))goto err2;
 	memcpy(dst,tmp,slen);
 	memcpy(tag,tmp+slen,16);
 	OPENSSL_cleanse(tmp,slen+16);
@@ -2036,13 +2044,13 @@ err1:	return -1;
 	int dlen;
 	EVP_CIPHER_CTX *c=((struct xssl_chacha_poly *)ctx)->enc;
 
-	if(EVP_EncryptInit_ex(c,NULL,NULL,NULL,iv)!=1)goto err1;
-	if(aad&&alen)if(EVP_EncryptUpdate(c,NULL,&l,aad,alen)!=1)goto err1;
-	if(EVP_EncryptUpdate(c,dst,&l,src,slen)!=1)goto err1;
+	if(U(EVP_EncryptInit_ex(c,NULL,NULL,NULL,iv)!=1))goto err1;
+	if(aad&&alen)if(U(EVP_EncryptUpdate(c,NULL,&l,aad,alen)!=1))goto err1;
+	if(U(EVP_EncryptUpdate(c,dst,&l,src,slen)!=1))goto err1;
 	dlen=l;
-	if(EVP_EncryptFinal_ex(c,((unsigned char *)dst)+l,&l)!=1)goto err1;
-	if(EVP_CIPHER_CTX_ctrl(c,EVP_CTRL_AEAD_GET_TAG,16,tag)!=1)goto err1;
-	if(dlen+l!=slen)goto err1;
+	if(U(EVP_EncryptFinal_ex(c,((unsigned char *)dst)+l,&l)!=1))goto err1;
+	if(U(EVP_CIPHER_CTX_ctrl(c,EVP_CTRL_AEAD_GET_TAG,16,tag)!=1))goto err1;
+	if(U(dlen+l!=slen))goto err1;
 	return 0;
 
 err1:	return -1;
@@ -2063,19 +2071,19 @@ static int xssl_chacha_poly_encrypt_iov(void *ctx,void *iv,void *src,int slen,
 	unsigned char *tmp;
 	unsigned char *aad=NULL;
 
-	if(!(tmp=malloc(slen+16)))goto err1;
+	if(U(!(tmp=malloc(slen+16))))goto err1;
 	for(i=0,alen=0;i<niov;i++)alen+=iov[i].length;
 	if(alen)
 	{
-		if(!(aad=malloc(alen)))goto err2;
+		if(U(!(aad=malloc(alen))))goto err2;
 		for(i=0,alen=0;i<niov;i++)
 		{
 			memcpy(aad+alen,iov[i].data,iov[i].length);
 			alen+=iov[i].length;
 		}
 	}
-	if(!EVP_AEAD_CTX_seal(&((struct xssl_chacha_poly *)ctx)->enc,
-		tmp,&l,slen+16,iv,12,src,slen,aad,alen))goto err3;
+	if(U(!EVP_AEAD_CTX_seal(&((struct xssl_chacha_poly *)ctx)->enc,
+		tmp,&l,slen+16,iv,12,src,slen,aad,alen)))goto err3;
 	memcpy(dst,tmp,slen);
 	memcpy(tag,tmp+slen,16);
 	if(aad)
@@ -2101,14 +2109,14 @@ err1:	return -1;
 	int dlen;
 	EVP_CIPHER_CTX *c=((struct xssl_chacha_poly *)ctx)->enc;
 
-	if(EVP_EncryptInit_ex(c,NULL,NULL,NULL,iv)!=1)goto err1;
-	for(i=0;i<niov;i++)if(EVP_EncryptUpdate(c,NULL,&l,iov[i].data,
-		iov[i].length)!=1)goto err1;
-	if(EVP_EncryptUpdate(c,dst,&l,src,slen)!=1)goto err1;
+	if(U(EVP_EncryptInit_ex(c,NULL,NULL,NULL,iv)!=1))goto err1;
+	for(i=0;i<niov;i++)if(U(EVP_EncryptUpdate(c,NULL,&l,iov[i].data,
+		iov[i].length)!=1))goto err1;
+	if(U(EVP_EncryptUpdate(c,dst,&l,src,slen)!=1))goto err1;
 	dlen=l;
-	if(EVP_EncryptFinal_ex(c,((unsigned char *)dst)+l,&l)!=1)goto err1;
-	if(EVP_CIPHER_CTX_ctrl(c,EVP_CTRL_AEAD_GET_TAG,16,tag)!=1)goto err1;
-	if(dlen+l!=slen)goto err1;
+	if(U(EVP_EncryptFinal_ex(c,((unsigned char *)dst)+l,&l)!=1))goto err1;
+	if(U(EVP_CIPHER_CTX_ctrl(c,EVP_CTRL_AEAD_GET_TAG,16,tag)!=1))goto err1;
+	if(U(dlen+l!=slen))goto err1;
 	return 0;
 
 err1:	return -1;
@@ -2126,11 +2134,11 @@ static int xssl_chacha_poly_decrypt(void *ctx,void *iv,void *src,int slen,
 	size_t l=0;
 	unsigned char *tmp;
 
-	if(!(tmp=malloc(slen+16)))goto err1;
+	if(U(!(tmp=malloc(slen+16))))goto err1;
 	memcpy(tmp,src,slen);
 	memcpy(tmp+slen,tag,16);
-	if(!EVP_AEAD_CTX_open(&((struct xssl_chacha_poly *)ctx)->enc,
-		dst,&l,slen,iv,12,tmp,slen+16,aad,alen))goto err2;
+	if(U(!EVP_AEAD_CTX_open(&((struct xssl_chacha_poly *)ctx)->enc,
+		dst,&l,slen,iv,12,tmp,slen+16,aad,alen)))goto err2;
 	OPENSSL_cleanse(tmp,slen+16);
 	free(tmp);
 	return 0;
@@ -2143,13 +2151,13 @@ err1:	return -1;
 	int dlen;
 	EVP_CIPHER_CTX *c=((struct xssl_chacha_poly *)ctx)->dec;
 
-	if(EVP_DecryptInit_ex(c,NULL,NULL,NULL,iv)!=1)goto err1;
-	if(aad&&alen)if(EVP_DecryptUpdate(c,NULL,&l,aad,alen)!=1)goto err1;
-	if(!EVP_DecryptUpdate(c,dst,&l,src,slen))goto err1;
+	if(U(EVP_DecryptInit_ex(c,NULL,NULL,NULL,iv)!=1))goto err1;
+	if(aad&&alen)if(U(EVP_DecryptUpdate(c,NULL,&l,aad,alen)!=1))goto err1;
+	if(U(!EVP_DecryptUpdate(c,dst,&l,src,slen)))goto err1;
 	dlen=l;
-	if(!EVP_CIPHER_CTX_ctrl(c,EVP_CTRL_AEAD_SET_TAG,16,tag))goto err1;
-	if(EVP_DecryptFinal_ex(c,((unsigned char *)dst)+l,&l)<=0)goto err1;
-	if(dlen+l!=slen)goto err1;
+	if(U(!EVP_CIPHER_CTX_ctrl(c,EVP_CTRL_AEAD_SET_TAG,16,tag)))goto err1;
+	if(U(EVP_DecryptFinal_ex(c,((unsigned char *)dst)+l,&l)<=0))goto err1;
+	if(U(dlen+l!=slen))goto err1;
 	return 0;
 
 err1:	return -1;
@@ -2170,11 +2178,11 @@ static int xssl_chacha_poly_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 	unsigned char *tmp;
 	unsigned char *aad=NULL;
 
-	if(!(tmp=malloc(slen+16)))goto err1;
+	if(U(!(tmp=malloc(slen+16))))goto err1;
 	for(i=0,alen=0;i<niov;i++)alen+=iov[i].length;
 	if(alen)
 	{
-		if(!(aad=malloc(alen)))goto err2;
+		if(U(!(aad=malloc(alen))))goto err2;
 		for(i=0,alen=0;i<niov;i++)
 		{
 			memcpy(aad+alen,iov[i].data,iov[i].length);
@@ -2183,8 +2191,8 @@ static int xssl_chacha_poly_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 	}
 	memcpy(tmp,src,slen);
 	memcpy(tmp+slen,tag,16);
-	if(!EVP_AEAD_CTX_open(&((struct xssl_chacha_poly *)ctx)->enc,
-		dst,&l,slen,iv,12,tmp,slen+16,aad,alen))goto err3;
+	if(U(!EVP_AEAD_CTX_open(&((struct xssl_chacha_poly *)ctx)->enc,
+		dst,&l,slen,iv,12,tmp,slen+16,aad,alen)))goto err3;
 	if(aad)
 	{
 		OPENSSL_cleanse(aad,alen);
@@ -2208,14 +2216,14 @@ err1:	return -1;
 	int dlen;
 	EVP_CIPHER_CTX *c=((struct xssl_chacha_poly *)ctx)->dec;
 
-	if(EVP_DecryptInit_ex(c,NULL,NULL,NULL,iv)!=1)goto err1;
-	for(i=0;i<niov;i++)if(EVP_DecryptUpdate(c,NULL,&l,iov[i].data,
-		iov[i].length)!=1)goto err1;
-	if(!EVP_DecryptUpdate(c,dst,&l,src,slen))goto err1;
+	if(U(EVP_DecryptInit_ex(c,NULL,NULL,NULL,iv)!=1))goto err1;
+	for(i=0;i<niov;i++)if(U(EVP_DecryptUpdate(c,NULL,&l,iov[i].data,
+		iov[i].length)!=1))goto err1;
+	if(U(!EVP_DecryptUpdate(c,dst,&l,src,slen)))goto err1;
 	dlen=l;
-	if(!EVP_CIPHER_CTX_ctrl(c,EVP_CTRL_AEAD_SET_TAG,16,tag))goto err1;
-	if(EVP_DecryptFinal_ex(c,((unsigned char *)dst)+l,&l)<=0)goto err1;
-	if(dlen+l!=slen)goto err1;
+	if(U(!EVP_CIPHER_CTX_ctrl(c,EVP_CTRL_AEAD_SET_TAG,16,tag)))goto err1;
+	if(U(EVP_DecryptFinal_ex(c,((unsigned char *)dst)+l,&l)<=0))goto err1;
+	if(U(dlen+l!=slen))goto err1;
 	return 0;
 
 err1:	return -1;
@@ -2232,10 +2240,10 @@ static void *xssl_chacha_poly_init(void *ctx,void *key,int klen,int ilen,
 #if defined(LIBRESSL_VERSION_NUMBER)
 	struct xssl_chacha_poly *chp;
 
-	if(klen!=256||ilen!=12||tlen!=16)goto err1;
-	if(!(chp=malloc(sizeof(struct xssl_chacha_poly))))goto err1;
-	if(!EVP_AEAD_CTX_init(&chp->enc,EVP_aead_chacha20_poly1305(),key,
-		32,16,NULL))goto err2;
+	if(U(klen!=256)||U(ilen!=12)||U(tlen!=16))goto err1;
+	if(U(!(chp=malloc(sizeof(struct xssl_chacha_poly)))))goto err1;
+	if(U(!EVP_AEAD_CTX_init(&chp->enc,EVP_aead_chacha20_poly1305(),key,
+		32,16,NULL)))goto err2;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,32);
 	return chp;
 
@@ -2244,14 +2252,14 @@ err1:	((struct usicrypt_thread *)ctx)->global->memclear(key,32);
 #elif OPENSSL_VERSION_NUMBER >= 0x10100000L
 	struct xssl_chacha_poly *chp;
 
-	if(klen!=256||ilen!=12||tlen!=16)goto err1;
-	if(!(chp=malloc(sizeof(struct xssl_chacha_poly))))goto err1;
-	if(!(chp->enc=EVP_CIPHER_CTX_new()))goto err2;
-	if(EVP_EncryptInit_ex(chp->enc,EVP_chacha20_poly1305(),NULL,key,
-		NULL)!=1)goto err3;
-	if(!(chp->dec=EVP_CIPHER_CTX_new()))goto err3;
-	if(EVP_DecryptInit_ex(chp->dec,EVP_chacha20_poly1305(),NULL,key,
-		NULL)!=1)goto err4;
+	if(U(klen!=256)||U(ilen!=12)||U(tlen!=16))goto err1;
+	if(U(!(chp=malloc(sizeof(struct xssl_chacha_poly)))))goto err1;
+	if(U(!(chp->enc=EVP_CIPHER_CTX_new())))goto err2;
+	if(U(EVP_EncryptInit_ex(chp->enc,EVP_chacha20_poly1305(),NULL,key,
+		NULL)!=1))goto err3;
+	if(U(!(chp->dec=EVP_CIPHER_CTX_new())))goto err3;
+	if(U(EVP_DecryptInit_ex(chp->dec,EVP_chacha20_poly1305(),NULL,key,
+		NULL)!=1))goto err4;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,32);
 	return chp;
 
@@ -2286,8 +2294,8 @@ static int xssl_chacha_crypt(void *ctx,void *src,int slen,void *dst)
 #elif OPENSSL_VERSION_NUMBER >= 0x10100000L
 	int len;
 
-	if(EVP_EncryptUpdate(((struct xssl_chacha *)ctx)->ctx,dst,&len,
-		src,slen)!=1)return -1;
+	if(U(EVP_EncryptUpdate(((struct xssl_chacha *)ctx)->ctx,dst,&len,
+		src,slen)!=1))return -1;
 	return 0;
 #else
 	return -1;
@@ -2300,10 +2308,11 @@ static void *xssl_chacha_init(void *ctx,void *key,int klen,void *iv)
 	struct xssl_chacha *ch;
 	unsigned long long zero=0ULL;
 
-	if(klen!=256)goto err1;
-	if(!(ch=malloc(sizeof(struct xssl_chacha))))goto err1;
+	if(U(klen!=256))goto err1;
+	if(U(!(ch=malloc(sizeof(struct xssl_chacha)))))goto err1;
 	ChaCha_set_key(&ch->ctx,key,256);
-	ChaCha_set_iv(&ch->ctx,iv,(unsigned char *)(&zero));
+	ChaCha_set_iv(&ch->ctx,iv?iv:(unsigned char *)(&zero),
+		(unsigned char *)(&zero));
 	ch->global=((struct usicrypt_thread *)ctx)->global;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,32);
 	return ch;
@@ -2313,12 +2322,14 @@ err1:	((struct usicrypt_thread *)ctx)->global->memclear(key,32);
 	struct xssl_chacha *ch;
 	unsigned char tmp[16];
 
-	if(klen!=256)goto err1;
-	if(!(ch=malloc(sizeof(struct xssl_chacha))))goto err1;
-	if(!(ch->ctx=EVP_CIPHER_CTX_new()))goto err2;
+	if(U(klen!=256))goto err1;
+	if(U(!(ch=malloc(sizeof(struct xssl_chacha)))))goto err1;
+	if(U(!(ch->ctx=EVP_CIPHER_CTX_new())))goto err2;
 	memset(tmp,0,8);
-	memcpy(tmp+8,iv,8);
-	if(EVP_EncryptInit_ex(ch->ctx,EVP_chacha20(),NULL,key,tmp)!=1)goto err3;
+	if(iv)memcpy(tmp+8,iv,8);
+	else memset(tmp+8,0,8);
+	if(U(EVP_EncryptInit_ex(ch->ctx,EVP_chacha20(),NULL,key,tmp)!=1))
+		goto err3;
 	((struct usicrypt_thread *)ctx)->global->memclear(tmp,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,32);
 	return ch;
@@ -2384,10 +2395,10 @@ static int xssl_camellia_cmac(void *ctx,void *key,int klen,void *src,int slen,
 		break;
 	default:goto err1;
 	}
-	if(!(c=CMAC_CTX_new()))goto err1;
-	if(CMAC_Init(c,key,klen>>3,type,NULL)!=1)goto err2;
-	if(CMAC_Update(c,src,slen)!=1)goto err2;
-	if(CMAC_Final(c,dst,&unused)!=1)goto err2;
+	if(U(!(c=CMAC_CTX_new())))goto err1;
+	if(U(CMAC_Init(c,key,klen>>3,type,NULL)!=1))goto err2;
+	if(U(CMAC_Update(c,src,slen)!=1))goto err2;
+	if(U(CMAC_Final(c,dst,&unused)!=1))goto err2;
 	CMAC_CTX_free(c);
 	return 0;
 
@@ -2418,11 +2429,11 @@ static int xssl_camellia_cmac_iov(void *ctx,void *key,int klen,
 		break;
 	default:goto err1;
 	}
-	if(!(c=CMAC_CTX_new()))goto err1;
-	if(CMAC_Init(c,key,klen>>3,type,NULL)!=1)goto err2;
-	for(i=0;i<niov;i++)if(CMAC_Update(c,iov[i].data,iov[i].length)!=1)
+	if(U(!(c=CMAC_CTX_new())))goto err1;
+	if(U(CMAC_Init(c,key,klen>>3,type,NULL)!=1))goto err2;
+	for(i=0;i<niov;i++)if(U(CMAC_Update(c,iov[i].data,iov[i].length)!=1))
 		goto err2;
-	if(CMAC_Final(c,dst,&unused)!=1)goto err2;
+	if(U(CMAC_Final(c,dst,&unused)!=1))goto err2;
 	CMAC_CTX_free(c);
 	return 0;
 
@@ -2439,7 +2450,7 @@ static int xssl_camellia_ecb_encrypt(void *ctx,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	for(;slen;s+=16,d+=16,slen-=16)Camellia_ecb_encrypt(s,d,
 		&((struct xssl_camellia_ecb *)ctx)->ctx,CAMELLIA_ENCRYPT);
 	return 0;
@@ -2450,7 +2461,7 @@ static int xssl_camellia_ecb_decrypt(void *ctx,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	for(;slen;s+=16,d+=16,slen-=16)Camellia_ecb_encrypt(s,d,
 		&((struct xssl_camellia_ecb *)ctx)->ctx,CAMELLIA_DECRYPT);
 	return 0;
@@ -2460,9 +2471,9 @@ static void *xssl_camellia_ecb_init(void *ctx,void *key,int klen)
 {
 	struct xssl_camellia_ecb *camellia;
 
-	if(!(camellia=malloc(sizeof(struct xssl_camellia_ecb))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct xssl_camellia_ecb)))))goto err1;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
-	if(Camellia_set_key(key,klen,&camellia->ctx))goto err2;
+	if(U(Camellia_set_key(key,klen,&camellia->ctx)))goto err2;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
 
@@ -2487,7 +2498,7 @@ static int xssl_camellia_cbc_encrypt(void *ctx,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	for(;slen;s+=16,d+=16,slen-=16)Camellia_cbc_encrypt(s,d,16,
 		&((struct xssl_camellia_cbc *)ctx)->ctx,
 		((struct xssl_camellia_cbc *)ctx)->iv,CAMELLIA_ENCRYPT);
@@ -2499,7 +2510,7 @@ static int xssl_camellia_cbc_decrypt(void *ctx,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	for(;slen;s+=16,d+=16,slen-=16)Camellia_cbc_encrypt(s,d,16,
 		&((struct xssl_camellia_cbc *)ctx)->ctx,
 		((struct xssl_camellia_cbc *)ctx)->iv,CAMELLIA_DECRYPT);
@@ -2510,10 +2521,11 @@ static void *xssl_camellia_cbc_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct xssl_camellia_cbc *camellia;
 
-	if(!(camellia=malloc(sizeof(struct xssl_camellia_cbc))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct xssl_camellia_cbc)))))goto err1;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
-	if(Camellia_set_key(key,klen,&camellia->ctx))goto err2;
-	memcpy(camellia->iv,iv,16);
+	if(U(Camellia_set_key(key,klen,&camellia->ctx)))goto err2;
+	if(iv)memcpy(camellia->iv,iv,16);
+	else memset(camellia->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
 
@@ -2540,7 +2552,7 @@ static void xssl_camellia_cbc_exit(void *ctx)
 
 static int xssl_camellia_cts_encrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen<=16)return -1;
+	if(U(slen<=16))return -1;
 	CRYPTO_cts128_encrypt(src,dst,slen,
 		&((struct xssl_camellia_cbc *)ctx)->ctx,
 		((struct xssl_camellia_cbc *)ctx)->iv,
@@ -2550,7 +2562,7 @@ static int xssl_camellia_cts_encrypt(void *ctx,void *src,int slen,void *dst)
 
 static int xssl_camellia_cts_decrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen<=16)return -1;
+	if((slen<=16))return -1;
 	CRYPTO_cts128_decrypt(src,dst,slen,
 		&((struct xssl_camellia_cbc *)ctx)->ctx,
 		((struct xssl_camellia_cbc *)ctx)->iv,
@@ -2562,10 +2574,11 @@ static void *xssl_camellia_cts_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct xssl_camellia_cbc *camellia;
 
-	if(!(camellia=malloc(sizeof(struct xssl_camellia_cbc))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct xssl_camellia_cbc)))))goto err1;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
-	if(Camellia_set_key(key,klen,&camellia->ctx))goto err2;
-	memcpy(camellia->iv,iv,16);
+	if(U(Camellia_set_key(key,klen,&camellia->ctx)))goto err2;
+	if(iv)memcpy(camellia->iv,iv,16);
+	else memset(camellia->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
 
@@ -2612,11 +2625,12 @@ static void *xssl_camellia_cfb_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct xssl_camellia_cfb *camellia;
 
-	if(!(camellia=malloc(sizeof(struct xssl_camellia_cfb))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct xssl_camellia_cfb)))))goto err1;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
 	camellia->num=0;
-	if(Camellia_set_key(key,klen,&camellia->enc))goto err2;
-	memcpy(camellia->iv,iv,16);
+	if(U(Camellia_set_key(key,klen,&camellia->enc)))goto err2;
+	if(iv)memcpy(camellia->iv,iv,16);
+	else memset(camellia->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
 
@@ -2664,10 +2678,11 @@ static void *xssl_camellia_cfb8_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct xssl_camellia_cfb8 *camellia;
 
-	if(!(camellia=malloc(sizeof(struct xssl_camellia_cfb8))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct xssl_camellia_cfb8)))))goto err1;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
-	if(Camellia_set_key(key,klen,&camellia->enc))goto err2;
-	memcpy(camellia->iv,iv,16);
+	if(U(Camellia_set_key(key,klen,&camellia->enc)))goto err2;
+	if(iv)memcpy(camellia->iv,iv,16);
+	else memset(camellia->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
 
@@ -2715,12 +2730,13 @@ static void *xssl_camellia_ofb_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct xssl_camellia_ofb *camellia;
 
-	if(!(camellia=malloc(sizeof(struct xssl_camellia_ofb))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct xssl_camellia_ofb)))))goto err1;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
 	memset(camellia->zero,0,16);
 	camellia->n=0;
-	if(Camellia_set_key(key,klen,&camellia->enc))goto err2;
-	memcpy(camellia->iv,iv,16);
+	if((Camellia_set_key(key,klen,&camellia->enc)))goto err2;
+	if(iv)memcpy(camellia->iv,iv,16);
+	else memset(camellia->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
 
@@ -2770,12 +2786,13 @@ static void *xssl_camellia_ctr_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct xssl_camellia_ctr *camellia;
 
-	if(!(camellia=malloc(sizeof(struct xssl_camellia_ctr))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct xssl_camellia_ctr)))))goto err1;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
 	memset(camellia->zero,0,16);
 	camellia->n=0;
-	if(Camellia_set_key(key,klen,&camellia->enc))goto err2;
-	memcpy(camellia->iv,iv,16);
+	if(U(Camellia_set_key(key,klen,&camellia->enc)))goto err2;
+	if(iv)memcpy(camellia->iv,iv,16);
+	else memset(camellia->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
 
@@ -2812,7 +2829,7 @@ static int xssl_camellia_xts_encrypt(void *ctx,void *iv,void *src,int slen,
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<16)return -1;
+	if(U(slen<16))return -1;
 
 	Camellia_ecb_encrypt(iv,camellia->twk,&camellia->twe,CAMELLIA_ENCRYPT);
 
@@ -2854,7 +2871,7 @@ static int xssl_camellia_xts_decrypt(void *ctx,void *iv,void *src,int slen,
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<16)return -1;
+	if(U(slen<16))return -1;
 
 	Camellia_ecb_encrypt(iv,camellia->twk,&camellia->twe,CAMELLIA_ENCRYPT);
 
@@ -2898,10 +2915,10 @@ static void *xssl_camellia_xts_init(void *ctx,void *key,int klen)
 {
 	struct xssl_camellia_xts *camellia;
 
-	if(!(camellia=malloc(sizeof(struct xssl_camellia_xts))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct xssl_camellia_xts)))))goto err1;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
-	if(Camellia_set_key(key,klen>>1,&camellia->ctx))goto err2;
-	if(Camellia_set_key(key+(klen>>4),klen>>1,&camellia->twe))goto err2;
+	if(U(Camellia_set_key(key,klen>>1,&camellia->ctx)))goto err2;
+	if(U(Camellia_set_key(key+(klen>>4),klen>>1,&camellia->twe)))goto err2;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
 
@@ -2939,7 +2956,7 @@ static int xssl_camellia_essiv_encrypt(void *ctx,void *iv,void *src,int slen,
 	unsigned char *d=dst;
 	struct xssl_camellia_essiv *camellia=ctx;
 
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	Camellia_ecb_encrypt(iv,camellia->iv,&camellia->aux,CAMELLIA_ENCRYPT);
 	for(;slen;s+=16,d+=16,slen-=16)Camellia_cbc_encrypt(s,d,16,
 		&camellia->ctx,camellia->iv,CAMELLIA_ENCRYPT);
@@ -2953,7 +2970,7 @@ static int xssl_camellia_essiv_decrypt(void *ctx,void *iv,void *src,int slen,
 	unsigned char *d=dst;
 	struct xssl_camellia_essiv *camellia=ctx;
 
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	Camellia_ecb_encrypt(iv,camellia->iv,&camellia->aux,CAMELLIA_ENCRYPT);
 	for(;slen;s+=16,d+=16,slen-=16)Camellia_cbc_encrypt(s,d,16,
 		&camellia->ctx,camellia->iv,CAMELLIA_DECRYPT);
@@ -2965,11 +2982,11 @@ static void *xssl_camellia_essiv_init(void *ctx,void *key,int klen)
 	struct xssl_camellia_essiv *camellia;
 	unsigned char tmp[SHA256_DIGEST_LENGTH];
 
-	if(!(camellia=malloc(sizeof(struct xssl_camellia_essiv))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct xssl_camellia_essiv)))))goto err1;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
-	if(Camellia_set_key(key,klen,&camellia->ctx))goto err2;
-	if(!SHA256(key,klen>>3,tmp))goto err2;
-	if(Camellia_set_key(tmp,256,&camellia->aux))goto err3;
+	if(U(Camellia_set_key(key,klen,&camellia->ctx)))goto err2;
+	if(U(!SHA256(key,klen>>3,tmp)))goto err2;
+	if(U(Camellia_set_key(tmp,256,&camellia->aux)))goto err3;
 	((struct usicrypt_thread *)ctx)->global->memclear(tmp,sizeof(tmp));
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
@@ -2998,12 +3015,12 @@ static void xssl_camellia_essiv_exit(void *ctx)
 
 int USICRYPT(random)(void *ctx,void *data,int len)
 {
-	if((((struct usicrypt_thread *)ctx)->total+=1)>=10000)
+	if(U((((struct usicrypt_thread *)ctx)->total+=1)>=10000))
 	{
-		if(xssl_reseed(ctx))return -1;
+		if(U(xssl_reseed(ctx)))return -1;
 		((struct usicrypt_thread *)ctx)->total=0;
 	}
-	if(RAND_bytes(data,len)!=1)return -1;
+	if(U(RAND_bytes(data,len)!=1))return -1;
 	return 0;
 }
 
@@ -3040,19 +3057,19 @@ int USICRYPT(digest)(void *ctx,int md,void *in,int len,void *out)
 #ifndef USICRYPT_NO_DIGEST
 #ifndef USICRYPT_NO_SHA1
 	case USICRYPT_SHA1:
-		return (!SHA1(in,len,out))?-1:0;
+		return U(!SHA1(in,len,out))?-1:0;
 #endif
 #ifndef USICRYPT_NO_SHA256
 	case USICRYPT_SHA256:
-		return (!SHA256(in,len,out))?-1:0;
+		return U(!SHA256(in,len,out))?-1:0;
 #endif
 #ifndef USICRYPT_NO_SHA384
 	case USICRYPT_SHA384:
-		return (!SHA384(in,len,out))?-1:0;
+		return U(!SHA384(in,len,out))?-1:0;
 #endif
 #ifndef USICRYPT_NO_SHA512
 	case USICRYPT_SHA512:
-		return (!SHA512(in,len,out))?-1:0;
+		return U(!SHA512(in,len,out))?-1:0;
 #endif
 #endif
 	default:return -1;
@@ -3094,11 +3111,11 @@ int USICRYPT(digest_iov)(void *ctx,int md,struct usicrypt_iov *iov,int niov,
 	default:return -1;
 	}
 
-	if(!(c=EVP_MD_CTX_create()))goto err1;
-	if(!EVP_DigestInit_ex(c,digest,NULL))goto err2;
-	for(i=0;i<niov;i++)if(!EVP_DigestUpdate(c,iov[i].data,iov[i].length))
+	if(U(!(c=EVP_MD_CTX_create())))goto err1;
+	if(U(!EVP_DigestInit_ex(c,digest,NULL)))goto err2;
+	for(i=0;i<niov;i++)if(U(!EVP_DigestUpdate(c,iov[i].data,iov[i].length)))
 		goto err2;
-	if(!EVP_DigestFinal_ex(c,out,NULL))goto err2;
+	if(U(!EVP_DigestFinal_ex(c,out,NULL)))goto err2;
 	r=0;
 err2:	EVP_MD_CTX_destroy(c);
 err1:	return r;
@@ -3112,19 +3129,19 @@ int USICRYPT(hmac)(void *ctx,int md,void *data,int dlen,void *key,int klen,
 #ifndef USICRYPT_NO_HMAC
 #ifndef USICRYPT_NO_SHA1
 	case USICRYPT_SHA1:
-		return (!HMAC(EVP_sha1(),key,klen,data,dlen,out,NULL))?-1:0;
+		return U(!HMAC(EVP_sha1(),key,klen,data,dlen,out,NULL))?-1:0;
 #endif
 #ifndef USICRYPT_NO_SHA256
 	case USICRYPT_SHA256:
-		return (!HMAC(EVP_sha256(),key,klen,data,dlen,out,NULL))?-1:0;
+		return U(!HMAC(EVP_sha256(),key,klen,data,dlen,out,NULL))?-1:0;
 #endif
 #ifndef USICRYPT_NO_SHA384
 	case USICRYPT_SHA384:
-		return (!HMAC(EVP_sha384(),key,klen,data,dlen,out,NULL))?-1:0;
+		return U(!HMAC(EVP_sha384(),key,klen,data,dlen,out,NULL))?-1:0;
 #endif
 #ifndef USICRYPT_NO_SHA512
 	case USICRYPT_SHA512:
-		return (!HMAC(EVP_sha512(),key,klen,data,dlen,out,NULL))?-1:0;
+		return U(!HMAC(EVP_sha512(),key,klen,data,dlen,out,NULL))?-1:0;
 #endif
 #endif
 	default:return -1;
@@ -3174,12 +3191,12 @@ int USICRYPT(hmac_iov)(void *ctx,int md,struct usicrypt_iov *iov,int niov,
 #if defined(LIBRESSL_VERSION_NUMBER) || OPENSSL_VERSION_NUMBER < 0x10100000L
 	HMAC_CTX_init(c);
 #else
-	if(!(c=HMAC_CTX_new()))goto err1;
+	if(U(!(c=HMAC_CTX_new())))goto err1;
 #endif
-	if(!HMAC_Init_ex(c,key,klen,digest,NULL))goto err2;
-	for(i=0;i<niov;i++)if(!HMAC_Update(c,iov[i].data,iov[i].length))
+	if(U(!HMAC_Init_ex(c,key,klen,digest,NULL)))goto err2;
+	for(i=0;i<niov;i++)if(U(!HMAC_Update(c,iov[i].data,iov[i].length)))
 		goto err2;
-	if(!HMAC_Final(c,out,NULL))goto err2;
+	if(U(!HMAC_Final(c,out,NULL)))goto err2;
 	r=0;
 #if defined(LIBRESSL_VERSION_NUMBER) || OPENSSL_VERSION_NUMBER < 0x10100000L
 err2:	HMAC_CTX_cleanup(c);
@@ -3227,7 +3244,7 @@ int USICRYPT(pbkdf2)(void *ctx,int md,void *key,int klen,void *salt,int slen,
 	default:return -1;
 	}
 
-	if(!(PKCS5_PBKDF2_HMAC(key,klen,salt,slen,iter,type,len,out)))r=-1;
+	if(U(!(PKCS5_PBKDF2_HMAC(key,klen,salt,slen,iter,type,len,out))))r=-1;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen);
 	return r;
 #else
@@ -3284,26 +3301,26 @@ int USICRYPT(hkdf)(void *ctx,int md,void *key,int klen,void *salt,int slen,
 		salt=s;
 		memset(s,0,len);
 	}
-	if(!HMAC(type,salt,slen,key,klen,out,NULL))goto err1;
+	if(U(!HMAC(type,salt,slen,key,klen,out,NULL)))goto err1;
 	HMAC_CTX_init(&hm);
-	if(HMAC_Init_ex(&hm,out,len,type,NULL)!=1)goto err2;
-	if(HMAC_Update(&hm,info,ilen)!=1)goto err2;
+	if(U(HMAC_Init_ex(&hm,out,len,type,NULL)!=1))goto err2;
+	if(U(HMAC_Update(&hm,info,ilen)!=1))goto err2;
 	s[0]=1;
-	if(HMAC_Update(&hm,s,1)!=1)goto err2;
-	if(HMAC_Final(&hm,out,NULL)!=1)goto err2;
+	if(U(HMAC_Update(&hm,s,1)!=1))goto err2;
+	if(U(HMAC_Final(&hm,out,NULL)!=1))goto err2;
 	HMAC_CTX_cleanup(&hm);
 	return 0;
 
 err2:	HMAC_CTX_cleanup(&hm);
 err1:	return -1;
 #else
-	if(!(p=EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF,NULL)))goto err1;
-	if(EVP_PKEY_derive_init(p)!=1)goto err2;
-	if(EVP_PKEY_CTX_set_hkdf_md(p,type)!=1)goto err2;
-	if(EVP_PKEY_CTX_set1_hkdf_salt(p,salt,slen)!=1)goto err2;
-	if(EVP_PKEY_CTX_set1_hkdf_key(p,key,klen)!=1)goto err2;
-	if(EVP_PKEY_CTX_add1_hkdf_info(p,info,ilen)!=1)goto err2;
-	if(EVP_PKEY_derive(p,out,&len)!=1)goto err2;
+	if(U(!(p=EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF,NULL))))goto err1;
+	if(U(EVP_PKEY_derive_init(p)!=1))goto err2;
+	if(U(EVP_PKEY_CTX_set_hkdf_md(p,type)!=1))goto err2;
+	if(U(EVP_PKEY_CTX_set1_hkdf_salt(p,salt,slen)!=1))goto err2;
+	if(U(EVP_PKEY_CTX_set1_hkdf_key(p,key,klen)!=1))goto err2;
+	if(U(EVP_PKEY_CTX_add1_hkdf_info(p,info,ilen)!=1))goto err2;
+	if(U(EVP_PKEY_derive(p,out,&len)!=1))goto err2;
 	EVP_PKEY_CTX_free(p);
 	return 0;
 
@@ -3323,14 +3340,14 @@ void *USICRYPT(base64_encode)(void *ctx,void *in,int ilen,int *olen)
 	char *tmp;
 	char *out;
 
-	if(!(b64=BIO_new(BIO_f_base64())))goto err1;
-	if(!(bio=BIO_new(BIO_s_mem())))goto err2;
+	if(U(!(b64=BIO_new(BIO_f_base64()))))goto err1;
+	if(U(!(bio=BIO_new(BIO_s_mem()))))goto err2;
 	bio=BIO_push(b64,bio);
 	BIO_set_flags(bio,BIO_FLAGS_BASE64_NO_NL);
-	if(BIO_write(bio,in,ilen)!=ilen)goto err3;
-	if(BIO_flush(bio)!=1)goto err3;
+	if(U(BIO_write(bio,in,ilen)!=ilen))goto err3;
+	if(U(BIO_flush(bio)!=1))goto err3;
 	*olen=(int)BIO_get_mem_data(bio,&tmp);
-	if(!(out=malloc(*olen+1)))goto err3;
+	if(U(!(out=malloc(*olen+1))))goto err3;
 	memcpy(out,tmp,*olen);
 	out[*olen]=0;
 	BIO_free_all(bio);
@@ -3352,12 +3369,12 @@ void *USICRYPT(base64_decode)(void *ctx,void *in,int ilen,int *olen)
 	BIO *bio;
 	char *out;
 
-	if(!(b64=BIO_new(BIO_f_base64())))goto err1;
-	if(!(bio=BIO_new_mem_buf(in,ilen)))goto err2;
+	if(U(!(b64=BIO_new(BIO_f_base64()))))goto err1;
+	if(U(!(bio=BIO_new_mem_buf(in,ilen))))goto err2;
 	bio=BIO_push(b64,bio);
 	BIO_set_flags(bio,BIO_FLAGS_BASE64_NO_NL);
-	if(!(out=malloc(ilen)))goto err3;
-	if((*olen=BIO_read(bio,out,ilen))<=0)goto err4;
+	if(U(!(out=malloc(ilen))))goto err3;
+	if(U((*olen=BIO_read(bio,out,ilen))<=0))goto err4;
 	BIO_free_all(bio);
 	out=USICRYPT(do_realloc)(ctx,out,ilen,*olen);
 	return out;
@@ -3379,16 +3396,16 @@ void *USICRYPT(rsa_generate)(void *ctx,int bits)
 	EVP_PKEY *key;
 	BIGNUM *b;
 
-	if(bits<USICRYPT_RSA_BITS_MIN||bits>USICRYPT_RSA_BITS_MAX||(bits&7))
-		goto err1;
-	if(xssl_reseed(ctx))goto err1;
-	if(!(k=RSA_new()))goto err1;
-	if(!(b=BN_new()))goto err2;
-	if(!BN_set_word(b,USICRYPT_RSA_EXPONENT))goto err3;
-	if(RSA_generate_key_ex(k,bits,b,NULL)!=1)goto err3;
-	if(!RSA_blinding_on(k,NULL))goto err3;
-	if(!(key=EVP_PKEY_new()))goto err3;
-	if(!(EVP_PKEY_assign_RSA(key,k)))goto err4;
+	if(U(bits<USICRYPT_RSA_BITS_MIN)||U(bits>USICRYPT_RSA_BITS_MAX)||
+		U(bits&7))goto err1;
+	if(U(xssl_reseed(ctx)))goto err1;
+	if(U(!(k=RSA_new())))goto err1;
+	if(U(!(b=BN_new())))goto err2;
+	if(U(!BN_set_word(b,USICRYPT_RSA_EXPONENT)))goto err3;
+	if(U(RSA_generate_key_ex(k,bits,b,NULL)!=1))goto err3;
+	if(U(!RSA_blinding_on(k,NULL)))goto err3;
+	if(U(!(key=EVP_PKEY_new())))goto err3;
+	if(U(!(EVP_PKEY_assign_RSA(key,k))))goto err4;
 	BN_free(b);
 	return key;
 
@@ -3408,8 +3425,8 @@ int USICRYPT(rsa_size)(void *ctx,void *key)
 	int n;
 	RSA *rsa;
 
-	if(!(rsa=EVP_PKEY_get1_RSA((EVP_PKEY *)key)))goto err1;
-	if((n=RSA_size(rsa))<=0)goto err2;
+	if(U(!(rsa=EVP_PKEY_get1_RSA((EVP_PKEY *)key))))goto err1;
+	if(U((n=RSA_size(rsa))<=0))goto err2;
 	res=n<<3;
 
 err2:	RSA_free(rsa);
@@ -3427,11 +3444,11 @@ void *USICRYPT(rsa_get_pub)(void *ctx,void *key,int *len)
 	unsigned char *p=NULL;
 	unsigned char *m;
 
-	if(!(k=EVP_PKEY_get1_RSA((EVP_PKEY *)key)))goto err1;
-	if((l=i2d_RSA_PUBKEY(k,NULL))<=0)goto err2;
-	if(!(m=p=malloc(l)))goto err2;
-	if((*len=i2d_RSA_PUBKEY(k,&m))<=0)goto err3;
-	if(*len==l)goto err2;
+	if(U(!(k=EVP_PKEY_get1_RSA((EVP_PKEY *)key))))goto err1;
+	if(U((l=i2d_RSA_PUBKEY(k,NULL))<=0))goto err2;
+	if(U(!(m=p=malloc(l))))goto err2;
+	if(U((*len=i2d_RSA_PUBKEY(k,&m))<=0))goto err3;
+	if(L(*len==l))goto err2;
 
 err3:	((struct usicrypt_thread *)ctx)->global->memclear(p,l);
 	free(p);
@@ -3451,11 +3468,11 @@ void *USICRYPT(rsa_set_pub)(void *ctx,void *key,int len)
 	RSA *k;
 	EVP_PKEY *kk;
 
-	if(!(k=d2i_RSA_PUBKEY(NULL,&pp,(long)len)))goto err1;
-	if((n=RSA_size(k))<USICRYPT_RSA_BYTES_MIN||n>USICRYPT_RSA_BYTES_MAX)
-		goto err2;
-	if(!(kk=EVP_PKEY_new()))goto err2;
-	if(!(EVP_PKEY_assign_RSA(kk,k)))goto err3;
+	if(U(!(k=d2i_RSA_PUBKEY(NULL,&pp,(long)len))))goto err1;
+	if(U((n=RSA_size(k))<USICRYPT_RSA_BYTES_MIN)||
+		U(n>USICRYPT_RSA_BYTES_MAX))goto err2;
+	if(U(!(kk=EVP_PKEY_new())))goto err2;
+	if(U(!(EVP_PKEY_assign_RSA(kk,k))))goto err3;
 	return kk;
 
 err3:	EVP_PKEY_free(kk);
@@ -3474,11 +3491,11 @@ void *USICRYPT(rsa_get_key)(void *ctx,void *key,int *len)
 	unsigned char *p=NULL;
 	unsigned char *m;
 
-	if(!(k=EVP_PKEY_get1_RSA((EVP_PKEY *)key)))goto err1;
-	if((l=i2d_RSAPrivateKey(k,NULL))<=0)goto err2;
-	if(!(m=p=malloc(l)))goto err2;
-	if((*len=i2d_RSAPrivateKey(k,&m))<=0)goto err3;
-	if(*len==l)goto err2;
+	if(U(!(k=EVP_PKEY_get1_RSA((EVP_PKEY *)key))))goto err1;
+	if(U((l=i2d_RSAPrivateKey(k,NULL))<=0))goto err2;
+	if(U(!(m=p=malloc(l))))goto err2;
+	if(U((*len=i2d_RSAPrivateKey(k,&m))<=0))goto err3;
+	if(L(*len==l))goto err2;
 
 err3:	((struct usicrypt_thread *)ctx)->global->memclear(p,l);
 	free(p);
@@ -3498,12 +3515,12 @@ void *USICRYPT(rsa_set_key)(void *ctx,void *key,int len)
 	RSA *k;
 	EVP_PKEY *kk;
 
-	if(!(k=d2i_RSAPrivateKey(NULL,&pp,(long)len)))goto err1;
-	if((n=RSA_size(k))<USICRYPT_RSA_BYTES_MIN||n>USICRYPT_RSA_BYTES_MAX)
-		goto err2;
-	if(!RSA_blinding_on(k,NULL))goto err2;
-	if(!(kk=EVP_PKEY_new()))goto err2;
-	if(!(EVP_PKEY_assign_RSA(kk,k)))goto err3;
+	if(U(!(k=d2i_RSAPrivateKey(NULL,&pp,(long)len))))goto err1;
+	if(U((n=RSA_size(k))<USICRYPT_RSA_BYTES_MIN)||
+		U(n>USICRYPT_RSA_BYTES_MAX))goto err2;
+	if(U(!RSA_blinding_on(k,NULL)))goto err2;
+	if(U(!(kk=EVP_PKEY_new())))goto err2;
+	if(U(!(EVP_PKEY_assign_RSA(kk,k))))goto err3;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,len);
 	return kk;
 
@@ -3601,11 +3618,11 @@ void *USICRYPT(rsa_encrypt_v15)(void *ctx,void *key,void *data,int dlen,
 	RSA *rsa;
 	unsigned char *out=NULL;
 
-	if(!(rsa=EVP_PKEY_get1_RSA(key)))goto err1;
+	if(U(!(rsa=EVP_PKEY_get1_RSA(key))))goto err1;
 	*olen=RSA_size(rsa);
-	if(dlen>*olen-11)goto err2;
-	if(!(out=malloc(*olen)))goto err2;
-	if(RSA_public_encrypt(dlen,data,out,rsa,RSA_PKCS1_PADDING)==*olen)
+	if(U(dlen>*olen-11))goto err2;
+	if(U(!(out=malloc(*olen))))goto err2;
+	if(L(RSA_public_encrypt(dlen,data,out,rsa,RSA_PKCS1_PADDING)==*olen))
 		goto err2;
 
 	((struct usicrypt_thread *)ctx)->global->memclear(out,RSA_size(rsa));
@@ -3626,11 +3643,11 @@ void *USICRYPT(rsa_decrypt_v15)(void *ctx,void *key,void *data,int dlen,
 	RSA *rsa;
 	unsigned char *out=NULL;
 
-	if(!(rsa=EVP_PKEY_get1_RSA(key)))goto err1;
+	if(U(!(rsa=EVP_PKEY_get1_RSA(key))))goto err1;
 	*olen=RSA_size(rsa);
-	if(dlen!=*olen)goto err2;
-	if(!(out=malloc(*olen)))goto err2;
-	if((l=RSA_private_decrypt(dlen,data,out,rsa,RSA_PKCS1_PADDING))==-1)
+	if(U(dlen!=*olen))goto err2;
+	if(U(!(out=malloc(*olen))))goto err2;
+	if(U((l=RSA_private_decrypt(dlen,data,out,rsa,RSA_PKCS1_PADDING))==-1))
 		goto err3;
 	out=USICRYPT(do_realloc)(ctx,out,*olen,l);
 	*olen=l;
@@ -3685,20 +3702,20 @@ void *USICRYPT(rsa_encrypt_oaep)(void *ctx,int md,void *key,void *data,int dlen,
 	default:goto err1;
 	}
 
-	if(xssl_reseed(ctx))goto err1;
-	if(!(rsa=EVP_PKEY_get1_RSA(key)))goto err1;
+	if(U(xssl_reseed(ctx)))goto err1;
+	if(U(!(rsa=EVP_PKEY_get1_RSA(key))))goto err1;
 	*olen=RSA_size(rsa);
-	if(dlen>*olen-2*len-2)goto err2;
-	if(!(tmp=malloc(*olen)))goto err2;
-	if(!(out=malloc(*olen)))goto err3;
+	if(U(dlen>*olen-2*len-2))goto err2;
+	if(U(!(tmp=malloc(*olen))))goto err2;
+	if(U(!(out=malloc(*olen))))goto err3;
 	if(type)
 	{
-		if(!RSA_padding_add_PKCS1_OAEP_mgf1(tmp,*olen,data,dlen,NULL,0,
-			type,type))goto err4;
+		if(U(!RSA_padding_add_PKCS1_OAEP_mgf1(tmp,*olen,data,dlen,NULL,
+			0,type,type)))goto err4;
 	}
-	else if(!RSA_padding_add_PKCS1_OAEP(tmp,*olen,data,dlen,NULL,0))
+	else if(U(!RSA_padding_add_PKCS1_OAEP(tmp,*olen,data,dlen,NULL,0)))
 		goto err4;
-	if(RSA_public_encrypt(*olen,tmp,out,rsa,RSA_NO_PADDING)==*olen)
+	if(L(RSA_public_encrypt(*olen,tmp,out,rsa,RSA_NO_PADDING)==*olen))
 		goto err3;
 
 err4:	((struct usicrypt_thread *)ctx)->global->memclear(out,RSA_size(rsa));
@@ -3748,21 +3765,21 @@ void *USICRYPT(rsa_decrypt_oaep)(void *ctx,int md,void *key,void *data,int dlen,
 	default:goto err1;
 	}
 
-	if(!(rsa=EVP_PKEY_get1_RSA(key)))goto err1;
+	if(U(!(rsa=EVP_PKEY_get1_RSA(key))))goto err1;
 	*olen=RSA_size(rsa);
-	if(dlen!=*olen)goto err2;
-	if(!(tmp=malloc(*olen)))goto err2;
-	if(!(out=malloc(*olen)))goto err3;
-	if(RSA_private_decrypt(dlen,data,tmp,rsa,RSA_NO_PADDING)!=*olen)
+	if(U(dlen!=*olen))goto err2;
+	if(U(!(tmp=malloc(*olen))))goto err2;
+	if(U(!(out=malloc(*olen))))goto err3;
+	if(U(RSA_private_decrypt(dlen,data,tmp,rsa,RSA_NO_PADDING)!=*olen))
 		goto err4;
-	if(tmp[0])goto err4;
+	if(U(tmp[0]))goto err4;
 	if(type)
 	{
-		if((l=RSA_padding_check_PKCS1_OAEP_mgf1(out,*olen,tmp+1,*olen-1,
-			*olen,NULL,0,type,type))==-1)goto err4;
+		if(U((l=RSA_padding_check_PKCS1_OAEP_mgf1(out,*olen,tmp+1,
+			*olen-1,*olen,NULL,0,type,type))==-1))goto err4;
 	}
-	else if((l=RSA_padding_check_PKCS1_OAEP(out,*olen,tmp+1,*olen-1,*olen,
-		NULL,0))==-1)goto err4;
+	else if(U((l=RSA_padding_check_PKCS1_OAEP(out,*olen,tmp+1,*olen-1,*olen,
+		NULL,0))==-1))goto err4;
 	out=USICRYPT(do_realloc)(ctx,out,*olen,l);
 	*olen=l;
 	goto err3;
@@ -3794,15 +3811,15 @@ void *USICRYPT(dh_generate)(void *ctx,int bits,int generator,int *len)
 	unsigned char *data=NULL;
 	unsigned char *m;
 
-	if(bits<USICRYPT_DH_BITS_MIN||bits>USICRYPT_DH_BITS_MAX||
-		(bits&7)||(generator!=2&&generator!=5))goto err1;
-	if(xssl_reseed(ctx))goto err1;
-	if(!(dh=DH_new()))goto err1;
-	if(!DH_generate_parameters_ex(dh,bits,generator,NULL))goto err2;
-	if((l=i2d_DHparams(dh,NULL))<=0)goto err2;
-	if(!(m=data=malloc(l)))goto err2;
-	if((*len=i2d_DHparams(dh,&m))<=0)goto err3;
-	if(l==*len)goto err2;
+	if(U(bits<USICRYPT_DH_BITS_MIN)||U(bits>USICRYPT_DH_BITS_MAX)||
+		U(bits&7)||U(generator!=2&&generator!=5))goto err1;
+	if(U(xssl_reseed(ctx)))goto err1;
+	if(U(!(dh=DH_new())))goto err1;
+	if(U(!DH_generate_parameters_ex(dh,bits,generator,NULL)))goto err2;
+	if(U((l=i2d_DHparams(dh,NULL))<=0))goto err2;
+	if(U(!(m=data=malloc(l))))goto err2;
+	if(U((*len=i2d_DHparams(dh,&m))<=0))goto err3;
+	if(L(l==*len))goto err2;
 
 err3:	((struct usicrypt_thread *)ctx)->global->memclear(data,l);
 	free(data);
@@ -3822,10 +3839,10 @@ void *USICRYPT(dh_init)(void *ctx,void *params,int len)
 	void *r;
 	const BIGNUM *g;
 
-	if(!(r=d2i_DHparams(NULL,(const unsigned char **)&params,len)))
+	if(U(!(r=d2i_DHparams(NULL,(const unsigned char **)&params,len))))
 		goto err1;
-	if(DH_size(r)<USICRYPT_DH_BYTES_MIN||DH_size(r)>USICRYPT_DH_BYTES_MAX)
-		goto err2;
+	if(U(DH_size(r)<USICRYPT_DH_BYTES_MIN)||
+		U(DH_size(r)>USICRYPT_DH_BYTES_MAX))goto err2;
 #if defined(LIBRESSL_VERSION_NUMBER) || OPENSSL_VERSION_NUMBER < 0x10100000L
 	g=((DH *)r)->g;
 #else
@@ -3833,7 +3850,7 @@ void *USICRYPT(dh_init)(void *ctx,void *params,int len)
 #endif
 	if(BN_is_word(g,2)||BN_is_word(g,5))msk=-1;
 	else msk=~(DH_CHECK_P_NOT_SAFE_PRIME|DH_UNABLE_TO_CHECK_GENERATOR);
-	if(!DH_check(r,&c)||(c&msk))goto err2;
+	if(U(!DH_check(r,&c))||U(c&msk))goto err2;
 	return r;
 
 err2:	DH_free(r);
@@ -3850,15 +3867,15 @@ void *USICRYPT(dh_genex)(void *ctx,void *dh,int *len)
 	const BIGNUM *pub;
 	unsigned char *num;
 
-	if(xssl_reseed(ctx))goto err1;
-	if(DH_generate_key(d)!=1)goto err1;
+	if(U(xssl_reseed(ctx)))goto err1;
+	if(U(DH_generate_key(d)!=1))goto err1;
 #if defined(LIBRESSL_VERSION_NUMBER) || OPENSSL_VERSION_NUMBER < 0x10100000L
 	pub=d->pub_key;
 #else
 	DH_get0_key(d,&pub,NULL);
 #endif
 	*len=BN_num_bytes(pub);
-	if(!(num=malloc(*len)))goto err1;
+	if(U(!(num=malloc(*len))))goto err1;
 	BN_bn2bin(pub,num);
 	return num;
 
@@ -3874,9 +3891,9 @@ void *USICRYPT(dh_derive)(void *ctx,void *dh,void *pub,int plen,int *slen)
 	BIGNUM *bn;
 	unsigned char *sec;
 
-	if(!(bn=BN_bin2bn(pub,plen,NULL)))goto err1;
-	if(!(sec=malloc(DH_size(dh))))goto err2;
-	if((*slen=DH_compute_key(sec,bn,dh))==-1)goto err3;
+	if(U(!(bn=BN_bin2bn(pub,plen,NULL))))goto err1;
+	if(U(!(sec=malloc(DH_size(dh)))))goto err2;
+	if(U((*slen=DH_compute_key(sec,bn,dh))==-1))goto err3;
 	BN_free(bn);
 	return sec;
 
@@ -3926,13 +3943,13 @@ void *USICRYPT(ec_generate)(void *ctx,int curve)
                 break;
         default:goto err1;
         }
-	if(xssl_reseed(ctx))goto err1;
-	if((nid=OBJ_txt2nid((const char *)name))==NID_undef)goto err1;
-	if(!(k=EC_KEY_new_by_curve_name(nid)))goto err1;
+	if(U(xssl_reseed(ctx)))goto err1;
+	if(U((nid=OBJ_txt2nid((const char *)name))==NID_undef))goto err1;
+	if(U(!(k=EC_KEY_new_by_curve_name(nid))))goto err1;
 	EC_KEY_set_asn1_flag(k,OPENSSL_EC_NAMED_CURVE);
-	if(!EC_KEY_generate_key(k))goto err2;
-	if(!(key=EVP_PKEY_new()))goto err2;
-	if(!(EVP_PKEY_assign_EC_KEY(key,k)))goto err3;
+	if(U(!EC_KEY_generate_key(k)))goto err2;
+	if(U(!(key=EVP_PKEY_new())))goto err2;
+	if(U(!(EVP_PKEY_assign_EC_KEY(key,k))))goto err3;
 	return key;
 
 err3:	EVP_PKEY_free(key);
@@ -3953,10 +3970,10 @@ int USICRYPT(ec_identifier)(void *ctx,void *key)
 	int res=-1;
 	char bfr[32];
 
-	if(!(ec=EVP_PKEY_get1_EC_KEY((EVP_PKEY *)key)))goto err1;
-	if(!(grp=EC_KEY_get0_group(ec)))goto err2;
-	if(!(nid=EC_GROUP_get_curve_name(grp)))goto err2;
-	if(!(obj=OBJ_nid2obj(nid)))goto err2;
+	if(U(!(ec=EVP_PKEY_get1_EC_KEY((EVP_PKEY *)key))))goto err1;
+	if(U(!(grp=EC_KEY_get0_group(ec))))goto err2;
+	if(U(!(nid=EC_GROUP_get_curve_name(grp))))goto err2;
+	if(U(!(obj=OBJ_nid2obj(nid))))goto err2;
 	OBJ_obj2txt(bfr,sizeof(bfr),obj,0);
 	if(!strcmp(bfr,"brainpoolP512r1"))res=USICRYPT_BRAINPOOLP512R1;
 	else if(!strcmp(bfr,"brainpoolP384r1"))res=USICRYPT_BRAINPOOLP384R1;
@@ -3979,13 +3996,13 @@ void *USICRYPT(ec_derive)(void *ctx,void *key,void *pub,int *klen)
 	EVP_PKEY_CTX *pkey;
 	unsigned char *s=NULL;
 
-	if(!(pkey=EVP_PKEY_CTX_new((EVP_PKEY *)key,NULL)))goto err1;
-	if(EVP_PKEY_derive_init(pkey)!=1)goto err2;
-	if(EVP_PKEY_derive_set_peer(pkey,(EVP_PKEY *)pub)!=1)goto err2;
-	if(EVP_PKEY_derive(pkey,NULL,&len)!=1)goto err2;
-	if(!(s=malloc(len)))goto err2;
+	if(U(!(pkey=EVP_PKEY_CTX_new((EVP_PKEY *)key,NULL))))goto err1;
+	if(U(EVP_PKEY_derive_init(pkey)!=1))goto err2;
+	if(U(EVP_PKEY_derive_set_peer(pkey,(EVP_PKEY *)pub)!=1))goto err2;
+	if(U(EVP_PKEY_derive(pkey,NULL,&len)!=1))goto err2;
+	if(U(!(s=malloc(len))))goto err2;
 	*klen=len;
-	if(EVP_PKEY_derive(pkey,s,&len)==1)goto err2;
+	if(U(EVP_PKEY_derive(pkey,s,&len)==1))goto err2;
 
 	((struct usicrypt_thread *)ctx)->global->memclear(s,len);
 	free(s);
@@ -4005,11 +4022,11 @@ void *USICRYPT(ec_get_pub)(void *ctx,void *key,int *len)
 	unsigned char *p=NULL;
 	unsigned char *m;
 
-	if(!(k=EVP_PKEY_get1_EC_KEY((EVP_PKEY *)key)))goto err1;
-	if((l=i2d_EC_PUBKEY(k,NULL))<=0)goto err2;
-	if(!(m=p=malloc(l)))goto err2;
-	if((*len=i2d_EC_PUBKEY(k,&m))<=0)goto err3;
-	if(*len==l)goto err2;
+	if(U(!(k=EVP_PKEY_get1_EC_KEY((EVP_PKEY *)key))))goto err1;
+	if(U((l=i2d_EC_PUBKEY(k,NULL))<=0))goto err2;
+	if(U(!(m=p=malloc(l))))goto err2;
+	if(U((*len=i2d_EC_PUBKEY(k,&m))<=0))goto err3;
+	if(U(*len==l))goto err2;
 
 err3:	((struct usicrypt_thread *)ctx)->global->memclear(p,l);
 	free(p);
@@ -4028,9 +4045,9 @@ void *USICRYPT(ec_set_pub)(void *ctx,void *key,int len)
 	EC_KEY *k;
 	EVP_PKEY *kk;
 
-	if(!(k=d2i_EC_PUBKEY(NULL,&pp,(long)len)))goto err1;
-	if(!(kk=EVP_PKEY_new()))goto err2;
-	if(!(EVP_PKEY_assign_EC_KEY(kk,k)))goto err3;
+	if(U(!(k=d2i_EC_PUBKEY(NULL,&pp,(long)len))))goto err1;
+	if(U(!(kk=EVP_PKEY_new())))goto err2;
+	if(U(!(EVP_PKEY_assign_EC_KEY(kk,k))))goto err3;
 	return kk;
 
 err3:	EVP_PKEY_free(kk);
@@ -4049,11 +4066,11 @@ void *USICRYPT(ec_get_key)(void *ctx,void *key,int *len)
 	unsigned char *p=NULL;
 	unsigned char *m;
 
-	if(!(k=EVP_PKEY_get1_EC_KEY((EVP_PKEY *)key)))goto err1;
-	if((l=i2d_ECPrivateKey(k,NULL))<=0)goto err2;
-	if(!(m=p=malloc(l)))goto err2;
-	if((*len=i2d_ECPrivateKey(k,&m))<=0)goto err3;
-	if(*len==l)goto err2;
+	if(U(!(k=EVP_PKEY_get1_EC_KEY((EVP_PKEY *)key))))goto err1;
+	if(U((l=i2d_ECPrivateKey(k,NULL))<=0))goto err2;
+	if(U(!(m=p=malloc(l))))goto err2;
+	if(U((*len=i2d_ECPrivateKey(k,&m))<=0))goto err3;
+	if(U(*len==l))goto err2;
 
 err3:	((struct usicrypt_thread *)ctx)->global->memclear(p,l);
 	free(p);
@@ -4072,9 +4089,9 @@ void *USICRYPT(ec_set_key)(void *ctx,void *key,int len)
 	EC_KEY *k;
 	EVP_PKEY *kk;
 
-	if(!(k=d2i_ECPrivateKey(NULL,&pp,(long)len)))goto err1;
-	if(!(kk=EVP_PKEY_new()))goto err2;
-	if(!(EVP_PKEY_assign_EC_KEY(kk,k)))goto err3;
+	if(U(!(k=d2i_ECPrivateKey(NULL,&pp,(long)len))))goto err1;
+	if(U(!(kk=EVP_PKEY_new())))goto err2;
+	if(U(!(EVP_PKEY_assign_EC_KEY(kk,k))))goto err3;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,len);
 	return kk;
 
@@ -4139,8 +4156,8 @@ void *USICRYPT(x25519_generate)(void *ctx)
 #if LIBRESSL_VERSION_NUMBER >= 0x20500000L
 	struct xssl_x25519 *x;
 
-	if(xssl_reseed(ctx))goto err1;
-	if(!(x=malloc(sizeof(struct xssl_x25519))))goto err1;
+	if(U(xssl_reseed(ctx)))goto err1;
+	if(U(!(x=malloc(sizeof(struct xssl_x25519)))))goto err1;
 	X25519_keypair(x->pub,x->key);
 	return x;
 
@@ -4152,11 +4169,11 @@ err1:	return NULL;
 	EVP_PKEY_CTX *c;
 	EVP_PKEY *key;
 
-	if(xssl_reseed(ctx))goto err1;
-	if(!(c=EVP_PKEY_CTX_new_id(NID_X25519,NULL)))goto err1;
-	if(EVP_PKEY_keygen_init(c)!=1)goto err2;
-	if(!(key=EVP_PKEY_new()))goto err2;
-	if(EVP_PKEY_keygen(c,&key)!=1)goto err3;
+	if(U(xssl_reseed(ctx)))goto err1;
+	if(U(!(c=EVP_PKEY_CTX_new_id(NID_X25519,NULL))))goto err1;
+	if(U(EVP_PKEY_keygen_init(c)!=1))goto err2;
+	if(U(!(key=EVP_PKEY_new())))goto err2;
+	if(U(EVP_PKEY_keygen(c,&key)!=1))goto err3;
 	EVP_PKEY_CTX_free(c);
 	return key;
 
@@ -4179,9 +4196,9 @@ void *USICRYPT(x25519_derive)(void *ctx,void *key,void *pub,int *klen)
 	unsigned char *data;
 
 	*klen=X25519_KEY_LENGTH;
-	if(!(data=malloc(*klen)))goto err1;
-	if(X25519(data,((struct xssl_x25519 *)key)->key,
-		((struct xssl_x25519 *)pub)->pub)!=1)goto err2;
+	if(U(!(data=malloc(*klen))))goto err1;
+	if(U(X25519(data,((struct xssl_x25519 *)key)->key,
+		((struct xssl_x25519 *)pub)->pub)!=1))goto err2;
 	return data;
 
 err2:	((struct usicrypt_thread *)ctx)->global->memclear(data,*klen);
@@ -4195,12 +4212,12 @@ err1:	return NULL;
 	EVP_PKEY_CTX *c;
 	unsigned char *data;
 
-	if(!(c=EVP_PKEY_CTX_new(key,NULL)))goto err1;
-	if(EVP_PKEY_derive_init(c)!=1)goto err2;
-	if(EVP_PKEY_derive_set_peer(c,pub)!=1)goto err2;
-	if(EVP_PKEY_derive(c,NULL,&len)!=1)goto err2;
-	if(!(data=malloc(len)))goto err2;
-	if(EVP_PKEY_derive(c,data,&len)!=1)goto err3;
+	if(U(!(c=EVP_PKEY_CTX_new(key,NULL))))goto err1;
+	if(U(EVP_PKEY_derive_init(c)!=1))goto err2;
+	if(U(EVP_PKEY_derive_set_peer(c,pub)!=1))goto err2;
+	if(U(EVP_PKEY_derive(c,NULL,&len)!=1))goto err2;
+	if(U(!(data=malloc(len))))goto err2;
+	if(U(EVP_PKEY_derive(c,data,&len)!=1))goto err3;
 	EVP_PKEY_CTX_free(c);
 	*klen=len;
 	return data;
@@ -4225,7 +4242,7 @@ void *USICRYPT(x25519_get_pub)(void *ctx,void *key,int *len)
 	unsigned char *data;
 
 	*len=sizeof(xssl_x25519_asn1_pub)+X25519_KEY_LENGTH;
-	if(!(data=malloc(*len)))goto err1;
+	if(U(!(data=malloc(*len))))goto err1;
 	memcpy(data,xssl_x25519_asn1_pub,sizeof(xssl_x25519_asn1_pub));
 	memcpy(data+sizeof(xssl_x25519_asn1_pub),
 		((struct xssl_x25519 *)key)->pub,X25519_KEY_LENGTH);
@@ -4240,8 +4257,8 @@ err1:	return NULL;
 	unsigned char *p;
 
 	*len=sizeof(xssl_x25519_asn1_pub)+32;
-	if(!(p=data=malloc(*len)))goto err1;
-	if(i2d_PUBKEY(key,&p)!=*len)goto err2;
+	if(U(!(p=data=malloc(*len))))goto err1;
+	if(U(i2d_PUBKEY(key,&p)!=*len))goto err2;
 	return data;
 
 err2:	((struct usicrypt_thread *)ctx)->global->memclear(data,*len);
@@ -4262,10 +4279,10 @@ void *USICRYPT(x25519_set_pub)(void *ctx,void *key,int len)
 #if LIBRESSL_VERSION_NUMBER >= 0x20500000L
 	struct xssl_x25519 *x;
 
-	if(len<sizeof(xssl_x25519_asn1_pub)+X25519_KEY_LENGTH||
-		memcmp(key,xssl_x25519_asn1_pub,sizeof(xssl_x25519_asn1_pub)))
+	if(U(len<sizeof(xssl_x25519_asn1_pub)+X25519_KEY_LENGTH)||
+	    U(memcmp(key,xssl_x25519_asn1_pub,sizeof(xssl_x25519_asn1_pub))))
 		goto err1;
-	if(!(x=malloc(sizeof(struct xssl_x25519))))goto err1;
+	if(U(!(x=malloc(sizeof(struct xssl_x25519)))))goto err1;
 	memcpy(x->pub,((unsigned char *)key)+sizeof(xssl_x25519_asn1_pub),
 		X25519_KEY_LENGTH);
 	return x;
@@ -4275,8 +4292,8 @@ err1:	return NULL;
 	return NULL;
 #endif
 #elif OPENSSL_VERSION_NUMBER >= 0x10100000L
-	if(len<sizeof(xssl_x25519_asn1_pub)+32||
-		memcmp(key,xssl_x25519_asn1_pub,sizeof(xssl_x25519_asn1_pub)))
+	if(U(len<sizeof(xssl_x25519_asn1_pub)+32)||
+	    U(memcmp(key,xssl_x25519_asn1_pub,sizeof(xssl_x25519_asn1_pub))))
 		return NULL;
 	return d2i_PUBKEY(NULL,(const unsigned char **)&key,len);
 #else
@@ -4295,7 +4312,7 @@ void *USICRYPT(x25519_get_key)(void *ctx,void *key,int *len)
 	unsigned char *data;
 
 	*len=sizeof(xssl_x25519_asn1_key)+X25519_KEY_LENGTH;
-	if(!(data=malloc(*len)))goto err1;
+	if(U(!(data=malloc(*len))))goto err1;
 	memcpy(data,xssl_x25519_asn1_key,sizeof(xssl_x25519_asn1_key));
 	memcpy(data+sizeof(xssl_x25519_asn1_key),
 		((struct xssl_x25519 *)key)->key,X25519_KEY_LENGTH);
@@ -4310,10 +4327,10 @@ err1:	return NULL;
 	unsigned char *p=NULL;
 	unsigned char *m;
 
-	if((l=i2d_PrivateKey(key,NULL))<=0)goto err1;
-	if(!(m=p=malloc(l)))goto err1;
-	if((*len=i2d_PrivateKey(key,&m))<=0)goto err2;
-	if(*len==l)goto err1;
+	if(U((l=i2d_PrivateKey(key,NULL))<=0))goto err1;
+	if(U(!(m=p=malloc(l))))goto err1;
+	if(U((*len=i2d_PrivateKey(key,&m))<=0))goto err2;
+	if(U(*len==l))goto err1;
 
 err2:	((struct usicrypt_thread *)ctx)->global->memclear(p,l);
 	free(p);
@@ -4335,10 +4352,10 @@ void *USICRYPT(x25519_set_key)(void *ctx,void *key,int len)
 	struct xssl_x25519 *x;
 	unsigned char bfr[X25519_KEY_LENGTH];
 
-	if(len<sizeof(xssl_x25519_asn1_key)+X25519_KEY_LENGTH||
-		memcmp(key,xssl_x25519_asn1_key,sizeof(xssl_x25519_asn1_key)))
+	if(U(len<sizeof(xssl_x25519_asn1_key)+X25519_KEY_LENGTH)||
+	    U(memcmp(key,xssl_x25519_asn1_key,sizeof(xssl_x25519_asn1_key))))
 		goto err1;
-	if(!(x=malloc(sizeof(struct xssl_x25519))))goto err1;
+	if(U(!(x=malloc(sizeof(struct xssl_x25519)))))goto err1;
 	memcpy(x->key,((unsigned char *)key)+sizeof(xssl_x25519_asn1_key),
 		X25519_KEY_LENGTH);
 	x->pub[0]=0x09;
@@ -4357,8 +4374,8 @@ err1:	((struct usicrypt_thread *)ctx)->global->memclear(key,len);
 	void *mem=key;
 	void *r=NULL;
 
-	if(len<sizeof(xssl_x25519_asn1_key)+32||
-		memcmp(key,xssl_x25519_asn1_key,sizeof(xssl_x25519_asn1_key)))
+	if(U(len<sizeof(xssl_x25519_asn1_key)+32)||
+	    U(memcmp(key,xssl_x25519_asn1_key,sizeof(xssl_x25519_asn1_key))))
 		goto err1;
 	r=d2i_PrivateKey(NID_X25519,NULL,(const unsigned char **)&key,len);
 err1:	((struct usicrypt_thread *)ctx)->global->memclear(mem,len);
@@ -4438,17 +4455,16 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #ifndef USICRYPT_NO_AES
 #ifndef USICRYPT_NO_ECB
 	case USICRYPT_AES|USICRYPT_ECB:
-		if(!(c=xssl_aes_ecb_init(ctx,key,klen)))break;
+		if(U(!(c=xssl_aes_ecb_init(ctx,key,klen))))break;
 		c->encrypt=xssl_aes_ecb_encrypt;
 		c->decrypt=xssl_aes_ecb_decrypt;
 		c->reset=NULL;
 		c->exit=xssl_aes_ecb_exit;
 		break;
-		return c;
 #endif
 #ifndef USICRYPT_NO_CBC
 	case USICRYPT_AES|USICRYPT_CBC:
-		if(!(c=xssl_aes_cbc_init(ctx,key,klen,iv)))break;
+		if(U(!(c=xssl_aes_cbc_init(ctx,key,klen,iv))))break;
 		c->encrypt=xssl_aes_cbc_encrypt;
 		c->decrypt=xssl_aes_cbc_decrypt;
 		c->reset=xssl_aes_cbc_reset;
@@ -4457,7 +4473,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CTS
 	case USICRYPT_AES|USICRYPT_CTS:
-		if(!(c=xssl_aes_cts_init(ctx,key,klen,iv)))break;
+		if(U(!(c=xssl_aes_cts_init(ctx,key,klen,iv))))break;
 		c->encrypt=xssl_aes_cts_encrypt;
 		c->decrypt=xssl_aes_cts_decrypt;
 		c->reset=xssl_aes_cts_reset;
@@ -4466,7 +4482,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CFB
 	case USICRYPT_AES|USICRYPT_CFB:
-		if(!(c=xssl_aes_cfb_init(ctx,key,klen,iv)))break;
+		if(U(!(c=xssl_aes_cfb_init(ctx,key,klen,iv))))break;
 		c->encrypt=xssl_aes_cfb_encrypt;
 		c->decrypt=xssl_aes_cfb_decrypt;
 		c->reset=xssl_aes_cfb_reset;
@@ -4475,7 +4491,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CFB8
 	case USICRYPT_AES|USICRYPT_CFB8:
-		if(!(c=xssl_aes_cfb8_init(ctx,key,klen,iv)))break;
+		if(U(!(c=xssl_aes_cfb8_init(ctx,key,klen,iv))))break;
 		c->encrypt=xssl_aes_cfb8_encrypt;
 		c->decrypt=xssl_aes_cfb8_decrypt;
 		c->reset=xssl_aes_cfb8_reset;
@@ -4484,7 +4500,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_OFB
 	case USICRYPT_AES|USICRYPT_OFB:
-		if(!(c=xssl_aes_ofb_init(ctx,key,klen,iv)))break;
+		if(U(!(c=xssl_aes_ofb_init(ctx,key,klen,iv))))break;
 		c->encrypt=xssl_aes_ofb_crypt;
 		c->decrypt=xssl_aes_ofb_crypt;
 		c->reset=xssl_aes_ofb_reset;
@@ -4493,7 +4509,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CTR
 	case USICRYPT_AES|USICRYPT_CTR:
-		if(!(c=xssl_aes_ctr_init(ctx,key,klen,iv)))break;
+		if(U(!(c=xssl_aes_ctr_init(ctx,key,klen,iv))))break;
 		c->encrypt=xssl_aes_ctr_crypt;
 		c->decrypt=xssl_aes_ctr_crypt;
 		c->reset=xssl_aes_ctr_reset;
@@ -4504,17 +4520,16 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #ifndef USICRYPT_NO_CAMELLIA
 #ifndef USICRYPT_NO_ECB
 	case USICRYPT_CAMELLIA|USICRYPT_ECB:
-		if(!(c=xssl_camellia_ecb_init(ctx,key,klen)))break;
+		if(U(!(c=xssl_camellia_ecb_init(ctx,key,klen))))break;
 		c->encrypt=xssl_camellia_ecb_encrypt;
 		c->decrypt=xssl_camellia_ecb_decrypt;
 		c->reset=NULL;
 		c->exit=xssl_camellia_ecb_exit;
 		break;
-		return c;
 #endif
 #ifndef USICRYPT_NO_CBC
 	case USICRYPT_CAMELLIA|USICRYPT_CBC:
-		if(!(c=xssl_camellia_cbc_init(ctx,key,klen,iv)))break;
+		if(U(!(c=xssl_camellia_cbc_init(ctx,key,klen,iv))))break;
 		c->encrypt=xssl_camellia_cbc_encrypt;
 		c->decrypt=xssl_camellia_cbc_decrypt;
 		c->reset=xssl_camellia_cbc_reset;
@@ -4523,7 +4538,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CTS
 	case USICRYPT_CAMELLIA|USICRYPT_CTS:
-		if(!(c=xssl_camellia_cts_init(ctx,key,klen,iv)))break;
+		if(U(!(c=xssl_camellia_cts_init(ctx,key,klen,iv))))break;
 		c->encrypt=xssl_camellia_cts_encrypt;
 		c->decrypt=xssl_camellia_cts_decrypt;
 		c->reset=xssl_camellia_cts_reset;
@@ -4532,7 +4547,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CFB
 	case USICRYPT_CAMELLIA|USICRYPT_CFB:
-		if(!(c=xssl_camellia_cfb_init(ctx,key,klen,iv)))break;
+		if(U(!(c=xssl_camellia_cfb_init(ctx,key,klen,iv))))break;
 		c->encrypt=xssl_camellia_cfb_encrypt;
 		c->decrypt=xssl_camellia_cfb_decrypt;
 		c->reset=xssl_camellia_cfb_reset;
@@ -4541,7 +4556,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CFB8
 	case USICRYPT_CAMELLIA|USICRYPT_CFB8:
-		if(!(c=xssl_camellia_cfb8_init(ctx,key,klen,iv)))break;
+		if(U(!(c=xssl_camellia_cfb8_init(ctx,key,klen,iv))))break;
 		c->encrypt=xssl_camellia_cfb8_encrypt;
 		c->decrypt=xssl_camellia_cfb8_decrypt;
 		c->reset=xssl_camellia_cfb8_reset;
@@ -4550,7 +4565,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_OFB
 	case USICRYPT_CAMELLIA|USICRYPT_OFB:
-		if(!(c=xssl_camellia_ofb_init(ctx,key,klen,iv)))break;
+		if(U(!(c=xssl_camellia_ofb_init(ctx,key,klen,iv))))break;
 		c->encrypt=xssl_camellia_ofb_crypt;
 		c->decrypt=xssl_camellia_ofb_crypt;
 		c->reset=xssl_camellia_ofb_reset;
@@ -4559,7 +4574,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CTR
 	case USICRYPT_CAMELLIA|USICRYPT_CTR:
-		if(!(c=xssl_camellia_ctr_init(ctx,key,klen,iv)))break;
+		if(U(!(c=xssl_camellia_ctr_init(ctx,key,klen,iv))))break;
 		c->encrypt=xssl_camellia_ctr_crypt;
 		c->decrypt=xssl_camellia_ctr_crypt;
 		c->reset=xssl_camellia_ctr_reset;
@@ -4570,7 +4585,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #ifndef USICRYPT_NO_CHACHA
 #ifndef USICRYPT_NO_STREAM
 	case USICRYPT_CHACHA20|USICRYPT_STREAM:
-		if(!(c=xssl_chacha_init(ctx,key,klen,iv)))break;
+		if(U(!(c=xssl_chacha_init(ctx,key,klen,iv))))break;
 		c->encrypt=xssl_chacha_crypt;
 		c->decrypt=xssl_chacha_crypt;
 		c->reset=xssl_chacha_reset;
@@ -4614,7 +4629,7 @@ void *USICRYPT(dskcipher_init)(void *ctx,int cipher,int mode,void *key,int klen)
 #ifndef USICRYPT_NO_AES
 #ifndef USICRYPT_NO_XTS
 	case USICRYPT_AES|USICRYPT_XTS:
-		if(!(c=xssl_aes_xts_init(ctx,key,klen)))break;
+		if(U(!(c=xssl_aes_xts_init(ctx,key,klen))))break;
 		c->encrypt=xssl_aes_xts_encrypt;
 		c->decrypt=xssl_aes_xts_decrypt;
 		c->exit=xssl_aes_xts_exit;
@@ -4622,7 +4637,7 @@ void *USICRYPT(dskcipher_init)(void *ctx,int cipher,int mode,void *key,int klen)
 #endif
 #ifndef USICRYPT_NO_ESSIV
 	case USICRYPT_AES|USICRYPT_ESSIV:
-		if(!(c=xssl_aes_essiv_init(ctx,key,klen)))break;
+		if(U(!(c=xssl_aes_essiv_init(ctx,key,klen))))break;
 		c->encrypt=xssl_aes_essiv_encrypt;
 		c->decrypt=xssl_aes_essiv_decrypt;
 		c->exit=xssl_aes_essiv_exit;
@@ -4632,7 +4647,7 @@ void *USICRYPT(dskcipher_init)(void *ctx,int cipher,int mode,void *key,int klen)
 #ifndef USICRYPT_NO_CAMELLIA
 #ifndef USICRYPT_NO_XTS
 	case USICRYPT_CAMELLIA|USICRYPT_XTS:
-		if(!(c=xssl_camellia_xts_init(ctx,key,klen)))break;
+		if(U(!(c=xssl_camellia_xts_init(ctx,key,klen))))break;
 		c->encrypt=xssl_camellia_xts_encrypt;
 		c->decrypt=xssl_camellia_xts_decrypt;
 		c->exit=xssl_camellia_xts_exit;
@@ -4640,7 +4655,7 @@ void *USICRYPT(dskcipher_init)(void *ctx,int cipher,int mode,void *key,int klen)
 #endif
 #ifndef USICRYPT_NO_ESSIV
 	case USICRYPT_CAMELLIA|USICRYPT_ESSIV:
-		if(!(c=xssl_camellia_essiv_init(ctx,key,klen)))break;
+		if(U(!(c=xssl_camellia_essiv_init(ctx,key,klen))))break;
 		c->encrypt=xssl_camellia_essiv_encrypt;
 		c->decrypt=xssl_camellia_essiv_decrypt;
 		c->exit=xssl_camellia_essiv_exit;
@@ -4678,7 +4693,7 @@ void *USICRYPT(aeadcipher_init)(void *ctx,int cipher,void *key,int klen,
 #ifndef USICRYPT_NO_AES
 #ifndef USICRYPT_NO_GCM
 	case USICRYPT_AES_GCM:
-		if(!(c=xssl_aes_gcm_init(ctx,key,klen,ilen,tlen)))break;
+		if(U(!(c=xssl_aes_gcm_init(ctx,key,klen,ilen,tlen))))break;
 		c->encrypt=xssl_aes_gcm_encrypt;
 		c->decrypt=xssl_aes_gcm_decrypt;
 #ifndef USICRYPT_NO_IOV
@@ -4690,7 +4705,7 @@ void *USICRYPT(aeadcipher_init)(void *ctx,int cipher,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CCM
 	case USICRYPT_AES_CCM:
-		if(!(c=xssl_aes_ccm_init(ctx,key,klen,ilen,tlen)))break;
+		if(U(!(c=xssl_aes_ccm_init(ctx,key,klen,ilen,tlen))))break;
 		c->encrypt=xssl_aes_ccm_encrypt;
 		c->decrypt=xssl_aes_ccm_decrypt;
 #ifndef USICRYPT_NO_IOV
@@ -4704,7 +4719,7 @@ void *USICRYPT(aeadcipher_init)(void *ctx,int cipher,void *key,int klen,
 #ifndef USICRYPT_NO_CHACHA
 #ifndef USICRYPT_NO_POLY
 	case USICRYPT_CHACHA20_POLY1305:
-		if(!(c=xssl_chacha_poly_init(ctx,key,klen,ilen,tlen)))break;
+		if(U(!(c=xssl_chacha_poly_init(ctx,key,klen,ilen,tlen))))break;
 		c->encrypt=xssl_chacha_poly_encrypt;
 		c->decrypt=xssl_chacha_poly_decrypt;
 #ifndef USICRYPT_NO_IOV
@@ -4820,29 +4835,31 @@ void *USICRYPT(encrypt_p8)(void *ctx,void *key,int klen,void *data,int dlen,
 	unsigned char iv[16];
 	unsigned char salt[8];
 
-	if(dlen>0x3fff||iter<=0||(digest==USICRYPT_SHA1&&bits!=128))goto err1;
+	if(U(dlen>0x3fff)||U(iter<=0)||
+		U(digest==USICRYPT_SHA1&&bits!=128))goto err1;
 
-	if(xssl_asn_next(data,dlen,0x30,&cidx,&didx))goto err1;
-	if(cidx+didx!=dlen)goto err1;
+	if(U(xssl_asn_next(data,dlen,0x30,&cidx,&didx)))goto err1;
+	if(U(cidx+didx!=dlen))goto err1;
 
 	for(didx=0;didx<4;didx++)if(xssl_digest_asn[didx].oidlen&&
 		xssl_digest_asn[didx].digest==digest)break;
-	if(didx==4)goto err1;
+	if(U(didx==4))goto err1;
 
 	for(cidx=0;cidx<24;cidx++)if(xssl_cipher_asn[cidx].oidlen&&
 		xssl_cipher_asn[cidx].cipher==cipher&&
 		xssl_cipher_asn[cidx].mode==mode&&
 		xssl_cipher_asn[cidx].bits==bits)break;
-	if(cidx==24)goto err1;
+	if(U(cidx==24))goto err1;
 
-	if(USICRYPT(random)(ctx,salt,8))goto err1;
-	if(USICRYPT(pbkdf2)(ctx,digest,key,klen,salt,8,iter,bfr))goto err2;
+	if(U(USICRYPT(random)(ctx,salt,8)))goto err1;
+	if(U(USICRYPT(pbkdf2)(ctx,digest,key,klen,salt,8,iter,bfr)))goto err2;
 
 	if(xssl_cipher_asn[cidx].ivlen)
-		if(USICRYPT(random)(ctx,iv,xssl_cipher_asn[cidx].ivlen))
+		if(U(USICRYPT(random)(ctx,iv,xssl_cipher_asn[cidx].ivlen)))
 			goto err3;
 
-	if(!(c=USICRYPT(blkcipher_init)(ctx,cipher,mode,bfr,bits,iv)))goto err4;
+	if(U(!(c=USICRYPT(blkcipher_init)(ctx,cipher,mode,bfr,bits,iv))))
+		goto err4;
 
 	if(iter>=0x800000)ilen=4;
 	else if(iter>=0x8000)ilen=3;
@@ -4859,7 +4876,7 @@ void *USICRYPT(encrypt_p8)(void *ctx,void *key,int klen,void *data,int dlen,
 	*rlen=xssl_asn_length(NULL,len1+len2+len3+dlen+plen)+
 		len1+len2+len3+dlen+plen+1;
 
-	if(!(ptr=out=malloc(*rlen)))goto err5;
+	if(U(!(ptr=out=malloc(*rlen))))goto err5;
 
 	*ptr++=0x30;
 	ptr+=xssl_asn_length(ptr,len1+len2+len3+dlen+plen);
@@ -4924,7 +4941,7 @@ void *USICRYPT(encrypt_p8)(void *ctx,void *key,int klen,void *data,int dlen,
 	memcpy(ptr,data,dlen);
 	if(xssl_cipher_asn[cidx].pad)usicrypt_cipher_padding_add(ctx,ptr,dlen);
 
-	if(USICRYPT(blkcipher_encrypt)(c,ptr,dlen+plen,ptr))goto err6;
+	if(U(USICRYPT(blkcipher_encrypt)(c,ptr,dlen+plen,ptr)))goto err6;
 	USICRYPT(blkcipher_exit)(c);
 
 	((struct usicrypt_thread *)ctx)->global->memclear(salt,sizeof(salt));
@@ -4953,7 +4970,7 @@ err1:	((struct usicrypt_thread *)ctx)->global->memclear(key,klen);
 	unsigned char *tmp;
 	unsigned char *r=NULL;
 
-	if(iter<=0||(bits!=128&&digest==USICRYPT_SHA1))goto err1;
+	if(U(iter<=0)||U(bits!=128&&digest==USICRYPT_SHA1))goto err1;
 
 	switch(cipher|mode)
 	{
@@ -5125,19 +5142,20 @@ err1:	((struct usicrypt_thread *)ctx)->global->memclear(key,klen);
 	default:goto err1;
 	}
 
-	if(!(in=BIO_new_mem_buf(data,dlen)))goto err1;
-	if(!(out=BIO_new(BIO_s_mem())))goto err2;
-	if(!(p8dec=d2i_PKCS8_PRIV_KEY_INFO_bio(in,NULL)))goto err3;
+	if(U(!(in=BIO_new_mem_buf(data,dlen))))goto err1;
+	if(U(!(out=BIO_new(BIO_s_mem()))))goto err2;
+	if(U(!(p8dec=d2i_PKCS8_PRIV_KEY_INFO_bio(in,NULL))))goto err3;
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
-	if(!(pbk=PKCS5_pbe2_set_iv(cm,iter,NULL,0,NULL,md)))goto err4;
-	if(!(p8enc=PKCS8_set0_pbe(key,klen,p8dec,pbk)))goto err5;
+	if(U(!(pbk=PKCS5_pbe2_set_iv(cm,iter,NULL,0,NULL,md))))goto err4;
+	if(U(!(p8enc=PKCS8_set0_pbe(key,klen,p8dec,pbk))))goto err5;
 	pbk=NULL;
 #else 
-	if(!(p8enc=PKCS8_encrypt(md,cm,key,klen,NULL,0,iter,p8dec)))goto err4;
+	if(U(!(p8enc=PKCS8_encrypt(md,cm,key,klen,NULL,0,iter,p8dec))))
+		goto err4;
 #endif
-	if(i2d_PKCS8_bio(out,p8enc)<=0)goto err6;
+	if(U(i2d_PKCS8_bio(out,p8enc)<=0))goto err6;
 	*rlen=(int)BIO_get_mem_data(out,&tmp);
-	if(!(r=malloc(*rlen)))goto err6;
+	if(U(!(r=malloc(*rlen))))goto err6;
 	memcpy(r,tmp,*rlen);
 
 err6:	X509_SIG_free(p8enc);
@@ -5180,137 +5198,139 @@ void *USICRYPT(decrypt_p8)(void *ctx,void *key,int klen,void *data,int dlen,
 	unsigned char *iv;
 	unsigned char bfr[64];
 
-	if(dlen>0x3fff)goto err1;
+	if(U(dlen>0x3fff))goto err1;
 
-	if(xssl_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(xssl_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	data+=h;
 	dlen-=h;
 
-	if(xssl_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(xssl_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	eptr=data+h+l;
 	elen=dlen-h-l;
 	data+=h;
 	dlen=l;
 
-	if(xssl_asn_next(data,dlen,0x06,&h,&l))goto err1;
-	if(l!=sizeof(xssl_pbes2_oid)||memcmp(data+h,xssl_pbes2_oid,l))goto err1;
+	if(U(xssl_asn_next(data,dlen,0x06,&h,&l)))goto err1;
+	if(U(l!=sizeof(xssl_pbes2_oid))||
+		U(memcmp(data+h,xssl_pbes2_oid,l)))goto err1;
 	data+=h+l;
 	dlen-=h+l;
 
-	if(xssl_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(xssl_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	data+=h;
 	dlen-=h;
 
-	if(xssl_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(xssl_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	data+=h;
 	dlen-=h;
 
-	if(xssl_asn_next(data,dlen,0x06,&h,&l))goto err1;
-	if(l!=sizeof(xssl_pbkdf2_oid)||memcmp(data+h,xssl_pbkdf2_oid,l))
+	if(U(xssl_asn_next(data,dlen,0x06,&h,&l)))goto err1;
+	if(U(l!=sizeof(xssl_pbkdf2_oid))||U(memcmp(data+h,xssl_pbkdf2_oid,l)))
 		goto err1;
 	data+=h+l;
 	dlen-=h+l;
 
-	if(xssl_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(xssl_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	data+=h;
 	dlen-=h;
 	mlen=l;
 
-	if(xssl_asn_next(data,dlen,0x04,&h,&l))goto err1;
+	if(U(xssl_asn_next(data,dlen,0x04,&h,&l)))goto err1;
 	salt=data+h;
 	slen=l;
 	data+=h+l;
 	dlen-=h+l;
 	mlen-=h+l;
 
-	if(xssl_asn_next(data,dlen,0x02,&h,&l))goto err1;
-	if(!l||l>sizeof(int))goto err1;
+	if(U(xssl_asn_next(data,dlen,0x02,&h,&l)))goto err1;
+	if(U(!l)||U(l>sizeof(int)))goto err1;
 	iter=data+h;
 	ilen=l;
 	data+=h+l;
 	dlen-=h+l;
 	mlen-=h+l;
 
-	if(mlen<0)goto err1;
+	if(U(mlen<0))goto err1;
 	else if(mlen)
 	{
-		if(xssl_asn_next(data,dlen,0x30,&h,&l))goto err1;
+		if(U(xssl_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 		data+=h;
 		dlen-=h;
 
-		if(xssl_asn_next(data,dlen,0x06,&h,&l))goto err1;
+		if(U(xssl_asn_next(data,dlen,0x06,&h,&l)))goto err1;
 		md=data+h;
 		mlen=l;
 		data+=h+l;
 		dlen-=h+l;
 
-		if(xssl_asn_next(data,dlen,0x05,&h,&l))goto err1;
-		if(l)goto err1;
+		if(U(xssl_asn_next(data,dlen,0x05,&h,&l)))goto err1;
+		if(U(l))goto err1;
 		data+=h;
 		dlen-=h;
 	}
 
-	if(xssl_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(xssl_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	data+=h;
 	dlen-=h;
 
-	if(xssl_asn_next(data,dlen,0x06,&h,&l))goto err1;
+	if(U(xssl_asn_next(data,dlen,0x06,&h,&l)))goto err1;
 	cipher=data+h;
 	clen=l;
 	data+=h+l;
 	dlen-=h+l;
 
-	if(xssl_asn_next(data,dlen,0x04,&h,&l))goto err1;
+	if(U(xssl_asn_next(data,dlen,0x04,&h,&l)))goto err1;
 	iv=data+h;
 	ivlen=l;
 	data+=h+l;
 	dlen-=h+l;
-	if(data!=eptr)goto err1;
+	if(U(data!=eptr))goto err1;
 
-	if(xssl_asn_next(eptr,elen,0x04,&h,&l))goto err1;
+	if(U(xssl_asn_next(eptr,elen,0x04,&h,&l)))goto err1;
 	eptr+=h;
 	elen=l;
 
 	for(l=0,h=0;h<ilen;h++)l=(l<<8)|iter[h];
-	if(!l)goto err1;
+	if(U(!l))goto err1;
 
 	if(mlen)
 	{
 		for(h=0;h<4;h++)if(xssl_digest_asn[h].oidlen&&
 			mlen==xssl_digest_asn[h].oidlen&&
 			!memcmp(md,xssl_digest_asn[h].oid,mlen))break;
-		if(h==4)goto err1;
+		if(U(h==4))goto err1;
 		else digest=xssl_digest_asn[h].digest;
 	}
 
 	for(h=0;h<24;h++)if(xssl_cipher_asn[h].oidlen&&
 		clen==xssl_cipher_asn[h].oidlen&&
 		!memcmp(cipher,xssl_cipher_asn[h].oid,clen))break;
-	if(h==24||xssl_cipher_asn[h].ivlen!=ivlen||
-		(xssl_cipher_asn[h].bits!=128&&digest==USICRYPT_SHA1))goto err1;
+	if(U(h==24)||U(xssl_cipher_asn[h].ivlen!=ivlen)||
+		U(xssl_cipher_asn[h].bits!=128&&digest==USICRYPT_SHA1))
+		goto err1;
 
-	if(xssl_cipher_asn[h].pad)if(elen&0x0f)goto err1;
+	if(xssl_cipher_asn[h].pad)if(U(elen&0x0f))goto err1;
 
-	if(USICRYPT(pbkdf2)(ctx,digest,key,klen,salt,slen,l,bfr))goto err1;
+	if(U(USICRYPT(pbkdf2)(ctx,digest,key,klen,salt,slen,l,bfr)))goto err1;
 
-	if(!(out=malloc(elen)))goto err2;
+	if(U(!(out=malloc(elen))))goto err2;
 
-	if(!(c=USICRYPT(blkcipher_init)(ctx,xssl_cipher_asn[h].cipher,
-		xssl_cipher_asn[h].mode,bfr,xssl_cipher_asn[h].bits,iv)))
+	if(U(!(c=USICRYPT(blkcipher_init)(ctx,xssl_cipher_asn[h].cipher,
+		xssl_cipher_asn[h].mode,bfr,xssl_cipher_asn[h].bits,iv))))
 		goto err3;
-	if(USICRYPT(blkcipher_decrypt)(c,eptr,elen,out))goto err5;
+	if(U(USICRYPT(blkcipher_decrypt)(c,eptr,elen,out)))goto err5;
 	USICRYPT(blkcipher_exit)(c);
 
 	if(xssl_cipher_asn[h].pad)
 	{
-		if((*rlen=usicrypt_cipher_padding_get(ctx,out,elen))==-1)
+		if(U((*rlen=usicrypt_cipher_padding_get(ctx,out,elen))==-1))
 			goto err4;
 		else *rlen=elen-*rlen;
 	}
 	else *rlen=elen;
 
-	if(xssl_asn_next(out,*rlen,0x30,&h,&l))goto err4;
-	if(h+l!=*rlen)goto err4;
+	if(U(xssl_asn_next(out,*rlen,0x30,&h,&l)))goto err4;
+	if(U(h+l!=*rlen))goto err4;
 
 	((struct usicrypt_thread *)ctx)->global->memclear(bfr,sizeof(bfr));
 	return USICRYPT(do_realloc)(ctx,out,elen,*rlen);
@@ -5329,13 +5349,13 @@ err1:	((struct usicrypt_thread *)ctx)->global->memclear(key,klen);
 	unsigned char *tmp;
 	unsigned char *r=NULL;
 
-	if(!(in=BIO_new_mem_buf(data,dlen)))goto err1;
-	if(!(out=BIO_new(BIO_s_mem())))goto err2;
-	if(!(p8enc=d2i_PKCS8_bio(in,NULL)))goto err3;
-	if(!(p8dec=PKCS8_decrypt(p8enc,key,klen)))goto err4;
-	if(i2d_PKCS8_PRIV_KEY_INFO_bio(out,p8dec)<=0)goto err5;
+	if(U(!(in=BIO_new_mem_buf(data,dlen))))goto err1;
+	if(U(!(out=BIO_new(BIO_s_mem()))))goto err2;
+	if(U(!(p8enc=d2i_PKCS8_bio(in,NULL))))goto err3;
+	if(U(!(p8dec=PKCS8_decrypt(p8enc,key,klen))))goto err4;
+	if(U(i2d_PKCS8_PRIV_KEY_INFO_bio(out,p8dec)<=0))goto err5;
 	*rlen=(int)BIO_get_mem_data(out,&tmp);
-	if(!(r=malloc(*rlen)))goto err5;
+	if(U(!(r=malloc(*rlen))))goto err5;
 	memcpy(r,tmp,*rlen);
 
 err5:	PKCS8_PRIV_KEY_INFO_free(p8dec);
@@ -5354,7 +5374,7 @@ void *USICRYPT(thread_init)(void *global)
 {
 	struct usicrypt_thread *ctx;
 
-	if(!(ctx=malloc(sizeof(struct usicrypt_thread))))goto err1;
+	if(U(!(ctx=malloc(sizeof(struct usicrypt_thread)))))goto err1;
 	ctx->global=global;
 	ctx->total=0;
 err1:	return ctx;
@@ -5380,20 +5400,20 @@ void *USICRYPT(global_init)(int (*rng_seed)(void *data,int len),
 	USICRYPT(do_realloc)(NULL,NULL,0,0);
 #if defined(LIBRESSL_VERSION_NUMBER) || OPENSSL_VERSION_NUMBER < 0x10100000L
 #if defined(USICRYPT_NO_THREADS)
-	if(!(ctx=malloc(sizeof(struct usicrypt_global))))goto err1;
+	if(U(!(ctx=malloc(sizeof(struct usicrypt_global)))))goto err1;
 #elif defined(_WIN64) || defined(_WIN32)
-	if(!(ctx=malloc(sizeof(struct usicrypt_global)+n*sizeof(HANDLE))))
+	if(U(!(ctx=malloc(sizeof(struct usicrypt_global)+n*sizeof(HANDLE)))))
 		goto err1;
 #else
-	if(!(ctx=malloc(sizeof(struct usicrypt_global)+n*
-		sizeof(pthread_mutex_t))))goto err1;
+	if(U(!(ctx=malloc(sizeof(struct usicrypt_global)+n*
+		sizeof(pthread_mutex_t)))))goto err1;
 #endif
 #else
-	if(!(ctx=malloc(sizeof(struct usicrypt_global))))goto err1;
+	if(U(!(ctx=malloc(sizeof(struct usicrypt_global)))))goto err1;
 #endif
 	ctx->rng_seed=(rng_seed?rng_seed:USICRYPT(get_random));
 	ctx->memclear=(memclear?memclear:USICRYPT(do_memclear));
-	if(ctx->rng_seed(bfr,sizeof(bfr)))goto err2;
+	if(U(ctx->rng_seed(bfr,sizeof(bfr))))goto err2;
 	RAND_seed(bfr,sizeof(bfr));
 	ctx->memclear(bfr,sizeof(bfr));
 	OpenSSL_add_all_algorithms();

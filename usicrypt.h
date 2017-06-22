@@ -1257,12 +1257,14 @@ extern int USICRYPT(blkcipher_decrypt)(void *ctx,void *src,int slen,void *dst);
  * mode		the cipher mode, Stream, ECB, CBC, CTS, CFB, CFB8, OFB or CTR
  * key		the key data
  * klen		the key data length in bits (128/192/256)
- * iv		the initial IV (ignored for ECB mode)
+ * iv		the initial IV, can be NULL (ignored for ECB mode)
  *
  * returns the allocated standard block cipher context or NULL in case of an
  * error
  *
  * Note: the key data will always be cleared.
+ *
+ * Note: if the IV is NULL, an all zeroes IV is used internally.
  *
  * AES/Camellia Notes:
  *

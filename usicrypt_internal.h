@@ -25,6 +25,14 @@
 #include <nettle/yarrow.h>
 #endif
 
+#ifdef __GNUC__
+#define L(x)	__builtin_expect((x),1)
+#define U(x)	__builtin_expect((x),0)
+#else
+#define L(x)	(x)
+#define U(x)	(x)
+#endif
+
 #ifdef USICRYPT_TEST
 #undef USICRYPT_NO_RSA
 #undef USICRYPT_NO_DH

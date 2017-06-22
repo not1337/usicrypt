@@ -354,13 +354,13 @@ static int util_asn_next(unsigned char *prm,int len,unsigned char id,
 	int n;
 
 	*hlen=2;
-	if(len<=1)goto err1;
-	if(prm[0]!=id)goto err1;
+	if(U(len<=1))goto err1;
+	if(U(prm[0]!=id))goto err1;
 	if(prm[1]&0x80)
 	{
 		*hlen=prm[1]&0x7f;
-		if(*hlen<1||*hlen>3)goto err1;
-		if(len<*hlen+2)goto err1;
+		if(U(*hlen<1)||U(*hlen>3))goto err1;
+		if(U(len<*hlen+2))goto err1;
 		*dlen=0;
 		n=2;
 		switch(*hlen)
@@ -374,7 +374,7 @@ static int util_asn_next(unsigned char *prm,int len,unsigned char id,
 		*hlen+=2;
 	}
 	else *dlen=prm[1];
-	if(*hlen+*dlen>len)goto err1;
+	if(U(*hlen+*dlen>len))goto err1;
 	return 0;
 
 err1:	return -1;
@@ -532,8 +532,8 @@ void *usicrypt_lfsr_init(void *ctx,int bits,void *preset)
 	unsigned char *ptr=preset;
 	struct util_lfsr *p;
 
-	if((bits&7)||bits<8||bits>128)goto err1;
-	if(!(p=malloc(sizeof(struct util_lfsr))))goto err1;
+	if(U(bits&7)||U(bits<8)||U(bits>128))goto err1;
+	if(U(!(p=malloc(sizeof(struct util_lfsr)))))goto err1;
 	p->bytes=(bits>>3)-1;
 	p->mode=util_lfsr[p->bytes].mode;
 	if(p->mode)p->poly.p64=util_lfsr[p->bytes].poly;
@@ -614,8 +614,8 @@ void *usicrypt_lfsr_init(void *ctx,int bits,void *preset)
 	}
 	else do
 	{
-		if(USICRYPT(random)(ctx,(unsigned char *)(&p->value),
-			sizeof(p->value)))goto err2;
+		if(U(USICRYPT(random)(ctx,(unsigned char *)(&p->value),
+			sizeof(p->value))))goto err2;
 		switch(p->mode)
 		{
 		case 0:	if(p->bytes!=3)p->value.v32&=(1<<bits)-1;
@@ -667,9 +667,10 @@ int usicrypt_cipher_padding_get(void *ctx,void *data,int len)
 	int i;
 	int pad;
 
-	if(len<1||(pad=((unsigned char *)data)[len-1])>len)return -1;
-	if(pad<1||pad>16)return -1;
-	for(i=len-pad;i<len-1;i++)if(((unsigned char *)data)[i]!=pad)return -1;
+	if(U(len<1)||U((pad=((unsigned char *)data)[len-1])>len))return -1;
+	if(U(pad<1)||U(pad>16))return -1;
+	for(i=len-pad;i<len-1;i++)
+		if(U(((unsigned char *)data)[i]!=pad))return -1;
 	return pad;
 }
 
@@ -715,7 +716,7 @@ void *usicrypt_dh_get_pub(void *ctx,void *pub,int publen,void *params,int plen,
 
 	*len=publen+pubadd+len1+len2+plen+sizeof(util_dh_oid)+len3+len4;
 
-	if(!(ptr=data=malloc(*len)))goto err1;
+	if(U(!(ptr=data=malloc(*len))))goto err1;
 
 	*ptr++=0x30;
 	ptr+=util_asn_length(ptr,publen+pubadd+len1+len2+plen+
@@ -753,49 +754,49 @@ void *usicrypt_dh_set_pub(void *ctx,void *data,int dlen,void **params,int *plen,
 	unsigned char *pmem;
 	unsigned char *pub;
 
-	if(util_asn_next(d,dlen,0x30,&h,&l))goto err1;
+	if(U(util_asn_next(d,dlen,0x30,&h,&l)))goto err1;
 	d+=h;
 	dlen-=h;
 
-	if(util_asn_next(d,dlen,0x30,&h,&l))goto err1;
-	if(l<=sizeof(util_dh_oid))goto err1;
-	if(memcmp(d+h,util_dh_oid,sizeof(util_dh_oid)))goto err1;
+	if(U(util_asn_next(d,dlen,0x30,&h,&l)))goto err1;
+	if(U(l<=sizeof(util_dh_oid)))goto err1;
+	if(U(memcmp(d+h,util_dh_oid,sizeof(util_dh_oid))))goto err1;
 	pmem=d+h+sizeof(util_dh_oid);
 	*plen=l-sizeof(util_dh_oid);
 	d+=h+l;
 	dlen-=h+l;
 
-	if(util_asn_next(d,dlen,0x03,&h,&l))goto err1;
-	if(!l||d[h])goto err1;
+	if(U(util_asn_next(d,dlen,0x03,&h,&l)))goto err1;
+	if(U(!l)||U(d[h]))goto err1;
 	d+=h+1;
 	dlen-=h+1;
 
-	if(util_asn_next(d,dlen,0x02,&h,&l))goto err1;
+	if(U(util_asn_next(d,dlen,0x02,&h,&l)))goto err1;
 	for(d+=h;l&&!*d;d++,l--);
 	if(!l)goto err1;
 	*len=l;
 
-	if(!(*params=malloc(*plen)))goto err1;
+	if(U(!(*params=malloc(*plen))))goto err1;
 	memcpy(*params,pmem,*plen);
 
-	if(!(pub=malloc(*len)))goto err2;
+	if(U(!(pub=malloc(*len))))goto err2;
 	memcpy(pub,d,*len);
 
 	d=pmem;
 	dlen=*plen;
-	if(util_asn_next(d,dlen,0x30,&h,&l))goto err3;
+	if(U(util_asn_next(d,dlen,0x30,&h,&l)))goto err3;
 	d+=h;
 	dlen-=h;
 
-	if(util_asn_next(d,dlen,0x02,&h,&l))goto err3;
+	if(U(util_asn_next(d,dlen,0x02,&h,&l)))goto err3;
 	for(d+=h;l&&!*d;d++,l--);
-	if(!l)goto err3;
+	if(U(!l))goto err3;
 	d+=l;
 	dlen-=l;
 
-	if(util_asn_next(d,dlen,0x02,&h,&l))goto err3;
+	if(U(util_asn_next(d,dlen,0x02,&h,&l)))goto err3;
 	for(d+=h;l&&!*d;d++,l--);
-	if(!l)goto err3;
+	if(U(!l))goto err3;
 
 	return pub;
 
@@ -823,11 +824,11 @@ int usicrypt_dh_cmp_params(void *ctx,void *p1,int p1len,void *p2,int p2len)
 	unsigned char *gy;
 
 	p=p1;
-	if(util_asn_next(p,p1len,0x30,&h,&l))goto err1;
+	if(U(util_asn_next(p,p1len,0x30,&h,&l)))goto err1;
 	p+=h;
 	p1len-=h;
 
-	if(util_asn_next(p,p1len,0x02,&h,&l))goto err1;
+	if(U(util_asn_next(p,p1len,0x02,&h,&l)))goto err1;
 	for(p+=h;l&&!*p;p++,l--);
 	if(!l)goto err1;
 	px=p;
@@ -835,28 +836,28 @@ int usicrypt_dh_cmp_params(void *ctx,void *p1,int p1len,void *p2,int p2len)
 	p+=l;
 	p1len-=l;
 
-	if(util_asn_next(p,p1len,0x02,&h,&l))goto err1;
+	if(U(util_asn_next(p,p1len,0x02,&h,&l)))goto err1;
 	for(p+=h;l&&!*p;p++,l--);
-	if(!l)goto err1;
+	if(U(!l))goto err1;
 	gx=p;
 	gxl=l;
 
 	p=p2;
-	if(util_asn_next(p,p2len,0x30,&h,&l))goto err1;
+	if(U(util_asn_next(p,p2len,0x30,&h,&l)))goto err1;
 	p+=h;
 	p2len-=h;
 
-	if(util_asn_next(p,p2len,0x02,&h,&l))goto err1;
+	if(U(util_asn_next(p,p2len,0x02,&h,&l)))goto err1;
 	for(p+=h;l&&!*p;p++,l--);
-	if(!l)goto err1;
+	if(U(!l))goto err1;
 	py=p;
 	pyl=l;
 	p+=l;
 	p2len-=l;
 
-	if(util_asn_next(p,p2len,0x02,&h,&l))goto err1;
+	if(U(util_asn_next(p,p2len,0x02,&h,&l)))goto err1;
 	for(p+=h;l&&!*p;p++,l--);
-	if(!l)goto err1;
+	if(U(!l))goto err1;
 	gy=p;
 	gyl=l;
 
@@ -879,15 +880,15 @@ int usicrypt_pub_type_from_p8(void *ctx,void *data,int dlen)
 	int sub;
 	unsigned char *d=data;
 
-	if(util_asn_next(d,dlen,0x30,&h,&l))goto err1;
+	if(U(util_asn_next(d,dlen,0x30,&h,&l)))goto err1;
 	d+=h;
 	dlen-=h;
 
-	if(util_asn_next(d,dlen,0x30,&h,&l))goto err1;
+	if(U(util_asn_next(d,dlen,0x30,&h,&l)))goto err1;
 	d+=h;
 	dlen-=h;
 
-	if(util_asn_next(d,dlen,0x06,&h,&l))goto err1;
+	if(U(util_asn_next(d,dlen,0x06,&h,&l)))goto err1;
 	d+=h;
 
 	for(i=0,sub=0;util_oids[i].oidlen;i++)if(util_oids[i].type<0&&
@@ -896,7 +897,7 @@ int usicrypt_pub_type_from_p8(void *ctx,void *data,int dlen)
 		sub=util_oids[i].type;
 		d+=l;
 		dlen-=h+l;
-		if(util_asn_next(d,dlen,0x06,&h,&l))goto err1;
+		if(U(util_asn_next(d,dlen,0x06,&h,&l)))goto err1;
 		d+=h;
 		break;
 	}
@@ -922,33 +923,33 @@ int usicrypt_key_type_from_p8(void *ctx,void *data,int dlen)
 	int pbes2=0;
 	unsigned char *d=data;
 
-	if(util_asn_next(d,dlen,0x30,&h,&l))goto err1;
+	if(U(util_asn_next(d,dlen,0x30,&h,&l)))goto err1;
 	d+=h;
 	dlen-=h;
 
 	if(util_asn_next(d,dlen,0x02,&h,&l))
 	{
-		if(!dlen||*d!=0x30)goto err1;
+		if(U(!dlen)||U(*d!=0x30))goto err1;
 		pbes2=1;
 	}
 	else
 	{
-		if(l!=1||d[h])goto err1;
+		if(U(l!=1)||U(d[h]))goto err1;
 		d+=h+l;
 		dlen-=h+l;
 	}
 
-	if(util_asn_next(d,dlen,0x30,&h,&l))goto err1;
+	if(U(util_asn_next(d,dlen,0x30,&h,&l)))goto err1;
 	d+=h;
 	dlen-=h;
 
-	if(util_asn_next(d,dlen,0x06,&h,&l))goto err1;
+	if(U(util_asn_next(d,dlen,0x06,&h,&l)))goto err1;
 	d+=h;
 
 	if(pbes2)
 	{
 #ifndef USICRYPT_NO_PBKDF2
-		if(l==sizeof(util_pbes2_oid)&&!memcmp(d,util_pbes2_oid,l))
+		if(L(l==sizeof(util_pbes2_oid))&&L(!memcmp(d,util_pbes2_oid,l)))
 			return USICRYPT_PBES2;
 #endif
 		goto err1;
@@ -960,7 +961,7 @@ int usicrypt_key_type_from_p8(void *ctx,void *data,int dlen)
 		sub=util_oids[i].type;
 		d+=l;
 		dlen-=h+l;
-		if(util_asn_next(d,dlen,0x06,&h,&l))goto err1;
+		if(U(util_asn_next(d,dlen,0x06,&h,&l)))goto err1;
 		d+=h;
 		break;
 	}
@@ -988,7 +989,7 @@ void *usicrypt_rsa_key_to_p8(void *ctx,void *data,int dlen,int *p8len)
 	len1=util_asn_length(NULL,dlen)+sizeof(util_rsap8hdr);
 	len2=util_asn_length(NULL,len1+dlen)+1;
 	*p8len=len1+len2+dlen;
-	if(!(ptr=r=malloc(*p8len)))goto err1;
+	if(U(!(ptr=r=malloc(*p8len))))goto err1;
 	*ptr++=0x30;
 	ptr+=util_asn_length(ptr,len1+dlen);
 	memcpy(ptr,util_rsap8hdr,sizeof(util_rsap8hdr));
@@ -1009,20 +1010,20 @@ void *usicrypt_p8_to_rsa_key(void *ctx,void *data,int dlen,int *klen)
 	unsigned char *d=data;
 	unsigned char *r=NULL;
 
-	if(util_asn_next(d,dlen,0x30,&h,&l))goto err1;
+	if(U(util_asn_next(d,dlen,0x30,&h,&l)))goto err1;
 	d+=h;
 	dlen-=h;
 
-	if(dlen<sizeof(util_rsap8hdr)||
-		memcmp(d,util_rsap8hdr,sizeof(util_rsap8hdr)))goto err1;
+	if(U(dlen<sizeof(util_rsap8hdr))||
+		U(memcmp(d,util_rsap8hdr,sizeof(util_rsap8hdr))))goto err1;
 	d+=sizeof(util_rsap8hdr)-1;
 	dlen-=sizeof(util_rsap8hdr)-1;
 
-	if(util_asn_next(d,dlen,0x04,&h,&l))goto err1;
+	if(U(util_asn_next(d,dlen,0x04,&h,&l)))goto err1;
 	d+=h;
 	dlen-=h;
 
-	if(!(r=malloc(dlen)))goto err1;
+	if(U(!(r=malloc(dlen))))goto err1;
 	memcpy(r,d,dlen);
 	*klen=dlen;
 err1:	return r;
@@ -1049,23 +1050,23 @@ void *usicrypt_ec_key_to_p8(void *ctx,void *data,int dlen,int *p8len)
 	unsigned char *oid;
 	unsigned char *pub;
 
-	if(util_asn_next(d,dlen,0x30,&h,&l))goto err1;
+	if(U(util_asn_next(d,dlen,0x30,&h,&l)))goto err1;
 	d+=h;
 	dlen-=h;
 
-	if(util_asn_next(d,dlen,0x02,&h,&l))goto err1;
-	if(l!=1||d[h]!=0x01)goto err1;
+	if(U(util_asn_next(d,dlen,0x02,&h,&l)))goto err1;
+	if(U(l!=1)||U(d[h]!=0x01))goto err1;
 	d+=h+l;
 	dlen-=h+l;
 
-	if(util_asn_next(d,dlen,0x04,&h,&l))goto err1;
+	if(U(util_asn_next(d,dlen,0x04,&h,&l)))goto err1;
 	key=d;
 	keylen=h+l;
 	d+=h+l;
 	dlen-=h+l;
 
-	if(util_asn_next(d,dlen,0xa0,&h,&l))goto err1;
-	if(l>0x76)goto err1;
+	if(U(util_asn_next(d,dlen,0xa0,&h,&l)))goto err1;
+	if(U(l>0x76))goto err1;
 	oid=d+h;
 	oidlen=l;
 	d+=h+l;
@@ -1087,7 +1088,7 @@ void *usicrypt_ec_key_to_p8(void *ctx,void *data,int dlen,int *p8len)
 	len3=util_asn_length(NULL,keylen+publen+3+len1+len2+
 		oidlen+sizeof(util_ecp8_hdr))+1;
 	*p8len=len1+len2+len3+keylen+publen+3+oidlen+sizeof(util_ecp8_hdr);
-	if(!(ptr=r=malloc(*p8len)))goto err1;
+	if(U(!(ptr=r=malloc(*p8len))))goto err1;
 	*ptr++=0x30;
 	ptr+=util_asn_length(ptr,keylen+publen+3+len1+len2+oidlen+
 		sizeof(util_ecp8_hdr));
@@ -1128,45 +1129,45 @@ void *usicrypt_p8_to_ec_key(void *ctx,void *data,int dlen,int *klen)
 	unsigned char *key;
 	unsigned char *pub;
 
-	if(util_asn_next(d,dlen,0x30,&h,&l))goto err1;
+	if(U(util_asn_next(d,dlen,0x30,&h,&l)))goto err1;
 	d+=h;
 	dlen-=h;
 
-	if(util_asn_next(d,dlen,0x02,&h,&l))goto err1;
-	if(l!=1||d[h])goto err1;
+	if(U(util_asn_next(d,dlen,0x02,&h,&l)))goto err1;
+	if(U(l!=1)||U(d[h]))goto err1;
 	d+=h+l;
 	dlen-=h+l;
 
-	if(util_asn_next(d,dlen,0x30,&h,&l))goto err1;
+	if(U(util_asn_next(d,dlen,0x30,&h,&l)))goto err1;
 	d+=h;
 	dlen-=h;
 
-	if(dlen<sizeof(util_ecp8_hdr)-5||
-		memcmp(d,util_ecp8_hdr+5,sizeof(util_ecp8_hdr)-5))goto err1;
+	if(U(dlen<sizeof(util_ecp8_hdr)-5)||
+		U(memcmp(d,util_ecp8_hdr+5,sizeof(util_ecp8_hdr)-5)))goto err1;
 	d+=sizeof(util_ecp8_hdr)-5;
 	dlen-=sizeof(util_ecp8_hdr)-5;
 
-	if(util_asn_next(d,dlen,0x06,&h,&l))goto err1;
-	if(h+l>0x7d)goto err1;
+	if(U(util_asn_next(d,dlen,0x06,&h,&l)))goto err1;
+	if(U(h+l>0x7d))goto err1;
 	oid=d;
 	oidlen=h+l;
 	d+=h+l;
 	dlen-=h+l;
 
-	if(util_asn_next(d,dlen,0x04,&h,&l))goto err1;
+	if(U(util_asn_next(d,dlen,0x04,&h,&l)))goto err1;
 	d+=h;
 	dlen-=h;
 
-	if(util_asn_next(d,dlen,0x30,&h,&l))goto err1;
+	if(U(util_asn_next(d,dlen,0x30,&h,&l)))goto err1;
 	d+=h;
 	dlen-=h;
 
-	if(util_asn_next(d,dlen,0x02,&h,&l))goto err1;
-	if(l!=1||d[h]!=0x01)goto err1;
+	if(U(util_asn_next(d,dlen,0x02,&h,&l)))goto err1;
+	if(U(l!=1)||U(d[h]!=0x01))goto err1;
 	d+=h+l;
 	dlen-=h+l;
 
-	if(util_asn_next(d,dlen,0x04,&h,&l))goto err1;
+	if(U(util_asn_next(d,dlen,0x04,&h,&l)))goto err1;
 	key=d;
 	keylen=h+l;
 	d+=h+l;
@@ -1185,7 +1186,7 @@ void *usicrypt_p8_to_ec_key(void *ctx,void *data,int dlen,int *klen)
 
 	len1=util_asn_length(NULL,publen+oidlen+2+keylen+3)+1;
 	*klen=publen+oidlen+2+keylen+3+len1;
-	if(!(ptr=r=malloc(*klen)))goto err1;
+	if(U(!(ptr=r=malloc(*klen))))goto err1;
 	*ptr++=0x30;
 	ptr+=util_asn_length(ptr,publen+oidlen+2+keylen+3);
 	*ptr++=0x02;

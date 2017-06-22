@@ -580,13 +580,13 @@ static int wolf_asn_next(unsigned char *prm,int len,unsigned char id,
 	int n;
 
 	*hlen=2;
-	if(len<=1)goto err1;
-	if(prm[0]!=id)goto err1;
+	if(U(len<=1))goto err1;
+	if(U(prm[0]!=id))goto err1;
 	if(prm[1]&0x80)
 	{
 		*hlen=prm[1]&0x7f;
-		if(*hlen<1||*hlen>3)goto err1;
-		if(len<*hlen+2)goto err1;
+		if(U(*hlen<1)||U(*hlen>3))goto err1;
+		if(U(len<*hlen+2))goto err1;
 		*dlen=0;
 		n=2;
 		switch(*hlen)
@@ -600,7 +600,7 @@ static int wolf_asn_next(unsigned char *prm,int len,unsigned char id,
 		*hlen+=2;
 	}
 	else *dlen=prm[1];
-	if(*hlen+*dlen>len)goto err1;
+	if(U(*hlen+*dlen>len))goto err1;
 	return 0;
 
 err1:	return -1;
@@ -643,19 +643,19 @@ static void *wolf_rsa_do_sign_v15(void *ctx,int md,void *key,void *data,
 	default:goto err1;
 	}
 
-	if(wolf_md[c.idx].init(&c.ctx))goto err1;
+	if(U(wolf_md[c.idx].init(&c.ctx)))goto err1;
 	if(!mode)
 	{
-		if(wolf_md[c.idx].update(&c.ctx,data,dlen))goto err2;
+		if(U(wolf_md[c.idx].update(&c.ctx,data,dlen)))goto err2;
 	}
 	else for(i=0;i<dlen;i++)
-		if(wolf_md[c.idx].update(&c.ctx,iov[i].data,iov[i].length))
+		if(U(wolf_md[c.idx].update(&c.ctx,iov[i].data,iov[i].length)))
 			goto err2;
-	if(wolf_md[c.idx].digest(&c.ctx,hash))goto err2;
+	if(U(wolf_md[c.idx].digest(&c.ctx,hash)))goto err2;
 	*slen=wc_RsaEncryptSize(key);
-	if(!(sig=malloc(*slen)))goto err2;
-	if(wc_RsaSSL_Sign(hash,wolf_md[c.idx].size,sig,*slen,key,
-		&((struct usicrypt_thread *)ctx)->rng)!=*slen)goto err3;
+	if(U(!(sig=malloc(*slen))))goto err2;
+	if(U(wc_RsaSSL_Sign(hash,wolf_md[c.idx].size,sig,*slen,key,
+		&((struct usicrypt_thread *)ctx)->rng)!=*slen))goto err3;
 	((struct usicrypt_thread *)ctx)->global->memclear(&c.ctx,sizeof(c.ctx));
 	((struct usicrypt_thread *)ctx)->global->memclear(hash,sizeof(hash));
 	return sig;
@@ -702,24 +702,24 @@ static int wolf_rsa_do_verify_v15(void *ctx,int md,void *key,void *data,
 	default:goto err1;
 	}
 
-	if(slen<wc_RsaEncryptSize(key))goto err1;
-	if(wolf_md[c.idx].init(&c.ctx))goto err1;
+	if(U(slen<wc_RsaEncryptSize(key)))goto err1;
+	if(U(wolf_md[c.idx].init(&c.ctx)))goto err1;
 	if(!mode)
 	{
-		if(wolf_md[c.idx].update(&c.ctx,data,dlen))goto err2;
+		if(U(wolf_md[c.idx].update(&c.ctx,data,dlen)))goto err2;
 	}
 	else for(i=0;i<dlen;i++)
-		if(wolf_md[c.idx].update(&c.ctx,iov[i].data,iov[i].length))
+		if(U(wolf_md[c.idx].update(&c.ctx,iov[i].data,iov[i].length)))
 			goto err2;
-	if(wolf_md[c.idx].digest(&c.ctx,hash))goto err2;
+	if(U(wolf_md[c.idx].digest(&c.ctx,hash)))goto err2;
 	res=wc_RsaEncryptSize(key);
-	if(!(tmp=malloc(res)))goto err2;
+	if(U(!(tmp=malloc(res))))goto err2;
 #ifdef WC_RSA_BLINDING
 	((RsaKey *)key)->rng=&((struct usicrypt_thread *)ctx)->rng;
 #endif
-	if(wc_RsaSSL_Verify(sig,slen,tmp,res,key)!=wolf_md[c.idx].size)
+	if(U(wc_RsaSSL_Verify(sig,slen,tmp,res,key)!=wolf_md[c.idx].size))
 		goto err3;
-	if(memcmp(hash,tmp,wolf_md[c.idx].size))goto err3;
+	if(U(memcmp(hash,tmp,wolf_md[c.idx].size)))goto err3;
 	((struct usicrypt_thread *)ctx)->global->memclear(tmp,res);
 	free(tmp);
 #ifdef WC_RSA_BLINDING
@@ -751,24 +751,24 @@ static void wolf_import_bugfix(ecc_key *key,unsigned char *data,int len)
 
 	/* skip to curve oid in import data */
 
-	if(*ptr++!=0x30)return;
-	if(*ptr&0x80)if(*ptr++!=0x81)return;
+	if(U(*ptr++!=0x30))return;
+	if(*ptr&0x80)if(U(*ptr++!=0x81))return;
 	l=*ptr++;
-	if(l+(ptr-data)>len||*ptr++!=0x30)return;
-	if(*ptr&0x80)if(*ptr++!=0x81)return;
+	if(U(l+(ptr-data)>len)||U(*ptr++!=0x30))return;
+	if(*ptr&0x80)if(U(*ptr++!=0x81))return;
 	l=*ptr++;
-	if(l+(ptr-data)>len)return;
+	if(U(l+(ptr-data)>len))return;
 	data=ptr;
 	len=l;
-	if(*ptr++!=0x06)return;
-	if(*ptr&0x80)if(*ptr++!=0x81)return;
+	if(U(*ptr++!=0x06))return;
+	if(*ptr&0x80)if(U(*ptr++!=0x81))return;
 	l=*ptr++;
-	if(l+(ptr-data)>=len)return;
+	if(U(l+(ptr-data)>=len))return;
 	ptr+=l;
-	if(*ptr++!=0x06)return;
-	if(*ptr&0x80)if(*ptr++!=0x81)return;
+	if(U(*ptr++!=0x06))return;
+	if(*ptr&0x80)if(U(*ptr++!=0x81))return;
 	l=*ptr++;
-	if(l+(ptr-data)>len)return;
+	if(U(l+(ptr-data)>len))return;
 
 	/* lookup curve oid in table */
 
@@ -829,19 +829,19 @@ static void *wolf_ec_do_sign(void *ctx,int md,void *key,void *data,int dlen,
 	default:goto err1;
 	}
 
-	if(wolf_md[c.idx].init(&c.ctx))goto err1;
+	if(U(wolf_md[c.idx].init(&c.ctx)))goto err1;
 	if(!mode)
 	{
-		if(wolf_md[c.idx].update(&c.ctx,data,dlen))goto err2;
+		if(U(wolf_md[c.idx].update(&c.ctx,data,dlen)))goto err2;
 	}
 	else for(len=0;len<dlen;len++)
-		if(wolf_md[c.idx].update(&c.ctx,iov[len].data,iov[len].length))
-			goto err2;
-	if(wolf_md[c.idx].digest(&c.ctx,hash))goto err2;
+	    if(U(wolf_md[c.idx].update(&c.ctx,iov[len].data,iov[len].length)))
+		goto err2;
+	if(U(wolf_md[c.idx].digest(&c.ctx,hash)))goto err2;
 	len=sizeof(sig);
-	if(wc_ecc_sign_hash(hash,wolf_md[c.idx].size,sig,&len,
-		&((struct usicrypt_thread *)ctx)->rng,key))goto err3;
-	if(!(r=malloc(len)))goto err3;
+	if(U(wc_ecc_sign_hash(hash,wolf_md[c.idx].size,sig,&len,
+		&((struct usicrypt_thread *)ctx)->rng,key)))goto err3;
+	if(U(!(r=malloc(len))))goto err3;
 	memcpy(r,sig,len);
 	*slen=len;
 err3:	((struct usicrypt_thread *)ctx)->global->memclear(sig,len);
@@ -883,17 +883,17 @@ static int wolf_ec_do_verify(void *ctx,int md,void *key,void *data,int dlen,
 	default:goto err1;
 	}
 
-	if(wolf_md[c.idx].init(&c.ctx))goto err1;
+	if(U(wolf_md[c.idx].init(&c.ctx)))goto err1;
 	if(!mode)
 	{
-		if(wolf_md[c.idx].update(&c.ctx,data,dlen))goto err2;
+		if(U(wolf_md[c.idx].update(&c.ctx,data,dlen)))goto err2;
 	}
 	else for(res=0;res<dlen;res++)
-		if(wolf_md[c.idx].update(&c.ctx,iov[res].data,iov[res].length))
-			goto err2;
-	if(wolf_md[c.idx].digest(&c.ctx,hash))goto err2;
-	if(wc_ecc_verify_hash(sig,slen,hash,wolf_md[c.idx].size,&res,key)||!res)
+	    if(U(wolf_md[c.idx].update(&c.ctx,iov[res].data,iov[res].length)))
 		goto err2;
+	if(U(wolf_md[c.idx].digest(&c.ctx,hash)))goto err2;
+	if(U(wc_ecc_verify_hash(sig,slen,hash,wolf_md[c.idx].size,&res,key))||
+		U(!res))goto err2;
 	((struct usicrypt_thread *)ctx)->global->memclear(&c.ctx,sizeof(c.ctx));
 	((struct usicrypt_thread *)ctx)->global->memclear(hash,sizeof(hash));
 	return 0;
@@ -916,22 +916,22 @@ static int wolf_pbkdf2_384(void *ctx,unsigned char *out,unsigned char *key,
 	Hmac h;
 	unsigned char tmp[SHA384_DIGEST_SIZE];
 
-	if(klen<0||slen<0||iter<1)goto err1;
+	if(U(klen<0)||U(slen<0)||U(iter<1))goto err1;
 
-	if(wc_HmacSetKey(&h,SHA384,key,klen))goto err2;
+	if(U(wc_HmacSetKey(&h,SHA384,key,klen)))goto err2;
 	i=wc_HmacUpdate(&h,salt,slen);
 	memset(out,0,3);
 	out[3]=0x01;
 	i+=wc_HmacUpdate(&h,out,4);
-	if(wc_HmacFinal(&h,out)||i)goto err3;
+	if(U(wc_HmacFinal(&h,out))||U(i))goto err3;
 
 	memcpy(tmp,out,SHA384_DIGEST_SIZE);
 
 	for(i=1;i<iter;i++)
 	{
-		if(wc_HmacSetKey(&h,SHA384,key,klen))goto err3;
+		if(U(wc_HmacSetKey(&h,SHA384,key,klen)))goto err3;
 		j=wc_HmacUpdate(&h,tmp,SHA384_DIGEST_SIZE);
-		if(wc_HmacFinal(&h,tmp)||j)goto err3;
+		if(U(wc_HmacFinal(&h,tmp))||U(j))goto err3;
 		for(j=0;j<SHA384_DIGEST_SIZE;j++)out[j]^=tmp[j];
 	}
 
@@ -953,8 +953,8 @@ err1:	return r;
 static int wolf_aes_cmac(void *ctx,void *key,int klen,void *src,int slen,
 	void *dst)
 {
-	if(klen&7)return -1;
-	if(wc_AesCmacGenerate(dst,NULL,src,slen,key,klen>>3))return -1;
+	if(U(klen&7))return -1;
+	if(U(wc_AesCmacGenerate(dst,NULL,src,slen,key,klen>>3)))return -1;
 	return 0;
 }
 
@@ -966,11 +966,11 @@ static int wolf_aes_cmac_iov(void *ctx,void *key,int klen,
 	int i;
 	Cmac c;
 
-	if(klen&7)goto err1;
-	if(wc_InitCmac(&c,key,klen>>3,WC_CMAC_AES,NULL))goto err1;
-	for(i=0;i<niov;i++)if(wc_CmacUpdate(&c,iov[i].data,iov[i].length))
+	if(U(klen&7))goto err1;
+	if(U(wc_InitCmac(&c,key,klen>>3,WC_CMAC_AES,NULL)))goto err1;
+	for(i=0;i<niov;i++)if(U(wc_CmacUpdate(&c,iov[i].data,iov[i].length)))
 		goto err2;
-	if(wc_CmacFinal(&c,dst,NULL))goto err2;
+	if(U(wc_CmacFinal(&c,dst,NULL)))goto err2;
 	((struct usicrypt_thread *)ctx)->global->memclear(&c,sizeof(c));
 	return 0;
 
@@ -984,16 +984,16 @@ err1:	return -1;
 
 static int wolf_aes_ecb_encrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen&0xf)return -1;
-	if(wc_AesEcbEncrypt(&((struct wolf_aes_xcb *)ctx)->enc,dst,src,slen))
+	if(U(slen&0xf))return -1;
+	if(U(wc_AesEcbEncrypt(&((struct wolf_aes_xcb *)ctx)->enc,dst,src,slen)))
 		return -1;
 	return 0;
 }
 
 static int wolf_aes_ecb_decrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen&0xf)return -1;
-	if(wc_AesEcbDecrypt(&((struct wolf_aes_xcb *)ctx)->dec,dst,src,slen))
+	if(U(slen&0xf))return -1;
+	if(U(wc_AesEcbDecrypt(&((struct wolf_aes_xcb *)ctx)->dec,dst,src,slen)))
 		return -1;
 	return 0;
 }
@@ -1002,10 +1002,10 @@ static void *wolf_aes_ecb_init(void *ctx,void *key,int klen)
 {
 	struct wolf_aes_xcb *aes;
 
-	if(klen&7)goto err1;
-	if(!(aes=malloc(sizeof(struct wolf_aes_xcb))))goto err1;
-	if(wc_AesSetKey(&aes->enc,key,klen>>3,NULL,AES_ENCRYPTION))goto err2;
-	if(wc_AesSetKey(&aes->dec,key,klen>>3,NULL,AES_DECRYPTION))goto err2;
+	if(U(klen&7))goto err1;
+	if(U(!(aes=malloc(sizeof(struct wolf_aes_xcb)))))goto err1;
+	if(U(wc_AesSetKey(&aes->enc,key,klen>>3,NULL,AES_ENCRYPTION)))goto err2;
+	if(U(wc_AesSetKey(&aes->dec,key,klen>>3,NULL,AES_DECRYPTION)))goto err2;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
@@ -1033,16 +1033,16 @@ static void wolf_aes_ecb_exit(void *ctx)
 
 static int wolf_aes_cbc_encrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen&0xf)return -1;
-	if(wc_AesCbcEncrypt(&((struct wolf_aes_xcb *)ctx)->enc,dst,src,slen))
+	if(U(slen&0xf))return -1;
+	if(U(wc_AesCbcEncrypt(&((struct wolf_aes_xcb *)ctx)->enc,dst,src,slen)))
 		return -1;
 	return 0;
 }
 
 static int wolf_aes_cbc_decrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen&0xf)return -1;
-	if(wc_AesCbcDecrypt(&((struct wolf_aes_xcb *)ctx)->dec,dst,src,slen))
+	if(U(slen&0xf))return -1;
+	if(U(wc_AesCbcDecrypt(&((struct wolf_aes_xcb *)ctx)->dec,dst,src,slen)))
 		return -1;
 	return 0;
 }
@@ -1050,11 +1050,13 @@ static int wolf_aes_cbc_decrypt(void *ctx,void *src,int slen,void *dst)
 static void *wolf_aes_cbc_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct wolf_aes_xcb *aes;
+	unsigned long long zero[2]={0,0};
 
-	if(klen&7)goto err1;
-	if(!(aes=malloc(sizeof(struct wolf_aes_xcb))))goto err1;
-	if(wc_AesSetKey(&aes->enc,key,klen>>3,iv,AES_ENCRYPTION))goto err2;
-	if(wc_AesSetKey(&aes->dec,key,klen>>3,iv,AES_DECRYPTION))goto err2;
+	if(U(klen&7))goto err1;
+	if(U(!(aes=malloc(sizeof(struct wolf_aes_xcb)))))goto err1;
+	if(!iv)iv=zero;
+	if(U(wc_AesSetKey(&aes->enc,key,klen>>3,iv,AES_ENCRYPTION)))goto err2;
+	if(U(wc_AesSetKey(&aes->dec,key,klen>>3,iv,AES_DECRYPTION)))goto err2;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
@@ -1093,15 +1095,15 @@ static int wolf_aes_cts_encrypt(void *ctx,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<=16)return -1;
+	if(U(slen<=16))return -1;
 	if(!(rem=slen&0xf))rem=0x10;
-	if(wc_AesCbcEncrypt(&aes->enc,d,s,slen-rem))return -1;
+	if(U(wc_AesCbcEncrypt(&aes->enc,d,s,slen-rem)))return -1;
 	s+=slen-rem;
 	d+=slen-rem;
 	memcpy(aes->tmp,s,rem);
 	if(rem<16)memset(aes->tmp+rem,0,16-rem);
 	memcpy(d,d-16,rem);
-	if(wc_AesCbcEncrypt(&aes->enc,d-16,aes->tmp,16))return -1;
+	if(U(wc_AesCbcEncrypt(&aes->enc,d-16,aes->tmp,16)))return -1;
 	return 0;
 }
 
@@ -1112,18 +1114,18 @@ static int wolf_aes_cts_decrypt(void *ctx,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<=16)return -1;
+	if(U(slen<=16))return -1;
 	if(!(rem=slen&0xf))rem=0x10;
 	if(slen-rem-16)
 	{
-		if(wc_AesCbcDecrypt(&aes->dec,d,s,slen-rem-16))return -1;
+		if(U(wc_AesCbcDecrypt(&aes->dec,d,s,slen-rem-16)))return -1;
 		s+=slen-rem-16;
 		d+=slen-rem-16;
 	}
 	memcpy(aes->tmp+16,s,16);
-	if(wc_AesEcbDecrypt(&aes->dec,aes->tmp,s,16))return -1;
+	if(U(wc_AesEcbDecrypt(&aes->dec,aes->tmp,s,16)))return -1;
 	memcpy(aes->tmp,s+16,rem);
-	if(wc_AesCbcDecrypt(&aes->dec,aes->tmp,aes->tmp,32))return -1;
+	if(U(wc_AesCbcDecrypt(&aes->dec,aes->tmp,aes->tmp,32)))return -1;
 	memcpy(d,aes->tmp,rem+16);
 	return 0;
 }
@@ -1131,11 +1133,13 @@ static int wolf_aes_cts_decrypt(void *ctx,void *src,int slen,void *dst)
 static void *wolf_aes_cts_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct wolf_aes_cts *aes;
+	unsigned long long zero[2]={0,0};
 
-	if(klen&7)goto err1;
-	if(!(aes=malloc(sizeof(struct wolf_aes_cts))))goto err1;
-	if(wc_AesSetKey(&aes->enc,key,klen>>3,iv,AES_ENCRYPTION))goto err2;
-	if(wc_AesSetKey(&aes->dec,key,klen>>3,iv,AES_DECRYPTION))goto err2;
+	if(U(klen&7))goto err1;
+	if(U(!(aes=malloc(sizeof(struct wolf_aes_cts)))))goto err1;
+	if(!iv)iv=zero;
+	if(U(wc_AesSetKey(&aes->enc,key,klen>>3,iv,AES_ENCRYPTION)))goto err2;
+	if(U(wc_AesSetKey(&aes->dec,key,klen>>3,iv,AES_DECRYPTION)))goto err2;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
@@ -1177,8 +1181,9 @@ static int wolf_aes_cfb_encrypt(void *ctx,void *src,int slen,void *dst)
 
 	while(slen--)
 	{
-		if(!aes->n)if(wc_AesEcbEncrypt(&aes->enc,aes->mem,aes->iv,16))
-			return -1;
+		if(!aes->n)
+			if(U(wc_AesEcbEncrypt(&aes->enc,aes->mem,aes->iv,16)))
+				return -1;
 		aes->iv[aes->n]=*d++=*s++^aes->mem[aes->n];
 		aes->n=(aes->n+1)&0xf;
 	}
@@ -1193,8 +1198,9 @@ static int wolf_aes_cfb_decrypt(void *ctx,void *src,int slen,void *dst)
 
 	while(slen--)
 	{
-		if(!aes->n)if(wc_AesEcbEncrypt(&aes->enc,aes->mem,aes->iv,16))
-			return -1;
+		if(!aes->n)
+			if(U(wc_AesEcbEncrypt(&aes->enc,aes->mem,aes->iv,16)))
+				return -1;
 		aes->iv[aes->n]=*s;
 		*d++=*s++^aes->mem[aes->n];
 		aes->n=(aes->n+1)&0xf;
@@ -1206,12 +1212,13 @@ static void *wolf_aes_cfb_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct wolf_aes_xfb *aes;
 
-	if(klen&7)goto err1;
-	if(!(aes=malloc(sizeof(struct wolf_aes_xfb))))goto err1;
-	if(wc_AesSetKey(&aes->enc,key,klen>>3,iv,AES_ENCRYPTION))goto err2;
+	if(U(klen&7))goto err1;
+	if(U(!(aes=malloc(sizeof(struct wolf_aes_xfb)))))goto err1;
+	if(U(wc_AesSetKey(&aes->enc,key,klen>>3,NULL,AES_ENCRYPTION)))goto err2;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	aes->n=0;
-	memcpy(aes->iv,iv,16);
+	if(iv)memcpy(aes->iv,iv,16);
+	else memset(aes->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
 
@@ -1248,7 +1255,7 @@ static int wolf_aes_cfb8_encrypt(void *ctx,void *src,int slen,void *dst)
 
 	while(slen--)
 	{
-		if(wc_AesEcbEncrypt(&aes->enc,aes->mem,aes->iv,16))return -1;
+		if(U(wc_AesEcbEncrypt(&aes->enc,aes->mem,aes->iv,16)))return -1;
 		memmove(aes->iv,aes->iv+1,15);
 		*d++=aes->iv[15]=*s++^aes->mem[0];
 	}
@@ -1263,7 +1270,7 @@ static int wolf_aes_cfb8_decrypt(void *ctx,void *src,int slen,void *dst)
 
 	while(slen--)
 	{
-		if(wc_AesEcbEncrypt(&aes->enc,aes->mem,aes->iv,16))return -1;
+		if(U(wc_AesEcbEncrypt(&aes->enc,aes->mem,aes->iv,16)))return -1;
 		memmove(aes->iv,aes->iv+1,15);
 		aes->iv[15]=*s;
 		*d++=*s++^aes->mem[0];
@@ -1275,11 +1282,12 @@ static void *wolf_aes_cfb8_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct wolf_aes_cfb8 *aes;
 
-	if(klen&7)goto err1;
-	if(!(aes=malloc(sizeof(struct wolf_aes_cfb8))))goto err1;
+	if(U(klen&7))goto err1;
+	if(U(!(aes=malloc(sizeof(struct wolf_aes_cfb8)))))goto err1;
+	if(U(wc_AesSetKey(&aes->enc,key,klen>>3,NULL,AES_ENCRYPTION)))goto err2;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
-	if(wc_AesSetKey(&aes->enc,key,klen>>3,NULL,AES_ENCRYPTION))goto err2;
-	memcpy(aes->iv,iv,16);
+	if(iv)memcpy(aes->iv,iv,16);
+	else memset(aes->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
 
@@ -1320,7 +1328,7 @@ static int wolf_aes_ofb_crypt(void *ctx,void *src,int slen,void *dst)
 		if(!aes->n)
 		{
 			wc_AesSetIV(&aes->enc,aes->iv);
-			if(wc_AesCbcEncrypt(&aes->enc,aes->iv,aes->zero,16))
+			if(U(wc_AesCbcEncrypt(&aes->enc,aes->iv,aes->zero,16)))
 				return -1;
 		}
 		*d++=aes->iv[aes->n];
@@ -1331,7 +1339,7 @@ static int wolf_aes_ofb_crypt(void *ctx,void *src,int slen,void *dst)
 		if(!aes->n)
 		{
 			wc_AesSetIV(&aes->enc,aes->iv);
-			if(wc_AesCbcEncrypt(&aes->enc,aes->iv,aes->zero,16))
+			if(U(wc_AesCbcEncrypt(&aes->enc,aes->iv,aes->zero,16)))
 				return -1;
 		}
 		*d++=*s++^aes->iv[aes->n];
@@ -1344,12 +1352,13 @@ static void *wolf_aes_ofb_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct wolf_aes_xfb *aes;
 
-	if(klen&7)goto err1;
-	if(!(aes=malloc(sizeof(struct wolf_aes_xfb))))goto err1;
-	if(wc_AesSetKey(&aes->enc,key,klen>>3,NULL,AES_ENCRYPTION))goto err2;
+	if(U(klen&7))goto err1;
+	if(U(!(aes=malloc(sizeof(struct wolf_aes_xfb)))))goto err1;
+	if(U(wc_AesSetKey(&aes->enc,key,klen>>3,NULL,AES_ENCRYPTION)))goto err2;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	aes->n=0;
-	memcpy(aes->iv,iv,16);
+	if(iv)memcpy(aes->iv,iv,16);
+	else memset(aes->iv,0,16);
 	memset(aes->zero,0,sizeof(aes->zero));
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
@@ -1399,10 +1408,12 @@ static int wolf_aes_ctr_crypt(void *ctx,void *src,int slen,void *dst)
 static void *wolf_aes_ctr_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct wolf_aes_ctr *aes;
+	unsigned long long zero[2]={0,0};
 
-	if(klen&7)goto err1;
-	if(!(aes=malloc(sizeof(struct wolf_aes_ctr))))goto err1;
-	if(wc_AesSetKey(&aes->enc,key,klen>>3,iv,AES_ENCRYPTION))goto err2;
+	if(U(klen&7))goto err1;
+	if(U(!(aes=malloc(sizeof(struct wolf_aes_ctr)))))goto err1;
+	if(!iv)iv=zero;
+	if(U(wc_AesSetKey(&aes->enc,key,klen>>3,iv,AES_ENCRYPTION)))goto err2;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	memset(aes->zero,0,sizeof(aes->zero));
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
@@ -1439,14 +1450,14 @@ static int wolf_aes_xts_encrypt(void *ctx,void *iv,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<16)return -1;
+	if(U(slen<16))return -1;
 
-	if(wc_AesEcbEncrypt(&aes->twe,aes->twk,iv,16))return -1;
+	if(U(wc_AesEcbEncrypt(&aes->twe,aes->twk,iv,16)))return -1;
 
 	for(;slen>=16;slen-=16,s+=16,d+=16)
 	{
 		for(i=0;i<16;i++)aes->wrk[i]=s[i]^aes->twk[i];
-		if(wc_AesEcbEncrypt(&aes->enc,d,aes->wrk,16))return -1;
+		if(U(wc_AesEcbEncrypt(&aes->enc,d,aes->wrk,16)))return -1;
 		for(n=0,i=0;i<16;i++,n>>=8)
 		{
 			d[i]^=aes->twk[i];
@@ -1462,7 +1473,7 @@ static int wolf_aes_xts_encrypt(void *ctx,void *iv,void *src,int slen,void *dst)
 		memcpy(aes->wrk,s,slen);
 		memcpy(aes->wrk+slen,d+slen,16-slen);
 		for(i=0;i<16;i++)aes->wrk[i]^=aes->twk[i];
-		if(wc_AesEcbEncrypt(&aes->enc,d,aes->wrk,16))return -1;
+		if(U(wc_AesEcbEncrypt(&aes->enc,d,aes->wrk,16)))return -1;
 		for(i=0;i<16;i++)d[i]^=aes->twk[i];
 	}
 
@@ -1477,14 +1488,14 @@ static int wolf_aes_xts_decrypt(void *ctx,void *iv,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<16)return -1;
+	if(U(slen<16))return -1;
 
-	if(wc_AesEcbEncrypt(&aes->twe,aes->twk,iv,16))return -1;
+	if(U(wc_AesEcbEncrypt(&aes->twe,aes->twk,iv,16)))return -1;
 
 	for(slen-=(slen&0xf)?16:0;slen>=16;slen-=16,s+=16,d+=16)
 	{
 		for(i=0;i<16;i++)aes->wrk[i]=s[i]^aes->twk[i];
-		if(wc_AesEcbDecrypt(&aes->dec,d,aes->wrk,16))return -1;
+		if(U(wc_AesEcbDecrypt(&aes->dec,d,aes->wrk,16)))return -1;
 		for(n=0,i=0;i<16;i++,n>>=8)
 		{
 			d[i]^=aes->twk[i];
@@ -1500,13 +1511,13 @@ static int wolf_aes_xts_decrypt(void *ctx,void *iv,void *src,int slen,void *dst)
 			aes->twk[i]=(unsigned char)(n|=(aes->twk[i]<<1));
 		if(n)aes->twk[0]^=0x87;
 		for(i=0;i<16;i++)aes->wrk[i]=s[i]^aes->twk[i];
-		if(wc_AesEcbDecrypt(&aes->dec,d,aes->wrk,16))return -1;
+		if(U(wc_AesEcbDecrypt(&aes->dec,d,aes->wrk,16)))return -1;
 		for(i=0;i<16;i++)d[i]^=aes->twk[i];
 		memcpy(d+16,d,slen);
 		memcpy(aes->wrk,s+16,slen);
 		memcpy(aes->wrk+slen,d+slen,16-slen);
 		for(i=0;i<16;i++)aes->wrk[i]^=aes->mem[i];
-		if(wc_AesEcbDecrypt(&aes->dec,d,aes->wrk,16))return -1;
+		if(U(wc_AesEcbDecrypt(&aes->dec,d,aes->wrk,16)))return -1;
 		for(i=0;i<16;i++)d[i]^=aes->mem[i];
 	}
 
@@ -1517,11 +1528,11 @@ static void *wolf_aes_xts_init(void *ctx,void *key,int klen)
 {
 	struct wolf_aes_xts *aes;
 
-	if(klen!=256&&klen!=512)goto err1;
-	if(!(aes=malloc(sizeof(struct wolf_aes_xts))))goto err1;
-	if(wc_AesSetKey(&aes->enc,key,klen>>4,NULL,AES_ENCRYPTION))goto err2;
-	if(wc_AesSetKey(&aes->dec,key,klen>>4,NULL,AES_DECRYPTION))goto err2;
-	if(wc_AesSetKey(&aes->twe,key+(klen>>4),klen>>4,NULL,AES_ENCRYPTION))
+	if(U(klen!=256&&klen!=512))goto err1;
+	if(U(!(aes=malloc(sizeof(struct wolf_aes_xts)))))goto err1;
+	if(U(wc_AesSetKey(&aes->enc,key,klen>>4,NULL,AES_ENCRYPTION)))goto err2;
+	if(U(wc_AesSetKey(&aes->dec,key,klen>>4,NULL,AES_DECRYPTION)))goto err2;
+	if(U(wc_AesSetKey(&aes->twe,key+(klen>>4),klen>>4,NULL,AES_ENCRYPTION)))
 		goto err2;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
@@ -1550,10 +1561,10 @@ static int wolf_aes_essiv_encrypt(void *ctx,void *iv,void *src,int slen,
 {
 	struct wolf_aes_essiv *aes=ctx;
 
-	if(slen&0xf)return -1;
-	if(wc_AesEcbEncrypt(&aes->aux,aes->iv,iv,16))return -1;
+	if(U(slen&0xf))return -1;
+	if(U(wc_AesEcbEncrypt(&aes->aux,aes->iv,iv,16)))return -1;
 	wc_AesSetIV(&aes->enc,aes->iv);
-	if(wc_AesCbcEncrypt(&aes->enc,dst,src,slen))return -1;
+	if(U(wc_AesCbcEncrypt(&aes->enc,dst,src,slen)))return -1;
 	return 0;
 }
 
@@ -1562,10 +1573,10 @@ static int wolf_aes_essiv_decrypt(void *ctx,void *iv,void *src,int slen,
 {
 	struct wolf_aes_essiv *aes=ctx;
 
-	if(slen&0xf)return -1;
-	if(wc_AesEcbEncrypt(&aes->aux,aes->iv,iv,16))return -1;
+	if(U(slen&0xf))return -1;
+	if(U(wc_AesEcbEncrypt(&aes->aux,aes->iv,iv,16)))return -1;
 	wc_AesSetIV(&aes->dec,aes->iv);
-	if(wc_AesCbcDecrypt(&aes->dec,dst,src,slen))return -1;
+	if(U(wc_AesCbcDecrypt(&aes->dec,dst,src,slen)))return -1;
 	return 0;
 }
 
@@ -1575,15 +1586,15 @@ static void *wolf_aes_essiv_init(void *ctx,void *key,int klen)
 	Sha256 h;
 	unsigned char tmp[SHA256_DIGEST_SIZE];
 
-	if(klen&7)goto err1;
-	if(!(aes=malloc(sizeof(struct wolf_aes_essiv))))goto err1;
-	if(wc_AesSetKey(&aes->enc,key,klen>>3,NULL,AES_ENCRYPTION))goto err2;
-	if(wc_AesSetKey(&aes->dec,key,klen>>3,NULL,AES_DECRYPTION))goto err2;
-	if(wc_InitSha256(&h))goto err2;
-	if(wc_Sha256Update(&h,key,klen>>3))goto err3;
-	if(wc_Sha256Final(&h,tmp))goto err3;
-	if(wc_AesSetKey(&aes->aux,tmp,SHA256_DIGEST_SIZE,NULL,AES_ENCRYPTION))
-		goto err4;
+	if(U(klen&7))goto err1;
+	if(U(!(aes=malloc(sizeof(struct wolf_aes_essiv)))))goto err1;
+	if(U(wc_AesSetKey(&aes->enc,key,klen>>3,NULL,AES_ENCRYPTION)))goto err2;
+	if(U(wc_AesSetKey(&aes->dec,key,klen>>3,NULL,AES_DECRYPTION)))goto err2;
+	if(U(wc_InitSha256(&h)))goto err2;
+	if(U(wc_Sha256Update(&h,key,klen>>3)))goto err3;
+	if(U(wc_Sha256Final(&h,tmp)))goto err3;
+	if(U(wc_AesSetKey(&aes->aux,tmp,SHA256_DIGEST_SIZE,NULL,
+		AES_ENCRYPTION)))goto err4;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	((struct usicrypt_thread *)ctx)->global->memclear(&h,sizeof(h));
 	((struct usicrypt_thread *)ctx)->global->memclear(tmp,sizeof(tmp));
@@ -1627,18 +1638,18 @@ static int wolf_aes_gcm_encrypt(void *ctx,void *iv,void *src,int slen,
 
 	if(wolf_need_gcm_bugfix&&((struct wolf_aes_xcm *)ctx)->tlen!=16)
 	{
-		if(wc_AesGcmEncrypt(&((struct wolf_aes_xcm *)ctx)->enc,
+		if(U(wc_AesGcmEncrypt(&((struct wolf_aes_xcm *)ctx)->enc,
 			dst,src,slen,iv,((struct wolf_aes_xcm *)ctx)->ilen,
-			tmp,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen))
+			tmp,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen)))
 			return -1;
 		memcpy(tag,tmp,((struct wolf_aes_xcm *)ctx)->tlen);
 		((struct wolf_aes_xcm *)ctx)->global->memclear(tmp,16);
 		return 0;
 	}
 #endif
-	if(wc_AesGcmEncrypt(&((struct wolf_aes_xcm *)ctx)->enc,
+	if(U(wc_AesGcmEncrypt(&((struct wolf_aes_xcm *)ctx)->enc,
 		dst,src,slen,iv,((struct wolf_aes_xcm *)ctx)->ilen,
-		tag,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen))return -1;
+		tag,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen)))return -1;
 	return 0;
 }
 
@@ -1656,7 +1667,7 @@ static int wolf_aes_gcm_encrypt_iov(void *ctx,void *iv,void *src,int slen,
 	for(i=0,alen=0;i<niov;i++)alen+=iov[i].length;
 	if(alen)
 	{
-		if(!(aad=malloc(alen)))goto err1;
+		if(U(!(aad=malloc(alen))))goto err1;
 		for(i=0,alen=0;i<niov;i++)
 		{
 			memcpy(aad+alen,iov[i].data,iov[i].length);
@@ -1666,9 +1677,9 @@ static int wolf_aes_gcm_encrypt_iov(void *ctx,void *iv,void *src,int slen,
 #ifdef WOLFSSL_AESNI
 	if(wolf_need_gcm_bugfix&&((struct wolf_aes_xcm *)ctx)->tlen!=16)
 	{
-		if(wc_AesGcmEncrypt(&((struct wolf_aes_xcm *)ctx)->enc,
+		if(U(wc_AesGcmEncrypt(&((struct wolf_aes_xcm *)ctx)->enc,
 			dst,src,slen,iv,((struct wolf_aes_xcm *)ctx)->ilen,
-			tmp,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen))
+			tmp,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen)))
 			goto err2;
 		memcpy(tag,tmp,((struct wolf_aes_xcm *)ctx)->tlen);
 		((struct wolf_aes_xcm *)ctx)->global->memclear(tmp,16);
@@ -1681,9 +1692,9 @@ static int wolf_aes_gcm_encrypt_iov(void *ctx,void *iv,void *src,int slen,
 		return 0;
 	}
 #endif
-	if(wc_AesGcmEncrypt(&((struct wolf_aes_xcm *)ctx)->enc,
+	if(U(wc_AesGcmEncrypt(&((struct wolf_aes_xcm *)ctx)->enc,
 		dst,src,slen,iv,((struct wolf_aes_xcm *)ctx)->ilen,
-		tag,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen))goto err2;
+		tag,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen)))goto err2;
 	if(aad)
 	{
 		((struct wolf_aes_xcm *)ctx)->global->memclear(aad,alen);
@@ -1711,25 +1722,25 @@ static int wolf_aes_gcm_decrypt(void *ctx,void *iv,void *src,int slen,
 
 	if(wolf_need_gcm_bugfix&&((struct wolf_aes_xcm *)ctx)->tlen!=16)
 	{
-		if(wc_AesGcmEncrypt(&((struct wolf_aes_xcm *)ctx)->enc,
+		if(U(wc_AesGcmEncrypt(&((struct wolf_aes_xcm *)ctx)->enc,
 			dst,src,slen,iv,((struct wolf_aes_xcm *)ctx)->ilen,
-			tmp,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen))
+			tmp,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen)))
 			return -1;
-		if(!(ptr=malloc(slen)))return -1;
+		if(U(!(ptr=malloc(slen))))return -1;
 		i=wc_AesGcmEncrypt(&((struct wolf_aes_xcm *)ctx)->enc,
 			ptr,dst,slen,iv,((struct wolf_aes_xcm *)ctx)->ilen,
 			tmp,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen);
 		((struct wolf_aes_xcm *)ctx)->global->memclear(ptr,slen);
 		free(ptr);
-		if(i)return -1;
+		if(U(i))return -1;
 		i=memcmp(tag,tmp,((struct wolf_aes_xcm *)ctx)->tlen);
 		((struct wolf_aes_xcm *)ctx)->global->memclear(tmp,16);
-		return i?-1:0;
+		return U(i)?-1:0;
 	}
 #endif
-	if(wc_AesGcmDecrypt(&((struct wolf_aes_xcm *)ctx)->enc,
+	if(U(wc_AesGcmDecrypt(&((struct wolf_aes_xcm *)ctx)->enc,
 		dst,src,slen,iv,((struct wolf_aes_xcm *)ctx)->ilen,
-		tag,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen))return -1;
+		tag,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen)))return -1;
 	return 0;
 }
 
@@ -1748,7 +1759,7 @@ static int wolf_aes_gcm_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 	for(i=0,alen=0;i<niov;i++)alen+=iov[i].length;
 	if(alen)
 	{
-		if(!(aad=malloc(alen)))goto err1;
+		if(U(!(aad=malloc(alen))))goto err1;
 		for(i=0,alen=0;i<niov;i++)
 		{
 			memcpy(aad+alen,iov[i].data,iov[i].length);
@@ -1758,17 +1769,17 @@ static int wolf_aes_gcm_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 #ifdef WOLFSSL_AESNI
 	if(wolf_need_gcm_bugfix&&((struct wolf_aes_xcm *)ctx)->tlen!=16)
 	{
-		if(wc_AesGcmEncrypt(&((struct wolf_aes_xcm *)ctx)->enc,
+		if(U(wc_AesGcmEncrypt(&((struct wolf_aes_xcm *)ctx)->enc,
 			dst,src,slen,iv,((struct wolf_aes_xcm *)ctx)->ilen,
-			tmp,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen))
+			tmp,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen)))
 			goto err2;
-		if(!(ptr=malloc(slen)))goto err2;
+		if(U(!(ptr=malloc(slen))))goto err2;
 		i=wc_AesGcmEncrypt(&((struct wolf_aes_xcm *)ctx)->enc,
 			ptr,dst,slen,iv,((struct wolf_aes_xcm *)ctx)->ilen,
 			tmp,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen);
 		((struct wolf_aes_xcm *)ctx)->global->memclear(ptr,slen);
 		free(ptr);
-		if(i)goto err2;
+		if(U(i))goto err2;
 		i=memcmp(tag,tmp,((struct wolf_aes_xcm *)ctx)->tlen);
 		((struct wolf_aes_xcm *)ctx)->global->memclear(tmp,16);
 		if(aad)
@@ -1777,7 +1788,7 @@ static int wolf_aes_gcm_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 				memclear(aad,alen);
 			free(aad);
 		}
-		return i?-1:0;
+		return U(i)?-1:0;
 	}
 #endif
 	if(wc_AesGcmDecrypt(&((struct wolf_aes_xcm *)ctx)->enc,
@@ -1804,9 +1815,9 @@ static void *wolf_aes_gcm_init(void *ctx,void *key,int klen,int ilen,int tlen)
 {
 	struct wolf_aes_xcm *aes;
 
-	if(klen&7)goto err1;
-	if(!(aes=malloc(sizeof(struct wolf_aes_xcm))))goto err1;
-	if(wc_AesGcmSetKey(&aes->enc,key,klen>>3))goto err2;
+	if(U(klen&7))goto err1;
+	if(U(!(aes=malloc(sizeof(struct wolf_aes_xcm)))))goto err1;
+	if(U(wc_AesGcmSetKey(&aes->enc,key,klen>>3)))goto err2;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	aes->ilen=ilen;
 	aes->tlen=tlen;
@@ -1833,9 +1844,9 @@ static void wolf_aes_gcm_exit(void *ctx)
 static int wolf_aes_ccm_encrypt(void *ctx,void *iv,void *src,int slen,
 	void *aad,int alen,void *dst,void *tag)
 {
-	if(wc_AesCcmEncrypt(&((struct wolf_aes_xcm *)ctx)->enc,
+	if(U(wc_AesCcmEncrypt(&((struct wolf_aes_xcm *)ctx)->enc,
 		dst,src,slen,iv,((struct wolf_aes_xcm *)ctx)->ilen,
-		tag,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen))return -1;
+		tag,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen)))return -1;
 	return 0;
 }
 
@@ -1851,16 +1862,16 @@ static int wolf_aes_ccm_encrypt_iov(void *ctx,void *iv,void *src,int slen,
 	for(i=0,alen=0;i<niov;i++)alen+=iov[i].length;
 	if(alen)
 	{
-		if(!(aad=malloc(alen)))goto err1;
+		if(U(!(aad=malloc(alen))))goto err1;
 		for(i=0,alen=0;i<niov;i++)
 		{
 			memcpy(aad+alen,iov[i].data,iov[i].length);
 			alen+=iov[i].length;
 		}
 	}
-	if(wc_AesCcmEncrypt(&((struct wolf_aes_xcm *)ctx)->enc,
+	if(U(wc_AesCcmEncrypt(&((struct wolf_aes_xcm *)ctx)->enc,
 		dst,src,slen,iv,((struct wolf_aes_xcm *)ctx)->ilen,
-		tag,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen))goto err2;
+		tag,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen)))goto err2;
 	if(aad)
 	{
 		((struct wolf_aes_xcm *)ctx)->global->memclear(aad,alen);
@@ -1881,9 +1892,9 @@ err1:   return -1;
 static int wolf_aes_ccm_decrypt(void *ctx,void *iv,void *src,int slen,
 	void *aad,int alen,void *dst,void *tag)
 {
-	if(wc_AesCcmDecrypt(&((struct wolf_aes_xcm *)ctx)->enc,
+	if(U(wc_AesCcmDecrypt(&((struct wolf_aes_xcm *)ctx)->enc,
 		dst,src,slen,iv,((struct wolf_aes_xcm *)ctx)->ilen,
-		tag,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen))return -1;
+		tag,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen)))return -1;
 	return 0;
 }
 
@@ -1899,16 +1910,16 @@ static int wolf_aes_ccm_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 	for(i=0,alen=0;i<niov;i++)alen+=iov[i].length;
 	if(alen)
 	{
-		if(!(aad=malloc(alen)))goto err1;
+		if(U(!(aad=malloc(alen))))goto err1;
 		for(i=0,alen=0;i<niov;i++)
 		{
 			memcpy(aad+alen,iov[i].data,iov[i].length);
 			alen+=iov[i].length;
 		}
 	}
-	if(wc_AesCcmDecrypt(&((struct wolf_aes_xcm *)ctx)->enc,
+	if(U(wc_AesCcmDecrypt(&((struct wolf_aes_xcm *)ctx)->enc,
 		dst,src,slen,iv,((struct wolf_aes_xcm *)ctx)->ilen,
-		tag,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen))goto err2;
+		tag,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen)))goto err2;
 	if(aad)
 	{
 		((struct wolf_aes_xcm *)ctx)->global->memclear(aad,alen);
@@ -1930,9 +1941,9 @@ static void *wolf_aes_ccm_init(void *ctx,void *key,int klen,int ilen,int tlen)
 {
 	struct wolf_aes_xcm *aes;
 
-	if(klen&7)goto err1;
-	if(!(aes=malloc(sizeof(struct wolf_aes_xcm))))goto err1;
-	if(wc_AesCcmSetKey(&aes->enc,key,klen>>3))goto err2;
+	if(U(klen&7))goto err1;
+	if(U(!(aes=malloc(sizeof(struct wolf_aes_xcm)))))goto err1;
+	if(U(wc_AesCcmSetKey(&aes->enc,key,klen>>3)))goto err2;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	aes->ilen=ilen;
 	aes->tlen=tlen;
@@ -1961,8 +1972,8 @@ static void wolf_aes_ccm_exit(void *ctx)
 static int wolf_chacha_poly_encrypt(void *ctx,void *iv,void *src,int slen,
 	void *aad,int alen,void *dst,void *tag)
 {
-	if(wc_ChaCha20Poly1305_Encrypt(((struct wolf_chacha_poly *)ctx)->key,
-		iv,aad,alen,src,slen,dst,tag))return -1;
+	if(U(wc_ChaCha20Poly1305_Encrypt(((struct wolf_chacha_poly *)ctx)->key,
+		iv,aad,alen,src,slen,dst,tag)))return -1;
 	return 0;
 }
 
@@ -1978,15 +1989,15 @@ static int wolf_chacha_poly_encrypt_iov(void *ctx,void *iv,void *src,int slen,
 	for(i=0,alen=0;i<niov;i++)alen+=iov[i].length;
 	if(alen)
 	{
-		if(!(aad=malloc(alen)))goto err1;
+		if(U(!(aad=malloc(alen))))goto err1;
 		for(i=0,alen=0;i<niov;i++)
 		{
 			memcpy(aad+alen,iov[i].data,iov[i].length);
 			alen+=iov[i].length;
 		}
 	}
-	if(wc_ChaCha20Poly1305_Encrypt(((struct wolf_chacha_poly *)ctx)->key,
-		iv,aad,alen,src,slen,dst,tag))goto err2;
+	if(U(wc_ChaCha20Poly1305_Encrypt(((struct wolf_chacha_poly *)ctx)->key,
+		iv,aad,alen,src,slen,dst,tag)))goto err2;
 	if(aad)
 	{
 		((struct wolf_chacha_poly *)ctx)->global->memclear(aad,alen);
@@ -2007,8 +2018,8 @@ err1:   return -1;
 static int wolf_chacha_poly_decrypt(void *ctx,void *iv,void *src,int slen,
 	void *aad,int alen,void *dst,void *tag)
 {
-	if(wc_ChaCha20Poly1305_Decrypt(((struct wolf_chacha_poly *)ctx)->key,
-		iv,aad,alen,src,slen,tag,dst))return -1;
+	if(U(wc_ChaCha20Poly1305_Decrypt(((struct wolf_chacha_poly *)ctx)->key,
+		iv,aad,alen,src,slen,tag,dst)))return -1;
 	return 0;
 }
 
@@ -2024,15 +2035,15 @@ static int wolf_chacha_poly_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 	for(i=0,alen=0;i<niov;i++)alen+=iov[i].length;
 	if(alen)
 	{
-		if(!(aad=malloc(alen)))goto err1;
+		if(U(!(aad=malloc(alen))))goto err1;
 		for(i=0,alen=0;i<niov;i++)
 		{
 			memcpy(aad+alen,iov[i].data,iov[i].length);
 			alen+=iov[i].length;
 		}
 	}
-	if(wc_ChaCha20Poly1305_Decrypt(((struct wolf_chacha_poly *)ctx)->key,
-		iv,aad,alen,src,slen,tag,dst))goto err2;
+	if(U(wc_ChaCha20Poly1305_Decrypt(((struct wolf_chacha_poly *)ctx)->key,
+		iv,aad,alen,src,slen,tag,dst)))goto err2;
 	if(aad)
 	{
 		((struct wolf_chacha_poly *)ctx)->global->memclear(aad,alen);
@@ -2055,8 +2066,8 @@ static void *wolf_chacha_poly_init(void *ctx,void *key,int klen,int ilen,
 {
 	struct wolf_chacha_poly *chp;
 
-	if(klen!=256||ilen!=12||tlen!=16)goto err1;
-	if(!(chp=malloc(sizeof(struct wolf_chacha_poly))))goto err1;
+	if(U(klen!=256)||U(ilen!=12)||U(tlen!=16))goto err1;
+	if(U(!(chp=malloc(sizeof(struct wolf_chacha_poly)))))goto err1;
 	memcpy(chp->key,key,CHACHA20_POLY1305_AEAD_KEYSIZE);
 	chp->global=((struct usicrypt_thread *)ctx)->global;
 	((struct usicrypt_thread *)ctx)->global->
@@ -2093,14 +2104,14 @@ static int wolf_chacha_crypt(void *ctx,void *src,int slen,void *dst)
 		if(!--slen)return 0;
 	}
 	rem=slen&(CHACHA_CHUNK_BYTES-1);
-	if(slen-rem)if(wc_Chacha_Process(&ch->ctx,d,s,slen-rem))return -1;
+	if(slen-rem)if(U(wc_Chacha_Process(&ch->ctx,d,s,slen-rem)))return -1;
 	if(rem)
 	{
 		d+=slen-rem;
 		s+=slen-rem;
 		memset(ch->mem,0,CHACHA_CHUNK_BYTES);
-		if(wc_Chacha_Process(&ch->ctx,ch->mem,ch->mem,
-			CHACHA_CHUNK_BYTES))return -1;
+		if(U(wc_Chacha_Process(&ch->ctx,ch->mem,ch->mem,
+			CHACHA_CHUNK_BYTES)))return -1;
 		while(rem--)*d++=*s++^ch->mem[ch->n++];
 	}
 	return 0;
@@ -2111,12 +2122,13 @@ static void *wolf_chacha_init(void *ctx,void *key,int klen,void *iv)
 	struct wolf_chacha *ch;
 	unsigned char tmp[12];
 
-	if(klen!=256)goto err1;
-	if(!(ch=malloc(sizeof(struct wolf_chacha))))goto err1;
+	if(U(klen!=256))goto err1;
+	if(U(!(ch=malloc(sizeof(struct wolf_chacha)))))goto err1;
 	memset(tmp,0,4);
-	memcpy(tmp+4,iv,8);
-	if(wc_Chacha_SetIV(&ch->ctx,tmp,0))goto err2;
-	if(wc_Chacha_SetKey(&ch->ctx,key,32))goto err2;
+	if(iv)memcpy(tmp+4,iv,8);
+	else memset(tmp+4,0,8);
+	if(U(wc_Chacha_SetIV(&ch->ctx,tmp,0)))goto err2;
+	if(U(wc_Chacha_SetKey(&ch->ctx,key,32)))goto err2;
 	ch->global=((struct usicrypt_thread *)ctx)->global;
 	ch->n=0;
 	((struct usicrypt_thread *)ctx)->global->memclear(tmp,12);
@@ -2165,8 +2177,8 @@ static int wolf_camellia_cmac(void *ctx,void *key,int klen,void *src,int slen,
 	Camellia enc;
 	unsigned char wrk[4][16];
 
-	if(klen&7)return -1;
-	if(wc_CamelliaSetKey(&enc,key,klen>>3,NULL))return -1;
+	if(U(klen&7))return -1;
+	if(U(wc_CamelliaSetKey(&enc,key,klen>>3,NULL)))return -1;
 	memset(wrk,0,sizeof(wrk));
 	wc_CamelliaEncryptDirect(&enc,wrk[1],wrk[1]);
 	for(n=0,i=15;i>=0;i--,n>>=8)
@@ -2213,8 +2225,8 @@ static int wolf_camellia_cmac_iov(void *ctx,void *key,int klen,
 	Camellia enc;
 	unsigned char wrk[6][16];
 
-	if(klen&7)return -1;
-	if(wc_CamelliaSetKey(&enc,key,klen>>3,NULL))return -1;
+	if(U(klen&7))return -1;
+	if(U(wc_CamelliaSetKey(&enc,key,klen>>3,NULL)))return -1;
 	memset(wrk,0,sizeof(wrk));
 	wc_CamelliaEncryptDirect(&enc,wrk[1],wrk[1]);
 	for(n=0,i=15;i>=0;i--,n>>=8)
@@ -2282,7 +2294,7 @@ static int wolf_camellia_ecb_encrypt(void *ctx,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	for(;slen;slen-=16,s+=16,d+=16)wc_CamelliaEncryptDirect(
 		&((struct wolf_camellia_xcb *)ctx)->ctx,d,s);
 	return 0;
@@ -2293,7 +2305,7 @@ static int wolf_camellia_ecb_decrypt(void *ctx,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	for(;slen;slen-=16,s+=16,d+=16)wc_CamelliaDecryptDirect(
 		&((struct wolf_camellia_xcb *)ctx)->ctx,d,s);
 	return 0;
@@ -2303,9 +2315,9 @@ static void *wolf_camellia_ecb_init(void *ctx,void *key,int klen)
 {
 	struct wolf_camellia_xcb *camellia;
 
-	if(klen&7)goto err1;
-	if(!(camellia=malloc(sizeof(struct wolf_camellia_xcb))))goto err1;
-	if(wc_CamelliaSetKey(&camellia->ctx,key,klen>>3,NULL))goto err2;
+	if(U(klen&7))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct wolf_camellia_xcb)))))goto err1;
+	if(U(wc_CamelliaSetKey(&camellia->ctx,key,klen>>3,NULL)))goto err2;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
@@ -2330,7 +2342,7 @@ static void wolf_camellia_ecb_exit(void *ctx)
 
 static int wolf_camellia_cbc_encrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	wc_CamelliaCbcEncrypt(&((struct wolf_camellia_xcb *)ctx)->ctx,dst,src,
 		slen);
 	return 0;
@@ -2338,7 +2350,7 @@ static int wolf_camellia_cbc_encrypt(void *ctx,void *src,int slen,void *dst)
 
 static int wolf_camellia_cbc_decrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	wc_CamelliaCbcDecrypt(&((struct wolf_camellia_xcb *)ctx)->ctx,dst,src,
 		slen);
 	return 0;
@@ -2347,10 +2359,12 @@ static int wolf_camellia_cbc_decrypt(void *ctx,void *src,int slen,void *dst)
 static void *wolf_camellia_cbc_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct wolf_camellia_xcb *camellia;
+	unsigned long long zero[2]={0,0};
 
-	if(klen&7)goto err1;
-	if(!(camellia=malloc(sizeof(struct wolf_camellia_xcb))))goto err1;
-	if(wc_CamelliaSetKey(&camellia->ctx,key,klen>>3,iv))goto err2;
+	if(U(klen&7))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct wolf_camellia_xcb)))))goto err1;
+	if(!iv)iv=zero;
+	if(U(wc_CamelliaSetKey(&camellia->ctx,key,klen>>3,iv)))goto err2;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
@@ -2385,7 +2399,7 @@ static int wolf_camellia_cts_encrypt(void *ctx,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<=16)return -1;
+	if(U(slen<=16))return -1;
 	if(!(rem=slen&0xf))rem=0x10;
 	wc_CamelliaCbcEncrypt(&camellia->ctx,d,s,slen-rem);
 	s+=slen-rem;
@@ -2404,7 +2418,7 @@ static int wolf_camellia_cts_decrypt(void *ctx,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<=16)return -1;
+	if(U(slen<=16))return -1;
 	if(!(rem=slen&0xf))rem=0x10;
 	if(slen-rem-16)
 	{
@@ -2423,10 +2437,12 @@ static int wolf_camellia_cts_decrypt(void *ctx,void *src,int slen,void *dst)
 static void *wolf_camellia_cts_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct wolf_camellia_cts *camellia;
+	unsigned long long zero[2]={0,0};
 
-	if(klen&7)goto err1;
-	if(!(camellia=malloc(sizeof(struct wolf_camellia_cts))))goto err1;
-	if(wc_CamelliaSetKey(&camellia->ctx,key,klen>>3,iv))goto err2;
+	if(U(klen&7))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct wolf_camellia_cts)))))goto err1;
+	if(!iv)iv=zero;
+	if(U(wc_CamelliaSetKey(&camellia->ctx,key,klen>>3,iv)))goto err2;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
@@ -2493,12 +2509,13 @@ static void *wolf_camellia_cfb_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct wolf_camellia_xfb *camellia;
 
-	if(klen&7)goto err1;
-	if(!(camellia=malloc(sizeof(struct wolf_camellia_xfb))))goto err1;
-	if(wc_CamelliaSetKey(&camellia->enc,key,klen>>3,iv))goto err2;
+	if(U(klen&7))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct wolf_camellia_xfb)))))goto err1;
+	if(U(wc_CamelliaSetKey(&camellia->enc,key,klen>>3,NULL)))goto err2;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
 	camellia->n=0;
-	memcpy(camellia->iv,iv,16);
+	if(iv)memcpy(camellia->iv,iv,16);
+	else memset(camellia->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
 
@@ -2567,11 +2584,12 @@ static void *wolf_camellia_cfb8_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct wolf_camellia_cfb8 *camellia;
 
-	if(klen&7)goto err1;
-	if(!(camellia=malloc(sizeof(struct wolf_camellia_cfb8))))goto err1;
+	if(U(klen&7))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct wolf_camellia_cfb8)))))goto err1;
+	if(U(wc_CamelliaSetKey(&camellia->enc,key,klen>>3,NULL)))goto err2;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
-	if(wc_CamelliaSetKey(&camellia->enc,key,klen>>3,NULL))goto err2;
-	memcpy(camellia->iv,iv,16);
+	if(iv)memcpy(camellia->iv,iv,16);
+	else memset(camellia->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
 
@@ -2636,12 +2654,13 @@ static void *wolf_camellia_ofb_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct wolf_camellia_xfb *camellia;
 
-	if(klen&7)goto err1;
-	if(!(camellia=malloc(sizeof(struct wolf_camellia_xfb))))goto err1;
-	if(wc_CamelliaSetKey(&camellia->enc,key,klen>>3,NULL))goto err2;
+	if(U(klen&7))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct wolf_camellia_xfb)))))goto err1;
+	if(U(wc_CamelliaSetKey(&camellia->enc,key,klen>>3,NULL)))goto err2;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
 	camellia->n=0;
-	memcpy(camellia->iv,iv,16);
+	if(iv)memcpy(camellia->iv,iv,16);
+	else memset(camellia->iv,0,16);
 	memset(camellia->zero,0,sizeof(camellia->zero));
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
@@ -2709,12 +2728,13 @@ static void *wolf_camellia_ctr_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct wolf_camellia_ctr *camellia;
 
-	if(klen&7)goto err1;
-	if(!(camellia=malloc(sizeof(struct wolf_camellia_ctr))))goto err1;
-	if(wc_CamelliaSetKey(&camellia->enc,key,klen>>3,NULL))goto err2;
+	if(U(klen&7))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct wolf_camellia_ctr)))))goto err1;
+	if(U(wc_CamelliaSetKey(&camellia->enc,key,klen>>3,NULL)))goto err2;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
 	camellia->n=0;
-	memcpy(camellia->ctr,iv,16);
+	if(iv)memcpy(camellia->ctr,iv,16);
+	else memset(camellia->ctr,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
 
@@ -2753,7 +2773,7 @@ static int wolf_camellia_xts_encrypt(void *ctx,void *iv,void *src,int slen,
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<16)return -1;
+	if(U(slen<16))return -1;
 
 	wc_CamelliaEncryptDirect(&camellia->twe,camellia->twk,iv);
 
@@ -2793,7 +2813,7 @@ static int wolf_camellia_xts_decrypt(void *ctx,void *iv,void *src,int slen,
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<16)return -1;
+	if(U(slen<16))return -1;
 
 	wc_CamelliaEncryptDirect(&camellia->twe,camellia->twk,iv);
 
@@ -2834,10 +2854,10 @@ static void *wolf_camellia_xts_init(void *ctx,void *key,int klen)
 {
 	struct wolf_camellia_xts *camellia;
 
-	if(klen!=256&&klen!=512)goto err1;
-	if(!(camellia=malloc(sizeof(struct wolf_camellia_xts))))goto err1;
-	if(wc_CamelliaSetKey(&camellia->ctx,key,klen>>4,NULL))goto err2;
-	if(wc_CamelliaSetKey(&camellia->twe,key+(klen>>4),klen>>4,NULL))
+	if(U(klen!=256&&klen!=512))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct wolf_camellia_xts)))))goto err1;
+	if(U(wc_CamelliaSetKey(&camellia->ctx,key,klen>>4,NULL)))goto err2;
+	if(U(wc_CamelliaSetKey(&camellia->twe,key+(klen>>4),klen>>4,NULL)))
 		goto err2;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
@@ -2867,7 +2887,7 @@ static int wolf_camellia_essiv_encrypt(void *ctx,void *iv,void *src,int slen,
 {
 	struct wolf_camellia_essiv *camellia=ctx;
 
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	wc_CamelliaEncryptDirect(&camellia->aux,camellia->iv,iv);
 	wc_CamelliaSetIV(&camellia->ctx,camellia->iv);
 	wc_CamelliaCbcEncrypt(&camellia->ctx,dst,src,slen);
@@ -2879,7 +2899,7 @@ static int wolf_camellia_essiv_decrypt(void *ctx,void *iv,void *src,int slen,
 {
 	struct wolf_camellia_essiv *camellia=ctx;
 
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	wc_CamelliaEncryptDirect(&camellia->aux,camellia->iv,iv);
 	wc_CamelliaSetIV(&camellia->ctx,camellia->iv);
 	wc_CamelliaCbcDecrypt(&camellia->ctx,dst,src,slen);
@@ -2892,13 +2912,13 @@ static void *wolf_camellia_essiv_init(void *ctx,void *key,int klen)
 	Sha256 h;
 	unsigned char tmp[SHA256_DIGEST_SIZE];
 
-	if(klen&7)goto err1;
-	if(!(camellia=malloc(sizeof(struct wolf_camellia_essiv))))goto err1;
-	if(wc_CamelliaSetKey(&camellia->ctx,key,klen>>3,NULL))goto err2;
-	if(wc_InitSha256(&h))goto err2;
-	if(wc_Sha256Update(&h,key,klen>>3))goto err3;
-	if(wc_Sha256Final(&h,tmp))goto err3;
-	if(wc_CamelliaSetKey(&camellia->aux,tmp,SHA256_DIGEST_SIZE,NULL))
+	if(U(klen&7))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct wolf_camellia_essiv)))))goto err1;
+	if(U(wc_CamelliaSetKey(&camellia->ctx,key,klen>>3,NULL)))goto err2;
+	if(U(wc_InitSha256(&h)))goto err2;
+	if(U(wc_Sha256Update(&h,key,klen>>3)))goto err3;
+	if(U(wc_Sha256Final(&h,tmp)))goto err3;
+	if(U(wc_CamelliaSetKey(&camellia->aux,tmp,SHA256_DIGEST_SIZE,NULL)))
 		goto err4;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
 	((struct usicrypt_thread *)ctx)->global->memclear(&h,sizeof(h));
@@ -2931,8 +2951,8 @@ static void wolf_camellia_essiv_exit(void *ctx)
 
 int USICRYPT(random)(void *ctx,void *data,int len)
 {
-	if(wc_RNG_GenerateBlock(&((struct usicrypt_thread *)ctx)->rng,
-		data,len))return -1;
+	if(U(wc_RNG_GenerateBlock(&((struct usicrypt_thread *)ctx)->rng,
+		data,len)))return -1;
 	return 0;
 }
 
@@ -2994,9 +3014,9 @@ int USICRYPT(digest)(void *ctx,int md,void *in,int len,void *out)
 	default:goto err1;
 	}
 
-	if(wolf_md[c.idx].init(&c.ctx))goto err1;
+	if(U(wolf_md[c.idx].init(&c.ctx)))goto err1;
 	res=wolf_md[c.idx].update(&c.ctx,in,len);
-	if(wolf_md[c.idx].digest(&c.ctx,out)||res)goto err2;
+	if(U(wolf_md[c.idx].digest(&c.ctx,out))||U(res))goto err2;
 	((struct usicrypt_thread *)ctx)->global->memclear(&c.ctx,sizeof(c.ctx));
 	return 0;
 
@@ -3038,10 +3058,10 @@ int USICRYPT(digest_iov)(void *ctx,int md,struct usicrypt_iov *iov,int niov,
 	default:goto err1;
 	}
 
-	if(wolf_md[c.idx].init(&c.ctx))goto err1;
-	for(i=0;i<niov;i++)if(wolf_md[c.idx].update(&c.ctx,iov[i].data,
-		iov[i].length))goto err2;
-	if(wolf_md[c.idx].digest(&c.ctx,out))goto err2;
+	if(U(wolf_md[c.idx].init(&c.ctx)))goto err1;
+	for(i=0;i<niov;i++)if(U(wolf_md[c.idx].update(&c.ctx,iov[i].data,
+		iov[i].length)))goto err2;
+	if(U(wolf_md[c.idx].digest(&c.ctx,out)))goto err2;
 	r=0;
 err2:	((struct usicrypt_thread *)ctx)->global->memclear(&c.ctx,sizeof(c.ctx));
 err1:	return r;
@@ -3081,9 +3101,9 @@ int USICRYPT(hmac)(void *ctx,int md,void *data,int dlen,void *key,int klen,
 	default:goto err1;
 	}
 
-	if(wc_HmacSetKey(&h,type,key,klen))goto err2;
+	if(U(wc_HmacSetKey(&h,type,key,klen)))goto err2;
 	res=wc_HmacUpdate(&h,data,dlen);
-	if(wc_HmacFinal(&h,out)||res)goto err2;
+	if(U(wc_HmacFinal(&h,out))||U(res))goto err2;
 	((struct usicrypt_thread *)ctx)->global->memclear(&h,sizeof(h));
 	return 0;
 
@@ -3126,10 +3146,10 @@ int USICRYPT(hmac_iov)(void *ctx,int md,struct usicrypt_iov *iov,int niov,
 	default:goto err1;
 	}
 
-	if(wc_HmacSetKey(&h,type,key,klen))goto err2;
-	for(i=0;i<niov;i++)if(wc_HmacUpdate(&h,iov[i].data,iov[i].length))
+	if(U(wc_HmacSetKey(&h,type,key,klen)))goto err2;
+	for(i=0;i<niov;i++)if(U(wc_HmacUpdate(&h,iov[i].data,iov[i].length)))
 		goto err2;
-	if(wc_HmacFinal(&h,out))goto err2;
+	if(U(wc_HmacFinal(&h,out)))goto err2;
 	r=0;
 err2:	((struct usicrypt_thread *)ctx)->global->memclear(&h,sizeof(h));
 err1:	return r;
@@ -3159,7 +3179,7 @@ int USICRYPT(pbkdf2)(void *ctx,int md,void *key,int klen,void *salt,int slen,
 #endif
 #ifndef USICRYPT_NO_SHA384
 	case USICRYPT_SHA384:
-		if(!wolf_pbkdf2_384(ctx,out,key,klen,salt,slen,iter))r=0;
+		if(L(!wolf_pbkdf2_384(ctx,out,key,klen,salt,slen,iter)))r=0;
 		goto err1;
 #endif
 #ifndef USICRYPT_NO_SHA512
@@ -3171,7 +3191,7 @@ int USICRYPT(pbkdf2)(void *ctx,int md,void *key,int klen,void *salt,int slen,
 	default:goto err1;
 	}
 
-	if(!wc_PBKDF2(out,key,klen,salt,slen,iter,len,type))r=0;
+	if(L(!wc_PBKDF2(out,key,klen,salt,slen,iter,len,type)))r=0;
 
 err1:	((struct usicrypt_thread *)ctx)->global->memclear(key,klen);
 #else
@@ -3217,7 +3237,7 @@ int USICRYPT(hkdf)(void *ctx,int md,void *key,int klen,void *salt,int slen,
 	default:return -1;
 	}
 
-	return wc_HKDF(type,key,klen,salt,slen,info,ilen,out,len)?-1:0;
+	return U(wc_HKDF(type,key,klen,salt,slen,info,ilen,out,len))?-1:0;
 }
 
 void *USICRYPT(base64_encode)(void *ctx,void *in,int ilen,int *olen)
@@ -3226,9 +3246,9 @@ void *USICRYPT(base64_encode)(void *ctx,void *in,int ilen,int *olen)
 	word32 len;
 	unsigned char *out;
 
-	if(Base64_Encode_NoNl(in,ilen,NULL,&len)!=LENGTH_ONLY_E)goto err1;
-	if(!(out=malloc(len+1)))goto err1;
-	if(Base64_Encode_NoNl(in,ilen,out,&len))goto err2;
+	if(U(Base64_Encode_NoNl(in,ilen,NULL,&len)!=LENGTH_ONLY_E))goto err1;
+	if(U(!(out=malloc(len+1))))goto err1;
+	if(U(Base64_Encode_NoNl(in,ilen,out,&len)))goto err2;
 	out[len]=0;
 	*olen=len;
 	return out;
@@ -3248,8 +3268,8 @@ void *USICRYPT(base64_decode)(void *ctx,void *in,int ilen,int *olen)
 	unsigned char *out;
 
 	len=ilen;
-	if(!(out=malloc(ilen)))goto err1;
-	if(Base64_Decode(in,ilen,out,&len))goto err2;
+	if(U(!(out=malloc(ilen))))goto err1;
+	if(U(Base64_Decode(in,ilen,out,&len)))goto err2;
 	out=USICRYPT(do_realloc)(ctx,out,ilen,len);
 	*olen=len;
 	return out;
@@ -3267,12 +3287,12 @@ void *USICRYPT(rsa_generate)(void *ctx,int bits)
 #ifndef USICRYPT_NO_RSA
 	RsaKey *key;
 
-	if(bits<USICRYPT_RSA_BITS_MIN||bits>USICRYPT_RSA_BITS_MAX||(bits&7))
-		goto err1;
-	if(!(key=malloc(sizeof(RsaKey))))goto err1;
-	if(wc_InitRsaKey(key,NULL))goto err2;
-	if(wc_MakeRsaKey(key,bits,USICRYPT_RSA_EXPONENT,
-		&((struct usicrypt_thread *)ctx)->rng))goto err3;
+	if(U(bits<USICRYPT_RSA_BITS_MIN)||U(bits>USICRYPT_RSA_BITS_MAX)||
+		U(bits&7))goto err1;
+	if(U(!(key=malloc(sizeof(RsaKey)))))goto err1;
+	if(U(wc_InitRsaKey(key,NULL)))goto err2;
+	if(U(wc_MakeRsaKey(key,bits,USICRYPT_RSA_EXPONENT,
+		&((struct usicrypt_thread *)ctx)->rng)))goto err3;
 	return key;
 
 err3:	wc_FreeRsaKey(key);
@@ -3288,7 +3308,7 @@ int USICRYPT(rsa_size)(void *ctx,void *key)
 #ifndef USICRYPT_NO_RSA
 	int len;
 
-	return (len=wc_RsaEncryptSize(key))>0?(len<<3):-1;
+	return L((len=wc_RsaEncryptSize(key))>0)?(len<<3):-1;
 #else
 	return -1;
 #endif
@@ -3300,8 +3320,8 @@ void *USICRYPT(rsa_get_pub)(void *ctx,void *k,int *len)
 	unsigned char *key;
 	unsigned char bfr[8192];
 
-	if((*len=wc_RsaKeyToPublicDer(k,bfr,sizeof(bfr)))<=0)goto err1;
-	if(!(key=malloc(*len)))goto err2;
+	if(U((*len=wc_RsaKeyToPublicDer(k,bfr,sizeof(bfr)))<=0))goto err1;
+	if(U(!(key=malloc(*len))))goto err2;
 	memcpy(key,bfr,*len);
 	((struct usicrypt_thread *)ctx)->global->memclear(bfr,*len);
 	return key;
@@ -3320,11 +3340,11 @@ void *USICRYPT(rsa_set_pub)(void *ctx,void *key,int len)
 	word32 idx=0;
 	RsaKey *rsa;
 
-	if(!(rsa=malloc(sizeof(RsaKey))))goto err1;
-	if(wc_InitRsaKey(rsa,NULL))goto err2;
-	if(wc_RsaPublicKeyDecode(key,&idx,rsa,len))goto err3;
-	if((n=wc_RsaEncryptSize(rsa))<USICRYPT_RSA_BYTES_MIN||
-		n>USICRYPT_RSA_BYTES_MAX)goto err3;
+	if(U(!(rsa=malloc(sizeof(RsaKey)))))goto err1;
+	if(U(wc_InitRsaKey(rsa,NULL)))goto err2;
+	if(U(wc_RsaPublicKeyDecode(key,&idx,rsa,len)))goto err3;
+	if(U((n=wc_RsaEncryptSize(rsa))<USICRYPT_RSA_BYTES_MIN)||
+		U(n>USICRYPT_RSA_BYTES_MAX))goto err3;
 	return rsa;
 
 err3:	wc_FreeRsaKey(rsa);
@@ -3341,8 +3361,8 @@ void *USICRYPT(rsa_get_key)(void *ctx,void *k,int *len)
 	unsigned char *key;
 	unsigned char bfr[8192];
 
-	if((*len=wc_RsaKeyToDer(k,bfr,sizeof(bfr)))<=0)goto err1;
-	if(!(key=malloc(*len)))goto err2;
+	if(U((*len=wc_RsaKeyToDer(k,bfr,sizeof(bfr)))<=0))goto err1;
+	if(U(!(key=malloc(*len))))goto err2;
 	memcpy(key,bfr,*len);
 	((struct usicrypt_thread *)ctx)->global->memclear(bfr,*len);
 	return key;
@@ -3361,11 +3381,11 @@ void *USICRYPT(rsa_set_key)(void *ctx,void *key,int len)
 	word32 idx=0;
 	RsaKey *rsa;
 
-	if(!(rsa=malloc(sizeof(RsaKey))))goto err1;
-	if(wc_InitRsaKey(rsa,NULL))goto err2;
-	if(wc_RsaPrivateKeyDecode(key,&idx,rsa,len))goto err3;
-	if((n=wc_RsaEncryptSize(rsa))<USICRYPT_RSA_BYTES_MIN||
-		n>USICRYPT_RSA_BYTES_MAX)goto err3;
+	if(U(!(rsa=malloc(sizeof(RsaKey)))))goto err1;
+	if(U(wc_InitRsaKey(rsa,NULL)))goto err2;
+	if(U(wc_RsaPrivateKeyDecode(key,&idx,rsa,len)))goto err3;
+	if(U((n=wc_RsaEncryptSize(rsa))<USICRYPT_RSA_BYTES_MIN)||
+		U(n>USICRYPT_RSA_BYTES_MAX))goto err3;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,len);
 	return rsa;
 
@@ -3449,10 +3469,10 @@ void *USICRYPT(rsa_encrypt_v15)(void *ctx,void *key,void *data,int dlen,
 	unsigned char *out;
 
 	*olen=wc_RsaEncryptSize(key);
-	if(dlen>*olen-11)goto err1;
-	if(!(out=malloc(*olen)))goto err1;
-	if((*olen=wc_RsaPublicEncrypt(data,dlen,out,*olen,key,
-		&((struct usicrypt_thread *)ctx)->rng))<0)goto err2;
+	if(U(dlen>*olen-11))goto err1;
+	if(U(!(out=malloc(*olen))))goto err1;
+	if(U((*olen=wc_RsaPublicEncrypt(data,dlen,out,*olen,key,
+		&((struct usicrypt_thread *)ctx)->rng))<0))goto err2;
 	return out;
 
 err2:	((struct usicrypt_thread *)ctx)->global->memclear(out,*olen);
@@ -3472,12 +3492,12 @@ void *USICRYPT(rsa_decrypt_v15)(void *ctx,void *key,void *data,int dlen,
 	unsigned char *out;
 
 	len=wc_RsaEncryptSize(key);
-	if(dlen!=len)goto err1;
-	if(!(out=malloc(len)))goto err1;
+	if(U(dlen!=len))goto err1;
+	if(U(!(out=malloc(len))))goto err1;
 #ifdef WC_RSA_BLINDING
 	((RsaKey *)key)->rng=&((struct usicrypt_thread *)ctx)->rng;
 #endif
-	if((l=wc_RsaPrivateDecrypt(data,dlen,out,len,key))<0)goto err2;
+	if(U((l=wc_RsaPrivateDecrypt(data,dlen,out,len,key))<0))goto err2;
 #ifdef WC_RSA_BLINDING
 	((RsaKey *)key)->rng=NULL;
 #endif
@@ -3539,11 +3559,11 @@ void *USICRYPT(rsa_encrypt_oaep)(void *ctx,int md,void *key,void *data,int dlen,
 	}
 
 	*olen=wc_RsaEncryptSize(key);
-	if(dlen>*olen-2*len-2)goto err1;
-	if(!(out=malloc(*olen)))goto err1;
-	if((*olen=wc_RsaPublicEncrypt_ex(data,dlen,out,*olen,key,
+	if(U(dlen>*olen-2*len-2))goto err1;
+	if(U(!(out=malloc(*olen))))goto err1;
+	if(U((*olen=wc_RsaPublicEncrypt_ex(data,dlen,out,*olen,key,
 		&((struct usicrypt_thread *)ctx)->rng,WC_RSA_OAEP_PAD,type,
-		mgf,NULL,0))<0)goto err2;
+		mgf,NULL,0))<0))goto err2;
 	return out;
 
 err2:	((struct usicrypt_thread *)ctx)->global->memclear(out,*olen);
@@ -3594,13 +3614,13 @@ void *USICRYPT(rsa_decrypt_oaep)(void *ctx,int md,void *key,void *data,int dlen,
 	}
 
 	len=wc_RsaEncryptSize(key);
-	if(dlen!=len)goto err1;
-	if(!(out=malloc(len)))goto err1;
+	if(U(dlen!=len))goto err1;
+	if(U(!(out=malloc(len))))goto err1;
 #ifdef WC_RSA_BLINDING
 	((RsaKey *)key)->rng=&((struct usicrypt_thread *)ctx)->rng;
 #endif
-	if((l=wc_RsaPrivateDecrypt_ex(data,dlen,out,len,key,WC_RSA_OAEP_PAD,
-		type,mgf,NULL,0))<0)goto err2;
+	if(U((l=wc_RsaPrivateDecrypt_ex(data,dlen,out,len,key,WC_RSA_OAEP_PAD,
+		type,mgf,NULL,0))<0))goto err2;
 #ifdef WC_RSA_BLINDING
 	((RsaKey *)key)->rng=NULL;
 #endif
@@ -3638,11 +3658,11 @@ void *USICRYPT(dh_init)(void *ctx,void *params,int len)
 	word32 idx=0;
 	struct wolf_dh *dh;
 
-	if(!(dh=malloc(sizeof(struct wolf_dh))))goto err1;
+	if(U(!(dh=malloc(sizeof(struct wolf_dh)))))goto err1;
 	wc_InitDhKey(&dh->dh);
-	if(wc_DhKeyDecode(params,&idx,&dh->dh,len))goto err2;
+	if(U(wc_DhKeyDecode(params,&idx,&dh->dh,len)))goto err2;
 	idx=dh->dh.p.used*sizeof(mp_digit);
-	if(idx<USICRYPT_DH_BYTES_MIN||idx>USICRYPT_DH_BYTES_MAX)goto err2;
+	if(U(idx<USICRYPT_DH_BYTES_MIN)||U(idx>USICRYPT_DH_BYTES_MAX))goto err2;
 	dh->plen=0;
 	return dh;
 
@@ -3669,10 +3689,10 @@ void *USICRYPT(dh_genex)(void *ctx,void *dh,int *len)
 	}
 	size=d->dh.p.used*sizeof(mp_digit);
 	d->plen=size;
-	if(!(d->priv=malloc(size)))goto err1;
-	if(!(pub=malloc(size)))goto err2;
-	if(wc_DhGenerateKeyPair(&d->dh,&((struct usicrypt_thread *)ctx)->rng,
-		d->priv,&d->plen,pub,&size))goto err3;
+	if(U(!(d->priv=malloc(size))))goto err1;
+	if(U(!(pub=malloc(size))))goto err2;
+	if(U(wc_DhGenerateKeyPair(&d->dh,&((struct usicrypt_thread *)ctx)->rng,
+		d->priv,&d->plen,pub,&size)))goto err3;
 	*len=size;
 	return pub;
 
@@ -3692,8 +3712,8 @@ void *USICRYPT(dh_derive)(void *ctx,void *dh,void *pub,int plen,int *slen)
 	word32 size=d->dh.p.used*sizeof(mp_digit);
 	byte *sec;
 
-	if(!(sec=malloc(size)))goto err1;
-	if(wc_DhAgree(&d->dh,sec,&size,d->priv,d->plen,pub,plen))goto err2;
+	if(U(!(sec=malloc(size))))goto err1;
+	if(U(wc_DhAgree(&d->dh,sec,&size,d->priv,d->plen,pub,plen)))goto err2;
 	*slen=size;
 	return sec;
 
@@ -3738,10 +3758,10 @@ void *USICRYPT(ec_generate)(void *ctx,int curve)
 	default:goto err1;
 	}
 	curve=wolf_ec_map[curve].id;
-	if(!(key=malloc(sizeof(ecc_key))))goto err1;
-	if(wc_ecc_init(key))goto err2;
-	if(wc_ecc_make_key_ex(&((struct usicrypt_thread *)ctx)->rng,0,key,
-		curve))goto err3;
+	if(U(!(key=malloc(sizeof(ecc_key)))))goto err1;
+	if(U(wc_ecc_init(key)))goto err2;
+	if(U(wc_ecc_make_key_ex(&((struct usicrypt_thread *)ctx)->rng,0,key,
+		curve)))goto err3;
 	return key;
 
 err3:	wc_ecc_free(key);
@@ -3773,9 +3793,9 @@ void *USICRYPT(ec_derive)(void *ctx,void *key,void *pub,int *klen)
 	byte bfr[1024];
 
 	len=sizeof(bfr);
-	if(wc_ecc_shared_secret(key,pub,bfr,&len))goto err1;
+	if(U(wc_ecc_shared_secret(key,pub,bfr,&len)))goto err1;
 	*klen=len;
-	if(!(sec=malloc(*klen)))goto err2;
+	if(U(!(sec=malloc(*klen))))goto err2;
 	memcpy(sec,bfr,len);
 	((struct usicrypt_thread *)ctx)->global->memclear(bfr,len);
 	return sec;
@@ -3793,8 +3813,8 @@ void *USICRYPT(ec_get_pub)(void *ctx,void *k,int *len)
 	unsigned char *key;
 	unsigned char bfr[1024];
 
-	if((*len=wc_EccPublicKeyToDer(k,bfr,sizeof(bfr),1))<=0)goto err1;
-	if(!(key=malloc(*len)))goto err2;
+	if(U((*len=wc_EccPublicKeyToDer(k,bfr,sizeof(bfr),1))<=0))goto err1;
+	if(U(!(key=malloc(*len))))goto err2;
 	memcpy(key,bfr,*len);
 	((struct usicrypt_thread *)ctx)->global->memclear(bfr,*len);
 	return key;
@@ -3812,9 +3832,9 @@ void *USICRYPT(ec_set_pub)(void *ctx,void *key,int len)
 	word32 idx=0;
 	ecc_key *ec;
 
-	if(!(ec=malloc(sizeof(ecc_key))))goto err1;
-	if(wc_ecc_init(ec))goto err2;
-	if(wc_EccPublicKeyDecode(key,&idx,ec,len))goto err3;
+	if(U(!(ec=malloc(sizeof(ecc_key)))))goto err1;
+	if(U(wc_ecc_init(ec)))goto err2;
+	if(U(wc_EccPublicKeyDecode(key,&idx,ec,len)))goto err3;
 	wolf_import_bugfix(ec,key,len);
 	return ec;
 
@@ -3832,8 +3852,8 @@ void *USICRYPT(ec_get_key)(void *ctx,void *k,int *len)
 	unsigned char *key;
 	unsigned char bfr[1024];
 
-	if((*len=wc_EccKeyToDer(k,bfr,sizeof(bfr)))<=0)goto err1;
-	if(!(key=malloc(*len)))goto err2;
+	if(U((*len=wc_EccKeyToDer(k,bfr,sizeof(bfr)))<=0))goto err1;
+	if(U(!(key=malloc(*len))))goto err2;
 	memcpy(key,bfr,*len);
 	((struct usicrypt_thread *)ctx)->global->memclear(bfr,*len);
 	return key;
@@ -3851,9 +3871,9 @@ void *USICRYPT(ec_set_key)(void *ctx,void *key,int len)
 	word32 idx=0;
 	ecc_key *ec;
 
-	if(!(ec=malloc(sizeof(ecc_key))))goto err1;
-	if(wc_ecc_init(ec))goto err2;
-	if(wc_EccPrivateKeyDecode(key,&idx,ec,len))goto err3;
+	if(U(!(ec=malloc(sizeof(ecc_key)))))goto err1;
+	if(U(wc_ecc_init(ec)))goto err2;
+	if(U(wc_EccPrivateKeyDecode(key,&idx,ec,len)))goto err3;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,len);
 	return ec;
 
@@ -3919,10 +3939,10 @@ void *USICRYPT(x25519_generate)(void *ctx)
 #ifndef USICRYPT_NO_X25519
 	curve25519_key *key;
 
-	if(!(key=malloc(sizeof(curve25519_key))))goto err1;
-	if(wc_curve25519_init(key))goto err2;
-	if(wc_curve25519_make_key(&((struct usicrypt_thread *)ctx)->rng,32,
-		key))goto err3;
+	if(U(!(key=malloc(sizeof(curve25519_key)))))goto err1;
+	if(U(wc_curve25519_init(key)))goto err2;
+	if(U(wc_curve25519_make_key(&((struct usicrypt_thread *)ctx)->rng,32,
+		key)))goto err3;
 	return key;
 
 err3:	wc_curve25519_free(key);
@@ -3940,9 +3960,9 @@ void *USICRYPT(x25519_derive)(void *ctx,void *key,void *pub,int *klen)
 	unsigned char *data;
 	unsigned char bfr[32];
 
-	if(wc_curve25519_shared_secret_ex(key,pub,bfr,&len,
-		EC25519_LITTLE_ENDIAN))goto err1;
-	if(!(data=malloc(len)))goto err1;
+	if(U(wc_curve25519_shared_secret_ex(key,pub,bfr,&len,
+		EC25519_LITTLE_ENDIAN)))goto err1;
+	if(U(!(data=malloc(len))))goto err1;
 	memcpy(data,bfr,len);
 	*klen=len;
 	((struct usicrypt_thread *)ctx)->global->memclear(bfr,sizeof(bfr));
@@ -3962,12 +3982,12 @@ void *USICRYPT(x25519_get_pub)(void *ctx,void *key,int *len)
 	unsigned char *data;
 
 	*len=sizeof(wolf_x25519_asn1_pub)+32;
-	if(!(data=malloc(*len)))goto err1;
+	if(U(!(data=malloc(*len))))goto err1;
 	memcpy(data,wolf_x25519_asn1_pub,sizeof(wolf_x25519_asn1_pub));
-	if(wc_curve25519_export_public_ex(key,
+	if(U(wc_curve25519_export_public_ex(key,
 		data+sizeof(wolf_x25519_asn1_pub),&l,
-		EC25519_LITTLE_ENDIAN))goto err2;
-	if(l!=32)goto err2;
+		EC25519_LITTLE_ENDIAN)))goto err2;
+	if(U(l!=32))goto err2;
 	return data;
 
 err2:	((struct usicrypt_thread *)ctx)->global->memclear(data,*len);
@@ -3983,14 +4003,14 @@ void *USICRYPT(x25519_set_pub)(void *ctx,void *key,int len)
 #ifndef USICRYPT_NO_X25519
 	curve25519_key *k;
 
-	if(len<sizeof(wolf_x25519_asn1_pub)+32||
-		memcmp(key,wolf_x25519_asn1_pub,sizeof(wolf_x25519_asn1_pub)))
+	if(U(len<sizeof(wolf_x25519_asn1_pub)+32)||
+	    U(memcmp(key,wolf_x25519_asn1_pub,sizeof(wolf_x25519_asn1_pub))))
 		goto err1;
-	if(!(k=malloc(sizeof(curve25519_key))))goto err1;
-	if(wc_curve25519_init(k))goto err2;
-	if(wc_curve25519_import_public_ex(
+	if(U(!(k=malloc(sizeof(curve25519_key)))))goto err1;
+	if(U(wc_curve25519_init(k)))goto err2;
+	if(U(wc_curve25519_import_public_ex(
 		((unsigned char *)key)+sizeof(wolf_x25519_asn1_pub),32,k,
-		EC25519_LITTLE_ENDIAN))goto err3;
+		EC25519_LITTLE_ENDIAN)))goto err3;
 	return k;
 
 err3:	wc_curve25519_free(k);
@@ -4008,12 +4028,12 @@ void *USICRYPT(x25519_get_key)(void *ctx,void *key,int *len)
 	unsigned char *data;
 
 	*len=sizeof(wolf_x25519_asn1_key)+32;
-	if(!(data=malloc(*len)))goto err1;
+	if(U(!(data=malloc(*len))))goto err1;
 	memcpy(data,wolf_x25519_asn1_key,sizeof(wolf_x25519_asn1_key));
-	if(wc_curve25519_export_private_raw_ex(key,
+	if(U(wc_curve25519_export_private_raw_ex(key,
 		data+sizeof(wolf_x25519_asn1_key),&l,
-		EC25519_LITTLE_ENDIAN))goto err2;
-	if(l!=32)goto err2;
+		EC25519_LITTLE_ENDIAN)))goto err2;
+	if(U(l!=32))goto err2;
 	return data;
 
 err2:	((struct usicrypt_thread *)ctx)->global->memclear(data,*len);
@@ -4031,21 +4051,21 @@ void *USICRYPT(x25519_set_key)(void *ctx,void *key,int len)
 	curve25519_key *k;
 	unsigned char bfr[32];
 
-	if(len<sizeof(wolf_x25519_asn1_key)+32||
-		memcmp(key,wolf_x25519_asn1_key,sizeof(wolf_x25519_asn1_key)))
+	if(U(len<sizeof(wolf_x25519_asn1_key)+32)||
+	    U(memcmp(key,wolf_x25519_asn1_key,sizeof(wolf_x25519_asn1_key))))
 		goto err1;
-	if(!(k=malloc(sizeof(curve25519_key))))goto err1;
-	if(wc_curve25519_init(k))goto err2;
-	if(wc_curve25519_import_private_ex(
+	if(U(!(k=malloc(sizeof(curve25519_key)))))goto err1;
+	if(U(wc_curve25519_init(k)))goto err2;
+	if(U(wc_curve25519_import_private_ex(
 		((unsigned char *)key)+sizeof(wolf_x25519_asn1_key),32,k,
-		EC25519_LITTLE_ENDIAN))goto err3;
-	if(wc_curve25519_import_public_ex(wolf_x25519_basepoint,32,k,
-		EC25519_LITTLE_ENDIAN))goto err3;
-	if(wc_curve25519_shared_secret_ex(k,k,bfr,&l,
-		EC25519_LITTLE_ENDIAN))goto err3;
-	if(l!=32)goto err4;
-	if(wc_curve25519_import_public_ex(bfr,32,k,
-		EC25519_LITTLE_ENDIAN))goto err4;
+		EC25519_LITTLE_ENDIAN)))goto err3;
+	if(U(wc_curve25519_import_public_ex(wolf_x25519_basepoint,32,k,
+		EC25519_LITTLE_ENDIAN)))goto err3;
+	if(U(wc_curve25519_shared_secret_ex(k,k,bfr,&l,
+		EC25519_LITTLE_ENDIAN)))goto err3;
+	if(U(l!=32))goto err4;
+	if(U(wc_curve25519_import_public_ex(bfr,32,k,
+		EC25519_LITTLE_ENDIAN)))goto err4;
 	((struct usicrypt_thread *)ctx)->global->memclear(bfr,sizeof(bfr));
 	((struct usicrypt_thread *)ctx)->global->memclear(key,len);
 	return k;
@@ -4084,29 +4104,31 @@ void *USICRYPT(encrypt_p8)(void *ctx,void *key,int klen,void *data,int dlen,
 	unsigned char iv[16];
 	unsigned char salt[8];
 
-	if(dlen>0x3fff||iter<=0||(digest==USICRYPT_SHA1&&bits!=128))goto err1;
+	if(U(dlen>0x3fff)||U(iter<=0)||U(digest==USICRYPT_SHA1&&bits!=128))
+		goto err1;
 
-	if(wolf_asn_next(data,dlen,0x30,&cidx,&didx))goto err1;
-	if(cidx+didx!=dlen)goto err1;
+	if(U(wolf_asn_next(data,dlen,0x30,&cidx,&didx)))goto err1;
+	if(U(cidx+didx!=dlen))goto err1;
 
 	for(didx=0;didx<4;didx++)if(wolf_digest_asn[didx].oidlen&&
 		wolf_digest_asn[didx].digest==digest)break;
-	if(didx==4)goto err1;
+	if(U(didx==4))goto err1;
 
 	for(cidx=0;cidx<24;cidx++)if(wolf_cipher_asn[cidx].oidlen&&
 		wolf_cipher_asn[cidx].cipher==cipher&&
 		wolf_cipher_asn[cidx].mode==mode&&
 		wolf_cipher_asn[cidx].bits==bits)break;
-	if(cidx==24)goto err1;
+	if(U(cidx==24))goto err1;
 
-	if(USICRYPT(random)(ctx,salt,8))goto err1;
-	if(USICRYPT(pbkdf2)(ctx,digest,key,klen,salt,8,iter,bfr))goto err2;
+	if(U(USICRYPT(random)(ctx,salt,8)))goto err1;
+	if(U(USICRYPT(pbkdf2)(ctx,digest,key,klen,salt,8,iter,bfr)))goto err2;
 
 	if(wolf_cipher_asn[cidx].ivlen)
-		if(USICRYPT(random)(ctx,iv,wolf_cipher_asn[cidx].ivlen))
+		if(U(USICRYPT(random)(ctx,iv,wolf_cipher_asn[cidx].ivlen)))
 			goto err3;
 
-	if(!(c=USICRYPT(blkcipher_init)(ctx,cipher,mode,bfr,bits,iv)))goto err4;
+	if(U(!(c=USICRYPT(blkcipher_init)(ctx,cipher,mode,bfr,bits,iv))))
+		goto err4;
 
 	if(iter>=0x800000)ilen=4;
 	else if(iter>=0x8000)ilen=3;
@@ -4123,7 +4145,7 @@ void *USICRYPT(encrypt_p8)(void *ctx,void *key,int klen,void *data,int dlen,
 	*rlen=wolf_asn_length(NULL,len1+len2+len3+dlen+plen)+
 		len1+len2+len3+dlen+plen+1;
 
-	if(!(ptr=out=malloc(*rlen)))goto err5;
+	if(U(!(ptr=out=malloc(*rlen))))goto err5;
 
 	*ptr++=0x30;
 	ptr+=wolf_asn_length(ptr,len1+len2+len3+dlen+plen);
@@ -4188,7 +4210,7 @@ void *USICRYPT(encrypt_p8)(void *ctx,void *key,int klen,void *data,int dlen,
 	memcpy(ptr,data,dlen);
 	if(wolf_cipher_asn[cidx].pad)usicrypt_cipher_padding_add(ctx,ptr,dlen);
 
-	if(USICRYPT(blkcipher_encrypt)(c,ptr,dlen+plen,ptr))goto err6;
+	if(U(USICRYPT(blkcipher_encrypt)(c,ptr,dlen+plen,ptr)))goto err6;
 	USICRYPT(blkcipher_exit)(c);
 
 	((struct usicrypt_thread *)ctx)->global->memclear(salt,sizeof(salt));
@@ -4230,137 +4252,139 @@ void *USICRYPT(decrypt_p8)(void *ctx,void *key,int klen,void *data,int dlen,
 	unsigned char *iv;
 	unsigned char bfr[64];
 
-	if(dlen>0x3fff)goto err1;
+	if(U(dlen>0x3fff))goto err1;
 
-	if(wolf_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(wolf_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	data+=h;
 	dlen-=h;
 
-	if(wolf_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(wolf_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	eptr=data+h+l;
 	elen=dlen-h-l;
 	data+=h;
 	dlen=l;
 
-	if(wolf_asn_next(data,dlen,0x06,&h,&l))goto err1;
-	if(l!=sizeof(wolf_pbes2_oid)||memcmp(data+h,wolf_pbes2_oid,l))goto err1;
+	if(U(wolf_asn_next(data,dlen,0x06,&h,&l)))goto err1;
+	if(U(l!=sizeof(wolf_pbes2_oid))||
+		U(memcmp(data+h,wolf_pbes2_oid,l)))goto err1;
 	data+=h+l;
 	dlen-=h+l;
 
-	if(wolf_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(wolf_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	data+=h;
 	dlen-=h;
 
-	if(wolf_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(wolf_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	data+=h;
 	dlen-=h;
 
-	if(wolf_asn_next(data,dlen,0x06,&h,&l))goto err1;
-	if(l!=sizeof(wolf_pbkdf2_oid)||memcmp(data+h,wolf_pbkdf2_oid,l))
+	if(U(wolf_asn_next(data,dlen,0x06,&h,&l)))goto err1;
+	if(U(l!=sizeof(wolf_pbkdf2_oid))||U(memcmp(data+h,wolf_pbkdf2_oid,l)))
 		goto err1;
 	data+=h+l;
 	dlen-=h+l;
 
-	if(wolf_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(wolf_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	data+=h;
 	dlen-=h;
 	mlen=l;
 
-	if(wolf_asn_next(data,dlen,0x04,&h,&l))goto err1;
+	if(U(wolf_asn_next(data,dlen,0x04,&h,&l)))goto err1;
 	salt=data+h;
 	slen=l;
 	data+=h+l;
 	dlen-=h+l;
 	mlen-=h+l;
 
-	if(wolf_asn_next(data,dlen,0x02,&h,&l))goto err1;
-	if(!l||l>sizeof(int))goto err1;
+	if(U(wolf_asn_next(data,dlen,0x02,&h,&l)))goto err1;
+	if(U(!l)||U(l>sizeof(int)))goto err1;
 	iter=data+h;
 	ilen=l;
 	data+=h+l;
 	dlen-=h+l;
 	mlen-=h+l;
 
-	if(mlen<0)goto err1;
+	if(U(mlen<0))goto err1;
 	else if(mlen)
 	{
-		if(wolf_asn_next(data,dlen,0x30,&h,&l))goto err1;
+		if(U(wolf_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 		data+=h;
 		dlen-=h;
 
-		if(wolf_asn_next(data,dlen,0x06,&h,&l))goto err1;
+		if(U(wolf_asn_next(data,dlen,0x06,&h,&l)))goto err1;
 		md=data+h;
 		mlen=l;
 		data+=h+l;
 		dlen-=h+l;
 
-		if(wolf_asn_next(data,dlen,0x05,&h,&l))goto err1;
+		if(U(wolf_asn_next(data,dlen,0x05,&h,&l)))goto err1;
 		if(l)goto err1;
 		data+=h;
 		dlen-=h;
 	}
 
-	if(wolf_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(wolf_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	data+=h;
 	dlen-=h;
 
-	if(wolf_asn_next(data,dlen,0x06,&h,&l))goto err1;
+	if(U(wolf_asn_next(data,dlen,0x06,&h,&l)))goto err1;
 	cipher=data+h;
 	clen=l;
 	data+=h+l;
 	dlen-=h+l;
 
-	if(wolf_asn_next(data,dlen,0x04,&h,&l))goto err1;
+	if(U(wolf_asn_next(data,dlen,0x04,&h,&l)))goto err1;
 	iv=data+h;
 	ivlen=l;
 	data+=h+l;
 	dlen-=h+l;
 	if(data!=eptr)goto err1;
 
-	if(wolf_asn_next(eptr,elen,0x04,&h,&l))goto err1;
+	if(U(wolf_asn_next(eptr,elen,0x04,&h,&l)))goto err1;
 	eptr+=h;
 	elen=l;
 
 	for(l=0,h=0;h<ilen;h++)l=(l<<8)|iter[h];
-	if(!l)goto err1;
+	if(U(!l))goto err1;
 
 	if(mlen)
 	{
 		for(h=0;h<4;h++)if(wolf_digest_asn[h].oidlen&&
 			mlen==wolf_digest_asn[h].oidlen&&
 			!memcmp(md,wolf_digest_asn[h].oid,mlen))break;
-		if(h==4)goto err1;
+		if(U(h==4))goto err1;
 		else digest=wolf_digest_asn[h].digest;
 	}
 
 	for(h=0;h<24;h++)if(wolf_cipher_asn[h].oidlen&&
 		clen==wolf_cipher_asn[h].oidlen&&
 		!memcmp(cipher,wolf_cipher_asn[h].oid,clen))break;
-	if(h==24||wolf_cipher_asn[h].ivlen!=ivlen||
-		(wolf_cipher_asn[h].bits!=128&&digest==USICRYPT_SHA1))goto err1;
+	if(U(h==24)||U(wolf_cipher_asn[h].ivlen!=ivlen)||
+		U(wolf_cipher_asn[h].bits!=128&&digest==USICRYPT_SHA1))
+			goto err1;
 
-	if(wolf_cipher_asn[h].pad)if(elen&0x0f)goto err1;
+	if(wolf_cipher_asn[h].pad)if(U(elen&0x0f))goto err1;
 
-	if(USICRYPT(pbkdf2)(ctx,digest,key,klen,salt,slen,l,bfr))goto err1;
+	if(U(USICRYPT(pbkdf2)(ctx,digest,key,klen,salt,slen,l,bfr)))goto err1;
 
-	if(!(out=malloc(elen)))goto err2;
+	if(U(!(out=malloc(elen))))goto err2;
 
-	if(!(c=USICRYPT(blkcipher_init)(ctx,wolf_cipher_asn[h].cipher,
-		wolf_cipher_asn[h].mode,bfr,wolf_cipher_asn[h].bits,iv)))
+	if(U(!(c=USICRYPT(blkcipher_init)(ctx,wolf_cipher_asn[h].cipher,
+		wolf_cipher_asn[h].mode,bfr,wolf_cipher_asn[h].bits,iv))))
 		goto err3;
-	if(USICRYPT(blkcipher_decrypt)(c,eptr,elen,out))goto err5;
+	if(U(USICRYPT(blkcipher_decrypt)(c,eptr,elen,out)))goto err5;
 	USICRYPT(blkcipher_exit)(c);
 
 	if(wolf_cipher_asn[h].pad)
 	{
-		if((*rlen=usicrypt_cipher_padding_get(ctx,out,elen))==-1)
+		if(U((*rlen=usicrypt_cipher_padding_get(ctx,out,elen))==-1))
 			goto err4;
 		else *rlen=elen-*rlen;
 	}
 	else *rlen=elen;
 
-	if(wolf_asn_next(out,*rlen,0x30,&h,&l))goto err4;
-	if(h+l!=*rlen)goto err4;
+	if(U(wolf_asn_next(out,*rlen,0x30,&h,&l)))goto err4;
+	if(U(h+l!=*rlen))goto err4;
 
 	((struct usicrypt_thread *)ctx)->global->memclear(bfr,sizeof(bfr));
 	return USICRYPT(do_realloc)(ctx,out,elen,*rlen);
@@ -4426,17 +4450,16 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #ifndef USICRYPT_NO_AES
 #ifndef USICRYPT_NO_ECB
 	case USICRYPT_AES|USICRYPT_ECB:
-		if(!(c=wolf_aes_ecb_init(ctx,key,klen)))break;
+		if(U(!(c=wolf_aes_ecb_init(ctx,key,klen))))break;
 		c->encrypt=wolf_aes_ecb_encrypt;
 		c->decrypt=wolf_aes_ecb_decrypt;
 		c->reset=NULL;
 		c->exit=wolf_aes_ecb_exit;
 		break;
-		return c;
 #endif
 #ifndef USICRYPT_NO_CBC
 	case USICRYPT_AES|USICRYPT_CBC:
-		if(!(c=wolf_aes_cbc_init(ctx,key,klen,iv)))break;
+		if(U(!(c=wolf_aes_cbc_init(ctx,key,klen,iv))))break;
 		c->encrypt=wolf_aes_cbc_encrypt;
 		c->decrypt=wolf_aes_cbc_decrypt;
 		c->reset=wolf_aes_cbc_reset;
@@ -4445,7 +4468,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CTS
 	case USICRYPT_AES|USICRYPT_CTS:
-		if(!(c=wolf_aes_cts_init(ctx,key,klen,iv)))break;
+		if(U(!(c=wolf_aes_cts_init(ctx,key,klen,iv))))break;
 		c->encrypt=wolf_aes_cts_encrypt;
 		c->decrypt=wolf_aes_cts_decrypt;
 		c->reset=wolf_aes_cts_reset;
@@ -4454,7 +4477,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CFB
 	case USICRYPT_AES|USICRYPT_CFB:
-		if(!(c=wolf_aes_cfb_init(ctx,key,klen,iv)))break;
+		if(U(!(c=wolf_aes_cfb_init(ctx,key,klen,iv))))break;
 		c->encrypt=wolf_aes_cfb_encrypt;
 		c->decrypt=wolf_aes_cfb_decrypt;
 		c->reset=wolf_aes_cfb_reset;
@@ -4463,7 +4486,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CFB8
 	case USICRYPT_AES|USICRYPT_CFB8:
-		if(!(c=wolf_aes_cfb8_init(ctx,key,klen,iv)))break;
+		if(U(!(c=wolf_aes_cfb8_init(ctx,key,klen,iv))))break;
 		c->encrypt=wolf_aes_cfb8_encrypt;
 		c->decrypt=wolf_aes_cfb8_decrypt;
 		c->reset=wolf_aes_cfb8_reset;
@@ -4472,7 +4495,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_OFB
 	case USICRYPT_AES|USICRYPT_OFB:
-		if(!(c=wolf_aes_ofb_init(ctx,key,klen,iv)))break;
+		if(U(!(c=wolf_aes_ofb_init(ctx,key,klen,iv))))break;
 		c->encrypt=wolf_aes_ofb_crypt;
 		c->decrypt=wolf_aes_ofb_crypt;
 		c->reset=wolf_aes_ofb_reset;
@@ -4481,7 +4504,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CTR
 	case USICRYPT_AES|USICRYPT_CTR:
-		if(!(c=wolf_aes_ctr_init(ctx,key,klen,iv)))break;
+		if(U(!(c=wolf_aes_ctr_init(ctx,key,klen,iv))))break;
 		c->encrypt=wolf_aes_ctr_crypt;
 		c->decrypt=wolf_aes_ctr_crypt;
 		c->reset=wolf_aes_ctr_reset;
@@ -4492,17 +4515,16 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #ifndef USICRYPT_NO_CAMELLIA
 #ifndef USICRYPT_NO_ECB
 	case USICRYPT_CAMELLIA|USICRYPT_ECB:
-		if(!(c=wolf_camellia_ecb_init(ctx,key,klen)))break;
+		if(U(!(c=wolf_camellia_ecb_init(ctx,key,klen))))break;
 		c->encrypt=wolf_camellia_ecb_encrypt;
 		c->decrypt=wolf_camellia_ecb_decrypt;
 		c->reset=NULL;
 		c->exit=wolf_camellia_ecb_exit;
 		break;
-		return c;
 #endif
 #ifndef USICRYPT_NO_CBC
 	case USICRYPT_CAMELLIA|USICRYPT_CBC:
-		if(!(c=wolf_camellia_cbc_init(ctx,key,klen,iv)))break;
+		if(U(!(c=wolf_camellia_cbc_init(ctx,key,klen,iv))))break;
 		c->encrypt=wolf_camellia_cbc_encrypt;
 		c->decrypt=wolf_camellia_cbc_decrypt;
 		c->reset=wolf_camellia_cbc_reset;
@@ -4511,7 +4533,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CTS
 	case USICRYPT_CAMELLIA|USICRYPT_CTS:
-		if(!(c=wolf_camellia_cts_init(ctx,key,klen,iv)))break;
+		if(U(!(c=wolf_camellia_cts_init(ctx,key,klen,iv))))break;
 		c->encrypt=wolf_camellia_cts_encrypt;
 		c->decrypt=wolf_camellia_cts_decrypt;
 		c->reset=wolf_camellia_cts_reset;
@@ -4520,7 +4542,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CFB
 	case USICRYPT_CAMELLIA|USICRYPT_CFB:
-		if(!(c=wolf_camellia_cfb_init(ctx,key,klen,iv)))break;
+		if(U(!(c=wolf_camellia_cfb_init(ctx,key,klen,iv))))break;
 		c->encrypt=wolf_camellia_cfb_encrypt;
 		c->decrypt=wolf_camellia_cfb_decrypt;
 		c->reset=wolf_camellia_cfb_reset;
@@ -4529,7 +4551,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CFB8
 	case USICRYPT_CAMELLIA|USICRYPT_CFB8:
-		if(!(c=wolf_camellia_cfb8_init(ctx,key,klen,iv)))break;
+		if(U(!(c=wolf_camellia_cfb8_init(ctx,key,klen,iv))))break;
 		c->encrypt=wolf_camellia_cfb8_encrypt;
 		c->decrypt=wolf_camellia_cfb8_decrypt;
 		c->reset=wolf_camellia_cfb8_reset;
@@ -4538,7 +4560,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_OFB
 	case USICRYPT_CAMELLIA|USICRYPT_OFB:
-		if(!(c=wolf_camellia_ofb_init(ctx,key,klen,iv)))break;
+		if(U(!(c=wolf_camellia_ofb_init(ctx,key,klen,iv))))break;
 		c->encrypt=wolf_camellia_ofb_crypt;
 		c->decrypt=wolf_camellia_ofb_crypt;
 		c->reset=wolf_camellia_ofb_reset;
@@ -4547,7 +4569,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CTR
 	case USICRYPT_CAMELLIA|USICRYPT_CTR:
-		if(!(c=wolf_camellia_ctr_init(ctx,key,klen,iv)))break;
+		if(U(!(c=wolf_camellia_ctr_init(ctx,key,klen,iv))))break;
 		c->encrypt=wolf_camellia_ctr_crypt;
 		c->decrypt=wolf_camellia_ctr_crypt;
 		c->reset=wolf_camellia_ctr_reset;
@@ -4558,7 +4580,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #ifndef USICRYPT_NO_CHACHA
 #ifndef USICRYPT_NO_STREAM
 	case USICRYPT_CHACHA20|USICRYPT_STREAM:
-		if(!(c=wolf_chacha_init(ctx,key,klen,iv)))break;
+		if(U(!(c=wolf_chacha_init(ctx,key,klen,iv))))break;
 		c->encrypt=wolf_chacha_crypt;
 		c->decrypt=wolf_chacha_crypt;
 		c->reset=wolf_chacha_reset;
@@ -4602,7 +4624,7 @@ void *USICRYPT(dskcipher_init)(void *ctx,int cipher,int mode,void *key,int klen)
 #ifndef USICRYPT_NO_AES
 #ifndef USICRYPT_NO_XTS
 	case USICRYPT_AES|USICRYPT_XTS:
-		if(!(c=wolf_aes_xts_init(ctx,key,klen)))break;
+		if(U(!(c=wolf_aes_xts_init(ctx,key,klen))))break;
 		c->encrypt=wolf_aes_xts_encrypt;
 		c->decrypt=wolf_aes_xts_decrypt;
 		c->exit=wolf_aes_xts_exit;
@@ -4610,7 +4632,7 @@ void *USICRYPT(dskcipher_init)(void *ctx,int cipher,int mode,void *key,int klen)
 #endif
 #ifndef USICRYPT_NO_ESSIV
 	case USICRYPT_AES|USICRYPT_ESSIV:
-		if(!(c=wolf_aes_essiv_init(ctx,key,klen)))break;
+		if(U(!(c=wolf_aes_essiv_init(ctx,key,klen))))break;
 		c->encrypt=wolf_aes_essiv_encrypt;
 		c->decrypt=wolf_aes_essiv_decrypt;
 		c->exit=wolf_aes_essiv_exit;
@@ -4620,7 +4642,7 @@ void *USICRYPT(dskcipher_init)(void *ctx,int cipher,int mode,void *key,int klen)
 #ifndef USICRYPT_NO_CAMELLIA
 #ifndef USICRYPT_NO_XTS
 	case USICRYPT_CAMELLIA|USICRYPT_XTS:
-		if(!(c=wolf_camellia_xts_init(ctx,key,klen)))break;
+		if(U(!(c=wolf_camellia_xts_init(ctx,key,klen))))break;
 		c->encrypt=wolf_camellia_xts_encrypt;
 		c->decrypt=wolf_camellia_xts_decrypt;
 		c->exit=wolf_camellia_xts_exit;
@@ -4628,7 +4650,7 @@ void *USICRYPT(dskcipher_init)(void *ctx,int cipher,int mode,void *key,int klen)
 #endif
 #ifndef USICRYPT_NO_ESSIV
 	case USICRYPT_CAMELLIA|USICRYPT_ESSIV:
-		if(!(c=wolf_camellia_essiv_init(ctx,key,klen)))break;
+		if(U(!(c=wolf_camellia_essiv_init(ctx,key,klen))))break;
 		c->encrypt=wolf_camellia_essiv_encrypt;
 		c->decrypt=wolf_camellia_essiv_decrypt;
 		c->exit=wolf_camellia_essiv_exit;
@@ -4666,7 +4688,7 @@ void *USICRYPT(aeadcipher_init)(void *ctx,int cipher,void *key,int klen,
 #ifndef USICRYPT_NO_AES
 #ifndef USICRYPT_NO_GCM
 	case USICRYPT_AES_GCM:
-		if(!(c=wolf_aes_gcm_init(ctx,key,klen,ilen,tlen)))break;
+		if(U(!(c=wolf_aes_gcm_init(ctx,key,klen,ilen,tlen))))break;
 		c->encrypt=wolf_aes_gcm_encrypt;
 		c->decrypt=wolf_aes_gcm_decrypt;
 #ifndef USICRYPT_NO_IOV
@@ -4678,7 +4700,7 @@ void *USICRYPT(aeadcipher_init)(void *ctx,int cipher,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CCM
 	case USICRYPT_AES_CCM:
-		if(!(c=wolf_aes_ccm_init(ctx,key,klen,ilen,tlen)))break;
+		if(U(!(c=wolf_aes_ccm_init(ctx,key,klen,ilen,tlen))))break;
 		c->encrypt=wolf_aes_ccm_encrypt;
 		c->decrypt=wolf_aes_ccm_decrypt;
 #ifndef USICRYPT_NO_IOV
@@ -4692,7 +4714,7 @@ void *USICRYPT(aeadcipher_init)(void *ctx,int cipher,void *key,int klen,
 #ifndef USICRYPT_NO_CHACHA
 #ifndef USICRYPT_NO_POLY
 	case USICRYPT_CHACHA20_POLY1305:
-		if(!(c=wolf_chacha_poly_init(ctx,key,klen,ilen,tlen)))break;
+		if(U(!(c=wolf_chacha_poly_init(ctx,key,klen,ilen,tlen))))break;
 		c->encrypt=wolf_chacha_poly_encrypt;
 		c->decrypt=wolf_chacha_poly_decrypt;
 #ifndef USICRYPT_NO_IOV
@@ -4792,11 +4814,12 @@ void *USICRYPT(thread_init)(void *global)
 {
 	struct usicrypt_thread *ctx;
 
-	if(!(ctx=malloc(sizeof(struct usicrypt_thread))))goto err1;
+	if(U(!(ctx=malloc(sizeof(struct usicrypt_thread)))))goto err1;
 	ctx->global=global;
-	if(wc_InitRng(&ctx->rng))goto err1;
+	if(U(wc_InitRng(&ctx->rng)))goto err2;
 	return ctx;
 
+err2:	free(ctx);
 err1:	return NULL;
 }
 
@@ -4812,10 +4835,10 @@ void *USICRYPT(global_init)(int (*rng_seed)(void *data,int len),
 	struct usicrypt_global *ctx;
 
 	USICRYPT(do_realloc)(NULL,NULL,0,0);
-	if(!(ctx=malloc(sizeof(struct usicrypt_global))))goto err1;
+	if(U(!(ctx=malloc(sizeof(struct usicrypt_global)))))goto err1;
 	ctx->rng_seed=(rng_seed?rng_seed:USICRYPT(get_random));
 	ctx->memclear=(memclear?memclear:USICRYPT(do_memclear));
-	if(wolfSSL_Init()!=SSL_SUCCESS)goto err2;
+	if(U(wolfSSL_Init()!=SSL_SUCCESS))goto err2;
 #ifndef USICRYPT_NO_AES
 #ifndef USICRYPT_NO_GCM
 #ifdef WOLFSSL_AESNI

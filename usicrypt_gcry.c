@@ -580,9 +580,9 @@ static int gcry_reseed(void *ctx)
 	int r=-1;
 	unsigned char bfr[32];
 
-	if(((struct usicrypt_thread *)ctx)->global->rng_seed(bfr,sizeof(bfr)))
-		goto err1;
-	if(gcry_random_add_bytes(bfr,sizeof(bfr),100))goto err1;
+	if(U(((struct usicrypt_thread *)ctx)->global->
+		rng_seed(bfr,sizeof(bfr))))goto err1;
+	if(U(gcry_random_add_bytes(bfr,sizeof(bfr),100)))goto err1;
 	r=0;
 err1:	((struct usicrypt_thread *)ctx)->global->memclear(bfr,sizeof(bfr));
 	return r;
@@ -597,13 +597,13 @@ static int gcry_asn_next(unsigned char *prm,int len,unsigned char id,
 	int n;
 	
 	*hlen=2;
-	if(len<=1)goto err1;
-	if(prm[0]!=id)goto err1;
+	if(U(len<=1))goto err1;
+	if(U(prm[0]!=id))goto err1;
 	if(prm[1]&0x80)
 	{       
 		*hlen=prm[1]&0x7f;
-		if(*hlen<1||*hlen>3)goto err1;
-		if(len<*hlen+2)goto err1;
+		if(U(*hlen<1)||U(*hlen>3))goto err1;
+		if(U(len<*hlen+2))goto err1;
 		*dlen=0;
 		n=2;
 		switch(*hlen)
@@ -617,7 +617,7 @@ static int gcry_asn_next(unsigned char *prm,int len,unsigned char id,
 		*hlen+=2;
 	}
 	else *dlen=prm[1];
-	if(*hlen+*dlen>len)goto err1;
+	if(U(*hlen+*dlen>len))goto err1;
 	return 0;
 
 err1:	return -1;
@@ -662,7 +662,7 @@ static int gcry_rsa_dh_mpi_test_primes(gcry_mpi_t *prime,int bits)
 	int i;
 	gcry_mpi_t n;
 
-	if(!(n=gcry_mpi_new(bits)))goto err1;
+	if(U(!(n=gcry_mpi_new(bits))))goto err1;
 	for(i=0;i<171;i++)
 	{
 		gcry_mpi_set_ui(n,gcry_primes[i]);
@@ -686,9 +686,9 @@ static int gcry_rsa_dh_mpi_miller_rabin(gcry_mpi_t *prime,int bits)
 	gcry_mpi_t r;
 	gcry_mpi_t a;
 
-	if(!(w=gcry_mpi_new(bits)))goto err1;
-	if(!(r=gcry_mpi_new(bits)))goto err2;
-	if(!(a=gcry_mpi_new(bits)))goto err3;
+	if(U(!(w=gcry_mpi_new(bits))))goto err1;
+	if(U(!(r=gcry_mpi_new(bits))))goto err2;
+	if(U(!(a=gcry_mpi_new(bits))))goto err3;
 
 	bits=gcry_mpi_get_nbits(*prime);
 
@@ -703,7 +703,7 @@ static int gcry_rsa_dh_mpi_miller_rabin(gcry_mpi_t *prime,int bits)
 	{
 		do
 		{
-			if(!c--)goto err4;
+			if(U(!c--))goto err4;
 			gcry_mpi_randomize(a,bits,GCRY_STRONG_RANDOM);
 			if(gcry_mpi_test_bit(a,bits-1))
 				gcry_mpi_set_highbit(a,bits-1);
@@ -738,7 +738,7 @@ static int gcry_rsa_mpi_gen_prime(gcry_mpi_t *prime,int bits)
 	int r=-1;
 	gcry_mpi_t p;
 
-	if(!(p=gcry_mpi_new(bits)))goto err1;
+	if(U(!(p=gcry_mpi_new(bits))))goto err1;
 
 	do
 	{
@@ -779,20 +779,20 @@ static struct gcry_rsa *gcry_rsa_mpi_generate(int bits,unsigned long exp)
 	gcry_mpi_t f;
 	struct gcry_rsa *rsa;
 
-	if((bits&1)||!(exp&1))goto err1;
-	if(!(n=gcry_mpi_new(bits)))goto err1;
-	if(!(e=gcry_mpi_new(sizeof(exp)<<3)))goto err2;
-	if(!(p=gcry_mpi_snew(bits)))goto err3;
-	if(!(q=gcry_mpi_snew(bits)))goto err4;
-	if(!(tmp1=gcry_mpi_snew(bits>>1)))goto err5;
-	if(!(tmp2=gcry_mpi_snew(bits>>1)))goto err6;
-	if(!(phi=gcry_mpi_snew(bits)))goto err7;
-	if(!(g=gcry_mpi_snew(bits)))goto err8;
-	if(!(f=gcry_mpi_snew(bits)))goto err9;
-	if(!(d=gcry_mpi_snew(bits)))goto err10;
-	if(!(e1=gcry_mpi_snew(bits>>2)))goto err11;
-	if(!(e2=gcry_mpi_snew(bits>>2)))goto err12;
-	if(!(c=gcry_mpi_snew(bits>>2)))goto err13;
+	if(U((bits&1))||U(!(exp&1)))goto err1;
+	if(U(!(n=gcry_mpi_new(bits))))goto err1;
+	if(U(!(e=gcry_mpi_new(sizeof(exp)<<3))))goto err2;
+	if(U(!(p=gcry_mpi_snew(bits))))goto err3;
+	if(U(!(q=gcry_mpi_snew(bits))))goto err4;
+	if(U(!(tmp1=gcry_mpi_snew(bits>>1))))goto err5;
+	if(U(!(tmp2=gcry_mpi_snew(bits>>1))))goto err6;
+	if(U(!(phi=gcry_mpi_snew(bits))))goto err7;
+	if(U(!(g=gcry_mpi_snew(bits))))goto err8;
+	if(U(!(f=gcry_mpi_snew(bits))))goto err9;
+	if(U(!(d=gcry_mpi_snew(bits))))goto err10;
+	if(U(!(e1=gcry_mpi_snew(bits>>2))))goto err11;
+	if(U(!(e2=gcry_mpi_snew(bits>>2))))goto err12;
+	if(U(!(c=gcry_mpi_snew(bits>>2))))goto err13;
 	gcry_mpi_set_ui(e,exp);
 	do
 	{
@@ -800,8 +800,8 @@ static struct gcry_rsa *gcry_rsa_mpi_generate(int bits,unsigned long exp)
 		{
 			do
 			{
-				if(gcry_rsa_mpi_gen_prime(&p,bits>>1)||
-					gcry_rsa_mpi_gen_prime(&q,bits>>1))
+				if(U(gcry_rsa_mpi_gen_prime(&p,bits>>1))||
+					U(gcry_rsa_mpi_gen_prime(&q,bits>>1)))
 						goto err14;
 			} while(!gcry_mpi_cmp(p,q));
 			if(gcry_mpi_cmp(p,q)>0)gcry_mpi_swap(p,q);
@@ -813,11 +813,11 @@ static struct gcry_rsa *gcry_rsa_mpi_generate(int bits,unsigned long exp)
 		gcry_mpi_gcd(g,tmp1,tmp2);
 	} while(!gcry_mpi_gcd(f,e,phi));
 	gcry_mpi_div(f,NULL,phi,g,-1);
-	if(!gcry_mpi_invm(d,e,f))goto err14;
+	if(U(!gcry_mpi_invm(d,e,f)))goto err14;
 	gcry_mpi_mod(e1,d,tmp1);
 	gcry_mpi_mod(e2,d,tmp2);
-	if(!gcry_mpi_invm(c,q,p))goto err14;
-	if(!(rsa=malloc(sizeof(struct gcry_rsa))))goto err14;
+	if(U(!gcry_mpi_invm(c,q,p)))goto err14;
+	if(U(!(rsa=malloc(sizeof(struct gcry_rsa)))))goto err14;
 	rsa->n=n;
 	rsa->e=e;
 	rsa->d=d;
@@ -859,31 +859,31 @@ static int gcry_rsa_mpi_check(gcry_mpi_t n,gcry_mpi_t e,gcry_mpi_t d,
 	gcry_mpi_t tmp1;
 	gcry_mpi_t tmp2;
 
-	if(!gcry_mpi_cmp_ui(d,0)||!gcry_mpi_cmp_ui(p,0)||!gcry_mpi_cmp_ui(q,0))
-		goto err1;
+	if(U(!gcry_mpi_cmp_ui(d,0))||U(!gcry_mpi_cmp_ui(p,0))||
+		U(!gcry_mpi_cmp_ui(q,0)))goto err1;
 	b=gcry_mpi_get_nbits(n);
-	if(!(p1=gcry_mpi_snew(b)))goto err1;
-	if(!(q1=gcry_mpi_snew(b)))goto err2;
-	if(!(tmp1=gcry_mpi_snew(b)))goto err3;
-	if(!(tmp2=gcry_mpi_snew(b)))goto err4;
-	if(!gcry_mpi_invm(tmp1,q,p))goto err5;
-	if(gcry_mpi_cmp(tmp1,c))goto err5;
+	if(U(!(p1=gcry_mpi_snew(b))))goto err1;
+	if(U(!(q1=gcry_mpi_snew(b))))goto err2;
+	if(U(!(tmp1=gcry_mpi_snew(b))))goto err3;
+	if(U(!(tmp2=gcry_mpi_snew(b))))goto err4;
+	if(U(!gcry_mpi_invm(tmp1,q,p)))goto err5;
+	if(U(gcry_mpi_cmp(tmp1,c)))goto err5;
 	gcry_mpi_mul(tmp1,p,q);
-	if(gcry_mpi_cmp(tmp1,n))goto err5;
+	if(U(gcry_mpi_cmp(tmp1,n)))goto err5;
 	gcry_mpi_sub_ui(p1,p,1);
 	gcry_mpi_mod(tmp1,d,p1);
-	if(gcry_mpi_cmp(tmp1,e1))goto err5;
+	if(U(gcry_mpi_cmp(tmp1,e1)))goto err5;
 	gcry_mpi_sub_ui(q1,q,1);
 	gcry_mpi_mod(tmp1,d,q1);
-	if(gcry_mpi_cmp(tmp1,e2))goto err5;
+	if(U(gcry_mpi_cmp(tmp1,e2)))goto err5;
 	gcry_mpi_mul(tmp2,p1,q1);
-	if(!gcry_mpi_gcd(tmp1,e,tmp2))goto err5;
+	if(U(!gcry_mpi_gcd(tmp1,e,tmp2)))goto err5;
 	gcry_mpi_gcd(tmp1,p1,q1);
 	gcry_mpi_div(tmp1,tmp2,tmp2,tmp1,0);
-	if(gcry_mpi_cmp_ui(tmp2,0))goto err5;
+	if(U(gcry_mpi_cmp_ui(tmp2,0)))goto err5;
 	gcry_mpi_mul(tmp2,d,e);
 	gcry_mpi_mod(tmp2,tmp2,tmp1);
-	if(gcry_mpi_cmp_ui(tmp2,1))goto err5;
+	if(U(gcry_mpi_cmp_ui(tmp2,1)))goto err5;
 	r=0;
 
 err5:	gcry_mpi_release(tmp2);
@@ -928,7 +928,8 @@ static int gcry_rsa_mpi_write_int(unsigned char *ptr,gcry_mpi_t val)
 	rl+=len;
 	if(!(bits&7))*ptr++=0x00;
 	len=(bits+7)>>3;
-	if(gcry_mpi_print(GCRYMPI_FMT_USG,ptr,len,&n,val)||n!=len)return -1;
+	if(U(gcry_mpi_print(GCRYMPI_FMT_USG,ptr,len,&n,val))||U(n!=len))
+		return -1;
 	return rl;
 }
 
@@ -957,19 +958,20 @@ static gcry_mpi_t gcry_rsa_mpi_read_int(void *ctx,unsigned char *ptr,int len,
 	gcry_mpi_t val=NULL;
 	unsigned char *tmp;
 
-	if(!len)goto err1;
+	if(U(!len))goto err1;
 	if(!*ptr)
 	{
 		ptr++;
-		if(!--len)goto err1;
+		if(U(!--len))goto err1;
 	}
 	if(secure)
 	{
-		if(!(tmp=gcry_malloc_secure(len)))goto err1;
+		if(U(!(tmp=gcry_malloc_secure(len))))goto err1;
 		memcpy(tmp,ptr,len);
 		ptr=tmp;
 	}
-	if(gcry_mpi_scan(&val,GCRYMPI_FMT_USG,ptr,len,&n)||n!=len)goto err2;
+	if(U(gcry_mpi_scan(&val,GCRYMPI_FMT_USG,ptr,len,&n))||U(n!=len))
+		goto err2;
 	if(secure)
 	{
 		((struct usicrypt_thread *)ctx)->global->memclear(ptr,len);
@@ -995,17 +997,18 @@ static int gcry_rsa_mpi_public(unsigned char *in,int ilen,unsigned char *out,
 	gcry_mpi_t ival=NULL;
 	gcry_mpi_t oval;
 
-	if(gcry_mpi_scan(&ival,GCRYMPI_FMT_USG,in,ilen,&n)||n!=ilen)goto err1;
-	if(mpi_cmp(ival,rsa->n)>=0)goto err1;
+	if(U(gcry_mpi_scan(&ival,GCRYMPI_FMT_USG,in,ilen,&n))||U(n!=ilen))
+		goto err1;
+	if(U(mpi_cmp(ival,rsa->n)>=0))goto err1;
 	*olen=gcry_mpi_get_nbits(rsa->n);
-	if(!(oval=gcry_mpi_new(*olen)))goto err1;
+	if(U(!(oval=gcry_mpi_new(*olen))))goto err1;
 	*olen=(*olen+7)>>3;
 	gcry_mpi_powm(oval,ival,rsa->e,rsa->n);
 	len=(gcry_mpi_get_nbits(oval)+7)>>3;
-	if(len>*olen)goto err2;
+	if(U(len>*olen))goto err2;
 	if(len<*olen)memset(out,0,*olen-len);
-	if(len)if(gcry_mpi_print(GCRYMPI_FMT_USG,out+*olen-len,len,&n,oval)||
-		n!=len)goto err2;
+	if(len)if(U(gcry_mpi_print(GCRYMPI_FMT_USG,out+*olen-len,len,&n,oval))||
+		U(n!=len))goto err2;
 	r=0;
 
 err2:	gcry_mpi_release(oval);
@@ -1022,17 +1025,18 @@ static int gcry_rsa_mpi_private(unsigned char *in,int ilen,unsigned char *out,
 	gcry_mpi_t ival=NULL;
 	gcry_mpi_t oval;
 
-	if(gcry_mpi_scan(&ival,GCRYMPI_FMT_USG,in,ilen,&n)||n!=ilen)goto err1;
-	if(mpi_cmp(ival,rsa->n)>=0)goto err1;
+	if(U(gcry_mpi_scan(&ival,GCRYMPI_FMT_USG,in,ilen,&n))||U(n!=ilen))
+		goto err1;
+	if(U(mpi_cmp(ival,rsa->n)>=0))goto err1;
 	*olen=gcry_mpi_get_nbits(rsa->n);
-	if(!(oval=gcry_mpi_snew(*olen)))goto err1;
+	if(U(!(oval=gcry_mpi_snew(*olen))))goto err1;
 	*olen=(*olen+7)>>3;
 	gcry_mpi_powm(oval,ival,rsa->d,rsa->n);
 	len=(gcry_mpi_get_nbits(oval)+7)>>3;
-	if(len>*olen)goto err2;
+	if(U(len>*olen))goto err2;
 	if(len<*olen)memset(out,0,*olen-len);
-	if(len)if(gcry_mpi_print(GCRYMPI_FMT_USG,out+*olen-len,len,&n,oval)||
-		n!=len)goto err2;
+	if(len)if(U(gcry_mpi_print(GCRYMPI_FMT_USG,out+*olen-len,len,&n,oval))||
+		U(n!=len))goto err2;
 	r=0;
 
 err2:	gcry_mpi_release(oval);
@@ -1050,8 +1054,8 @@ static int gcry_mgf1(unsigned char *mask,int len,unsigned char *seed,int slen,
 	gcry_md_hd_t h;
 	unsigned char bfr[4];
 
-	if(gcry_md_open(&h,md,0))goto err1;
-	if((mdlen=gcry_md_get_algo_dlen(md))<=0)goto err2;
+	if(U(gcry_md_open(&h,md,0)))goto err1;
+	if(U((mdlen=gcry_md_get_algo_dlen(md))<=0))goto err2;
 	for(i=0;olen<len;i++)
 	{
 		bfr[0]=(unsigned char)(i>>24);
@@ -1086,7 +1090,7 @@ static int gcry_add_oaep_mgf1(void *ctx,unsigned char *dst,int dlen,
 	unsigned char *dm;
 	unsigned char sm[64];
 
-	if((mdlen=gcry_md_get_algo_dlen(md))<=0)goto err1;
+	if(U((mdlen=gcry_md_get_algo_dlen(md))<=0))goto err1;
 	if(dlen-1<2*mdlen+1)goto err1;
 	dst[0]=0x00;
 	gcry_randomize(dst+1,mdlen,GCRY_STRONG_RANDOM);
@@ -1094,10 +1098,10 @@ static int gcry_add_oaep_mgf1(void *ctx,unsigned char *dst,int dlen,
 	memset(dst+2*mdlen+1,0,dlen-slen-2*mdlen-2);
 	dst[dlen-slen-1]=0x01;
 	memcpy(dst+dlen-slen,src,slen);
-	if(!(dm=malloc(dlen-mdlen-1)))goto err1;
-	if(gcry_mgf1(dm,dlen-mdlen-1,dst+1,mdlen,md))goto err2;
+	if(U(!(dm=malloc(dlen-mdlen-1))))goto err1;
+	if(U(gcry_mgf1(dm,dlen-mdlen-1,dst+1,mdlen,md)))goto err2;
 	for(i=0;i<dlen-mdlen-1;i++)dst[i+mdlen+1]^=dm[i];
-	if(gcry_mgf1(sm,mdlen,dst+mdlen+1,dlen-mdlen-1,md))goto err3;
+	if(U(gcry_mgf1(sm,mdlen,dst+mdlen+1,dlen-mdlen-1,md)))goto err3;
 	for(i=0;i<mdlen;i++)dst[i+1]^=sm[i];
 	((struct usicrypt_thread *)ctx)->global->memclear(sm,sizeof(sm));
 	((struct usicrypt_thread *)ctx)->global->memclear(dm,dlen-mdlen-1);
@@ -1119,20 +1123,20 @@ static int gcry_check_oaep_mgf1(void *ctx,unsigned char *dst,int dlen,
 	unsigned char *mem;
 	unsigned char wrk[64];
 
-	if((mdlen=gcry_md_get_algo_dlen(md))<=0)goto err1;
-	if(n<2*mdlen+2||n-1<slen)goto err1;
-	if(!(mem=malloc(2*n-mdlen-2)))goto err1;
+	if(U((mdlen=gcry_md_get_algo_dlen(md))<=0))goto err1;
+	if(U(n<2*mdlen+2)||U(n-1<slen))goto err1;
+	if(U(!(mem=malloc(2*n-mdlen-2))))goto err1;
 	memset(mem+n-mdlen-1,0,n-slen-1);
 	memcpy(mem+2*n-slen-mdlen-2,src,slen);
-	if(gcry_mgf1(wrk,mdlen,mem+n-1,n-mdlen-1,md))goto err2;
+	if(U(gcry_mgf1(wrk,mdlen,mem+n-1,n-mdlen-1,md)))goto err2;
 	for(i=0;i<mdlen;i++)wrk[i]^=mem[i+n-mdlen-1];
-	if(gcry_mgf1(mem,n-mdlen-1,wrk,mdlen,md))goto err2;
+	if(U(gcry_mgf1(mem,n-mdlen-1,wrk,mdlen,md)))goto err2;
 	for(i=0;i<n-mdlen-1;i++)mem[i]^=mem[i+n-1];
 	gcry_md_hash_buffer(md,wrk,p,plen);
-	if(memcmp(mem,wrk,mdlen))goto err2;
+	if(U(memcmp(mem,wrk,mdlen)))goto err2;
 	for(i=mdlen;i<n-mdlen-1;i++)if(mem[i])break;
-	if(i==n-mdlen-1||mem[i]!=0x01)goto err2;
-	if(dlen<(l=n-i-mdlen-2))goto err2;
+	if(U(i==n-mdlen-1)||U(mem[i]!=0x01))goto err2;
+	if(U(dlen<(l=n-i-mdlen-2)))goto err2;
 	memcpy(dst,mem+i+1,l);
 	((struct usicrypt_thread *)ctx)->global->memclear(wrk,sizeof(wrk));
 	((struct usicrypt_thread *)ctx)->global->memclear(mem,2*n-mdlen-2);
@@ -1159,12 +1163,12 @@ static int gcry_rsa_mpi_add_pss(void *ctx,struct gcry_rsa *rsa,
 	unsigned char *p;
 	gcry_md_hd_t h;
 
-	if(gcry_md_open(&h,md,0))goto err1;
-	if((mdlen=gcry_md_get_algo_dlen(md))<=0)goto err2;
+	if(U(gcry_md_open(&h,md,0)))goto err1;
+	if(U((mdlen=gcry_md_get_algo_dlen(md))<=0))goto err2;
 	bits=(gcry_mpi_get_nbits(rsa->n)-1)&0x7; 
 	bytes=(gcry_mpi_get_nbits(rsa->n)+7)>>3;
 	slen=bytes-mdlen-2-(bits?0:1);
-	if(slen-mdlen<0)goto err2;
+	if(U(slen-mdlen<0))goto err2;
 	if(!bits)
 	{
 		*out++=0x00;
@@ -1172,7 +1176,7 @@ static int gcry_rsa_mpi_add_pss(void *ctx,struct gcry_rsa *rsa,
 	}       
 	if(slen)
 	{
-		if(!(salt=malloc(slen)))goto err2;
+		if(U(!(salt=malloc(slen))))goto err2;
 		gcry_randomize(salt,slen,GCRY_STRONG_RANDOM);
 	}
 	else salt=NULL;
@@ -1180,7 +1184,7 @@ static int gcry_rsa_mpi_add_pss(void *ctx,struct gcry_rsa *rsa,
 	gcry_md_write(h,in,mdlen);
 	gcry_md_write(h,salt,slen);
 	memcpy(out+bytes-mdlen-1,gcry_md_read(h,md),mdlen);
-	if(gcry_mgf1(out,bytes-mdlen-1,out+bytes-mdlen-1,mdlen,md))goto err3;
+	if(U(gcry_mgf1(out,bytes-mdlen-1,out+bytes-mdlen-1,mdlen,md)))goto err3;
 	p=out+bytes-slen-mdlen-2;
 	*p++^=0x01;
 	for(i=0;i<slen;i++)*p++^=salt[i];
@@ -1209,25 +1213,25 @@ static int gcry_rsa_mpi_check_pss(void *ctx,struct gcry_rsa *rsa,
 	unsigned char *wrk;
 	gcry_md_hd_t h;
 	
-	if(gcry_md_open(&h,md,0))goto err1;
-	if((mdlen=gcry_md_get_algo_dlen(md))<=0)goto err2;
+	if(U(gcry_md_open(&h,md,0)))goto err1;
+	if(U((mdlen=gcry_md_get_algo_dlen(md))<=0))goto err2;
 	bits=(gcry_mpi_get_nbits(rsa->n)-1)&0x7;
 	bytes=(gcry_mpi_get_nbits(rsa->n)+7)>>3;
-	if(bytes-2*mdlen-2-(bits?0:1)<0)goto err2;
-	if(*sig&(0xff<<bits))goto err2;
+	if(U(bytes-2*mdlen-2-(bits?0:1)<0))goto err2;
+	if(U(*sig&(0xff<<bits)))goto err2;
 	if(!bits)
 	{       
 		sig++;
 		bytes--;
 	}
-	if(bytes<mdlen)goto err2;
-	if(sig[bytes-1]!=0xbc)goto err2;
-	if(!(wrk=malloc(bytes-mdlen-1)))goto err2;
-	if(gcry_mgf1(wrk,bytes-mdlen-1,sig+bytes-mdlen-1,mdlen,md))goto err3;
+	if(U(bytes<mdlen))goto err2;
+	if(U(sig[bytes-1]!=0xbc))goto err2;
+	if(U(!(wrk=malloc(bytes-mdlen-1))))goto err2;
+	if(U(gcry_mgf1(wrk,bytes-mdlen-1,sig+bytes-mdlen-1,mdlen,md)))goto err3;
 	for(i=0;i<bytes-mdlen-1;i++)wrk[i]^=sig[i];
 	if(bits)wrk[0]&=0xff>>(8-bits);
 	for(i=0;!wrk[i]&&i<bytes-mdlen-2;i++);
-	if(wrk[i++]!=0x01)goto err3;
+	if(U(wrk[i++]!=0x01))goto err3;
 	gcry_md_write(h,&zero,sizeof(zero));
 	gcry_md_write(h,hash,mdlen);
 	gcry_md_write(h,wrk+i,bytes-mdlen-i-1);
@@ -1242,7 +1246,7 @@ err1:	return r;
 static int gcry_rsa_mpi_add_type1(unsigned char *out,int olen,
 	unsigned char *in,int ilen)
 {
-	if(ilen>olen-11)return -1;
+	if(U(ilen>olen-11))return -1;
 	*out++=0x00;
 	*out++=0x01;
 	memset(out,0xff,olen-ilen-3);
@@ -1257,16 +1261,16 @@ static int gcry_rsa_mpi_check_type1(unsigned char *out,int olen,
 {
 	int i;
 
-	if(*in++!=0x00||*in++!=0x01)return -1;
+	if(U(*in++!=0x00)||U(*in++!=0x01))return -1;
 	for(ilen-=2,i=0;i<ilen;i++,in++)if(*in!=0xff)
 	{
-		if(*in)return -1;
+		if(U(*in))return -1;
 		in++;
 		break;
 	}
-	if(i<8||i==ilen)return -1;
+	if(U(i<8)||U(i==ilen))return -1;
 	ilen-=i+1;
-	if(ilen>olen)return -1;
+	if(U(ilen>olen))return -1;
 	memcpy(out,in,ilen);
 	return ilen;
 }
@@ -1276,7 +1280,7 @@ static int gcry_rsa_mpi_add_type2(unsigned char *out,int olen,
 {
 	int i;
 
-	if(ilen>olen-11)return -1;
+	if(U(ilen>olen-11))return -1;
 	*out++=0x00;
 	*out++=0x02;
 	gcry_randomize(out,olen-ilen-3,GCRY_STRONG_RANDOM);
@@ -1292,15 +1296,15 @@ static int gcry_rsa_mpi_check_type2(unsigned char *out,int olen,
 {
 	int i;
 
-	if(*in++!=0x00||*in++!=0x02)return -1;
+	if(U(*in++!=0x00)||U(*in++!=0x02))return -1;
 	for(ilen-=2,i=0;i<ilen;i++,in++)if(!*in)
 	{
 		in++;
 		break;
 	}
-	if(i<8||i==ilen)return -1;
+	if(U(i<8)||U(i==ilen))return -1;
 	ilen-=i+1;
-	if(ilen>olen)return -1;
+	if(U(ilen>olen))return -1;
 	memcpy(out,in,ilen);
 	return ilen;
 }
@@ -1342,18 +1346,19 @@ static void *gcry_rsa_do_sign_v15(void *ctx,int md,void *key,void *data,
 	default:goto err1;
 	}
 
-	if(gcry_md_open(&h,type,GCRY_MD_FLAG_SECURE))goto err1;
+	if(U(gcry_md_open(&h,type,GCRY_MD_FLAG_SECURE)))goto err1;
 	if(!mode)gcry_md_write(h,data,dlen);
 	else for(l=0;l<dlen;l++)gcry_md_write(h,iov[l].data,iov[l].length);
 	memcpy(hash,gcry_md_read(h,type),gcry_md_get_algo_dlen(type));
 	gcry_md_close(h);
 
 	*slen=(gcry_mpi_get_nbits(rsa->n)+7)>>3;
-	if(!(tmp=malloc(*slen)))goto err1;
-	if(!(sig=malloc(*slen)))goto err2;
-	if(gcry_rsa_mpi_add_type1(tmp,*slen,hash,gcry_md_get_algo_dlen(type)))
-		goto err3;
-	if(!gcry_rsa_mpi_private(tmp,*slen,sig,&l,rsa)&&l==*slen)goto err2;
+	if(U(!(tmp=malloc(*slen))))goto err1;
+	if(U(!(sig=malloc(*slen))))goto err2;
+	if(U(gcry_rsa_mpi_add_type1(tmp,*slen,hash,
+		gcry_md_get_algo_dlen(type))))goto err3;
+	if(L(!gcry_rsa_mpi_private(tmp,*slen,sig,&l,rsa))&&L(l==*slen))
+		goto err2;
 
 err3:	((struct usicrypt_thread *)ctx)->global->memclear(sig,*slen);
 	free(sig);
@@ -1402,18 +1407,18 @@ static int gcry_rsa_do_verify_v15(void *ctx,int md,void *key,void *data,
 	default:goto err1;
 	}
 
-	if(gcry_md_open(&h,type,GCRY_MD_FLAG_SECURE))goto err1;
+	if(U(gcry_md_open(&h,type,GCRY_MD_FLAG_SECURE)))goto err1;
 	if(!mode)gcry_md_write(h,data,dlen);
 	else for(l=0;l<dlen;l++)gcry_md_write(h,iov[l].data,iov[l].length);
 	memcpy(hash,gcry_md_read(h,type),gcry_md_get_algo_dlen(type));
 	gcry_md_close(h);
 
-	if(slen!=((gcry_mpi_get_nbits(rsa->n)+7)>>3))goto err1;
-	if(!(tmp=malloc(slen)))goto err1;
-	if(gcry_rsa_mpi_public(sig,slen,tmp,&l,rsa)||l!=slen)goto err2;
-	if(gcry_rsa_mpi_check_type1(cmp,gcry_md_get_algo_dlen(type),tmp,slen)
-		!=gcry_md_get_algo_dlen(type))goto err2;
-	if(memcmp(hash,cmp,gcry_md_get_algo_dlen(type)))goto err2;
+	if(U(slen!=((gcry_mpi_get_nbits(rsa->n)+7)>>3)))goto err1;
+	if(U(!(tmp=malloc(slen))))goto err1;
+	if(U(gcry_rsa_mpi_public(sig,slen,tmp,&l,rsa))||U(l!=slen))goto err2;
+	if(U(gcry_rsa_mpi_check_type1(cmp,gcry_md_get_algo_dlen(type),tmp,slen)
+		!=gcry_md_get_algo_dlen(type)))goto err2;
+	if(U(memcmp(hash,cmp,gcry_md_get_algo_dlen(type))))goto err2;
 	r=0;
 
 err2:	((struct usicrypt_thread *)ctx)->global->memclear(tmp,slen);
@@ -1460,19 +1465,20 @@ static void *gcry_rsa_do_sign_pss(void *ctx,int md,void *key,void *data,
 	default:goto err1;
 	}
 
-	if(gcry_reseed(ctx))goto err1;
+	if(U(gcry_reseed(ctx)))goto err1;
 
-	if(gcry_md_open(&h,type,GCRY_MD_FLAG_SECURE))goto err1;
+	if(U(gcry_md_open(&h,type,GCRY_MD_FLAG_SECURE)))goto err1;
 	if(!mode)gcry_md_write(h,data,dlen);
 	else for(l=0;l<dlen;l++)gcry_md_write(h,iov[l].data,iov[l].length);
 	memcpy(hash,gcry_md_read(h,type),gcry_md_get_algo_dlen(type));
 	gcry_md_close(h);
 
 	*slen=(gcry_mpi_get_nbits(rsa->n)+7)>>3;
-	if(!(tmp=malloc(*slen)))goto err2;
-	if(!(sig=malloc(*slen)))goto err3;
-	if(gcry_rsa_mpi_add_pss(ctx,rsa,tmp,hash,type))goto err5;
-	if(!gcry_rsa_mpi_private(tmp,*slen,sig,&l,rsa)&&l==*slen)goto err4;
+	if(U(!(tmp=malloc(*slen))))goto err2;
+	if(U(!(sig=malloc(*slen))))goto err3;
+	if(U(gcry_rsa_mpi_add_pss(ctx,rsa,tmp,hash,type)))goto err5;
+	if(L(!gcry_rsa_mpi_private(tmp,*slen,sig,&l,rsa))&&L(l==*slen))
+		goto err4;
 
 	((struct usicrypt_thread *)ctx)->global->memclear(sig,*slen);
 err5:	free(sig);
@@ -1520,16 +1526,16 @@ static int gcry_rsa_do_verify_pss(void *ctx,int md,void *key,void *data,
 	default:goto err1;
 	}
 
-	if(gcry_md_open(&h,type,GCRY_MD_FLAG_SECURE))goto err1;
+	if(U(gcry_md_open(&h,type,GCRY_MD_FLAG_SECURE)))goto err1;
 	if(!mode)gcry_md_write(h,data,dlen);
 	else for(l=0;l<dlen;l++)gcry_md_write(h,iov[l].data,iov[l].length);
 	memcpy(hash,gcry_md_read(h,type),gcry_md_get_algo_dlen(type));
 	gcry_md_close(h);
 
-	if(slen!=((gcry_mpi_get_nbits(rsa->n)+7)>>3))goto err2;
-	if(!(tmp=malloc(slen)))goto err2;
-	if(gcry_rsa_mpi_public(sig,slen,tmp,&l,rsa)||l!=slen)goto err3;
-	if(gcry_rsa_mpi_check_pss(ctx,rsa,hash,tmp,type))goto err3;
+	if(U(slen!=((gcry_mpi_get_nbits(rsa->n)+7)>>3)))goto err2;
+	if(U(!(tmp=malloc(slen))))goto err2;
+	if(U(gcry_rsa_mpi_public(sig,slen,tmp,&l,rsa))||U(l!=slen))goto err3;
+	if(U(gcry_rsa_mpi_check_pss(ctx,rsa,hash,tmp,type)))goto err3;
 	r=0;
 
 err3:	((struct usicrypt_thread *)ctx)->global->memclear(tmp,slen);
@@ -1556,8 +1562,8 @@ static int gcry_dh_mpi_gen_prime(gcry_mpi_t *prime,int bits)
 	gcry_mpi_t p;
 	gcry_mpi_t n;
 
-	if(!(p=gcry_mpi_new(bits)))goto err1;
-	if(!(n=gcry_mpi_new(bits)))goto err2;
+	if(U(!(p=gcry_mpi_new(bits))))goto err1;
+	if(U(!(n=gcry_mpi_new(bits))))goto err2;
 
 	do
 	{
@@ -1608,50 +1614,50 @@ static int gcry_dh_mpi_parse_param(unsigned char *prm,int len,gcry_mpi_t *pval,
 	unsigned char *g;
 	gcry_mpi_t tmp;
 
-	if(gcry_asn_next(prm,len,0x30,&h,&l))goto err1;
+	if(U(gcry_asn_next(prm,len,0x30,&h,&l)))goto err1;
 	prm+=h;
 	len-=h;
 
-	if(gcry_asn_next(prm,len,0x02,&h,&l))goto err1;
+	if(U(gcry_asn_next(prm,len,0x02,&h,&l)))goto err1;
 	p=prm+h;
 	plen=l;
 	prm+=h+l;
 	len-=h+l;
 
-	if(gcry_asn_next(prm,len,0x02,&h,&l))goto err1;
+	if(U(gcry_asn_next(prm,len,0x02,&h,&l)))goto err1;
 	g=prm+h;
 	glen=l;
 
-	if(!plen||!glen||(*p&0x80)||(*g&0x80))goto err1;
+	if(U(!plen)||U(!glen)||U(*p&0x80)||U(*g&0x80))goto err1;
 
 	*pval=NULL;
 	*gval=NULL;
 
-	if(gcry_mpi_scan(pval,GCRYMPI_FMT_USG,p,plen,NULL))goto err2;
-	if(gcry_mpi_scan(gval,GCRYMPI_FMT_USG,g,glen,NULL))goto err3;
+	if(U(gcry_mpi_scan(pval,GCRYMPI_FMT_USG,p,plen,NULL)))goto err2;
+	if(U(gcry_mpi_scan(gval,GCRYMPI_FMT_USG,g,glen,NULL)))goto err3;
 
 	h=gcry_mpi_get_nbits(*pval);
-	if(h<USICRYPT_DH_BITS_MIN||h>USICRYPT_DH_BITS_MAX)goto err3;
-	if(!(tmp=gcry_mpi_new(h)))goto err3;
-	if(gcry_mpi_cmp_ui(*pval,3)<0||gcry_mpi_cmp_ui(*gval,1)<=0||
-		gcry_prime_check(*pval,0))goto err4;
+	if(U(h<USICRYPT_DH_BITS_MIN)||U(h>USICRYPT_DH_BITS_MAX))goto err3;
+	if(U(!(tmp=gcry_mpi_new(h))))goto err3;
+	if(U(gcry_mpi_cmp_ui(*pval,3)<0)||U(gcry_mpi_cmp_ui(*gval,1)<=0)||
+		U(gcry_prime_check(*pval,0)))goto err4;
 	if(!gcry_mpi_cmp_ui(*gval,2))
 	{
 		gcry_mpi_set_ui(tmp,24);
 		gcry_mpi_mod(tmp,*pval,tmp);
-		if(gcry_mpi_cmp_ui(tmp,11))goto err4;
+		if(U(gcry_mpi_cmp_ui(tmp,11)))goto err4;
 	}
 	else if(!gcry_mpi_cmp_ui(*gval,3))
 	{
 		gcry_mpi_set_ui(tmp,12);
 		gcry_mpi_mod(tmp,*pval,tmp);
-		if(gcry_mpi_cmp_ui(tmp,5))goto err4;
+		if(U(gcry_mpi_cmp_ui(tmp,5)))goto err4;
 	}
 	else if(!gcry_mpi_cmp_ui(*gval,5))
 	{
 		gcry_mpi_set_ui(tmp,10);
 		gcry_mpi_mod(tmp,*pval,tmp);
-		if(gcry_mpi_cmp_ui(tmp,3)&&gcry_mpi_cmp_ui(tmp,7))goto err4;
+		if(U(gcry_mpi_cmp_ui(tmp,3)&&gcry_mpi_cmp_ui(tmp,7)))goto err4;
 	}
 	gcry_mpi_release(tmp);
 	return 0;
@@ -1667,8 +1673,8 @@ static gcry_mpi_t gcry_dh_mpi_generate(gcry_mpi_t pval)
 	int bits;
 	gcry_mpi_t key;
 
-	if((bits=gcry_mpi_get_nbits(pval)-1)<=0)return NULL;
-	if(!(key=gcry_mpi_snew(bits)))return NULL;
+	if(U((bits=gcry_mpi_get_nbits(pval)-1)<=0))return NULL;
+	if(U(!(key=gcry_mpi_snew(bits))))return NULL;
 	gcry_mpi_randomize(key,bits,GCRY_STRONG_RANDOM);
 	gcry_mpi_set_bit(key,bits-1);
 	return key;
@@ -1681,8 +1687,8 @@ static gcry_mpi_t gcry_dh_mpi_pub_from_key(gcry_mpi_t key,gcry_mpi_t pval,
 	int bits;
 	gcry_mpi_t pub;
 
-	if((bits=gcry_mpi_get_nbits(pval))<=0)return NULL;
-	if(!(pub=gcry_mpi_new(bits)))return NULL;
+	if(U((bits=gcry_mpi_get_nbits(pval))<=0))return NULL;
+	if(U(!(pub=gcry_mpi_new(bits))))return NULL;
 	gcry_mpi_powm(pub,gval,key,pval);
 	return pub;
 }
@@ -1693,11 +1699,11 @@ static gcry_mpi_t gcry_dh_mpi_derive(gcry_mpi_t key,gcry_mpi_t pub,
 	int bits;
 	gcry_mpi_t sec;
 
-	if(gcry_mpi_cmp_ui(pub,2)<0)return NULL;
-	if((bits=gcry_mpi_get_nbits(pval))<=0)return NULL;
-	if(!(sec=gcry_mpi_snew(bits)))return NULL;
+	if(U(gcry_mpi_cmp_ui(pub,2)<0))return NULL;
+	if(U((bits=gcry_mpi_get_nbits(pval))<=0))return NULL;
+	if(U(!(sec=gcry_mpi_snew(bits))))return NULL;
 	gcry_mpi_sub_ui(sec,pval,2);
-	if(gcry_mpi_cmp(pub,sec)>0)
+	if(U(gcry_mpi_cmp(pub,sec)>0))
 	{
 		gcry_mpi_release(sec);
 		sec=NULL;
@@ -1712,18 +1718,18 @@ static unsigned char *gcry_dh_mpi_get_val(void *ctx,gcry_mpi_t val,int *len)
 	size_t l;
 	unsigned char *data;
 
-	if((bits=gcry_mpi_get_nbits(val))<0)goto err1;
+	if(U((bits=gcry_mpi_get_nbits(val))<0))goto err1;
 	else if(!bits)
 	{
 		l=1;
-		if(!(data=malloc(l)))goto err1;
+		if(U(!(data=malloc(l))))goto err1;
 		*data=0x00;
 	}
 	else
 	{
 		l=(bits+7)>>3;
-		if(!(data=malloc(l)))goto err1;
-		if(gcry_mpi_print(GCRYMPI_FMT_USG,data,l,&l,val))goto err2;
+		if(U(!(data=malloc(l))))goto err1;
+		if(U(gcry_mpi_print(GCRYMPI_FMT_USG,data,l,&l,val)))goto err2;
 	}
 	*len=l;
 	return data;
@@ -1737,12 +1743,12 @@ static gcry_mpi_t gcry_dh_mpi_set_pub(void *pub,int len)
 {
 	gcry_mpi_t p=NULL;
 
-	if(len<0)goto err1;
+	if(U(len<0))goto err1;
 	else if(!len)
 	{
-		if(!(p=gcry_mpi_new(0)))goto err1;
+		if(U(!(p=gcry_mpi_new(0))))goto err1;
 	}
-	else if(gcry_mpi_scan(&p,GCRYMPI_FMT_USG,pub,len,NULL))goto err1;
+	else if(U(gcry_mpi_scan(&p,GCRYMPI_FMT_USG,pub,len,NULL)))goto err1;
 	return p;
 
 err1:	if(p)gcry_mpi_release(p);
@@ -1764,22 +1770,23 @@ static int gcry_ec_mpi_check_pub(void *ctx,gcry_mpi_t pub,int id)
 	gcry_mpi_point_t g;
 	unsigned char *wrk;
 
-	if(gcry_mpi_ec_new(&c,NULL,gcry_ec_map[id].gcry_name))goto err1;
-	if((n=gcry_mpi_get_nbits(pub))<=0)goto err2;
+	if(U(gcry_mpi_ec_new(&c,NULL,gcry_ec_map[id].gcry_name)))goto err1;
+	if(U((n=gcry_mpi_get_nbits(pub))<=0))goto err2;
 	bytes=(n+7)>>3;
-	if(!(bytes&1)||bytes<3)goto err2;
-	if(!(wrk=malloc(bytes)))goto err2;
-	if(gcry_mpi_print(GCRYMPI_FMT_USG,wrk,bytes,&n,pub)||n!=bytes)goto err3;
-	if(*wrk!=0x04)goto err3;
-	if(gcry_mpi_scan(&x,GCRYMPI_FMT_USG,wrk+1,(bytes-1)>>1,&n)||
-		n!=((bytes-1)>>1))goto err4;
-	if(gcry_mpi_scan(&y,GCRYMPI_FMT_USG,wrk+1+((bytes-1)>>1),
-		(bytes-1)>>1,&n)||n!=((bytes-1)>>1))goto err5;
-	if(!(z=gcry_mpi_new(1)))goto err5;
+	if(U(!(bytes&1))||U(bytes<3))goto err2;
+	if(U(!(wrk=malloc(bytes))))goto err2;
+	if(U(gcry_mpi_print(GCRYMPI_FMT_USG,wrk,bytes,&n,pub))||U(n!=bytes))
+		goto err3;
+	if(U(*wrk!=0x04))goto err3;
+	if(U(gcry_mpi_scan(&x,GCRYMPI_FMT_USG,wrk+1,(bytes-1)>>1,&n))||
+		U(n!=((bytes-1)>>1)))goto err4;
+	if(U(gcry_mpi_scan(&y,GCRYMPI_FMT_USG,wrk+1+((bytes-1)>>1),
+		(bytes-1)>>1,&n))||U(n!=((bytes-1)>>1)))goto err5;
+	if(U(!(z=gcry_mpi_new(1))))goto err5;
 	gcry_mpi_set_ui(z,1);
-	if(!(g=gcry_mpi_point_new(0)))goto err6;
+	if(U(!(g=gcry_mpi_point_new(0))))goto err6;
 	gcry_mpi_point_set(g,x,y,z);
-	if(!(gcry_mpi_ec_curve_point(g,c)))goto err7;
+	if(U(!(gcry_mpi_ec_curve_point(g,c))))goto err7;
 	r=0;
 err7:	gcry_mpi_point_release(g);
 err6:	gcry_mpi_release(z);
@@ -1798,10 +1805,10 @@ static gcry_mpi_t gcry_ec_mpi_generate(int id)
 	gcry_mpi_t key;
 	gcry_mpi_t n;
 
-	if(gcry_mpi_ec_new(&ctx,NULL,gcry_ec_map[id].gcry_name))goto err1;
-	if(!(n=gcry_mpi_ec_get_mpi("n",ctx,0)))goto err2;
-	if((bits=gcry_mpi_get_nbits(n))<=0)goto err2;
-	if(!(key=gcry_mpi_snew(bits)))goto err2;
+	if(U(gcry_mpi_ec_new(&ctx,NULL,gcry_ec_map[id].gcry_name)))goto err1;
+	if(U(!(n=gcry_mpi_ec_get_mpi("n",ctx,0))))goto err2;
+	if(U((bits=gcry_mpi_get_nbits(n))<=0))goto err2;
+	if(U(!(key=gcry_mpi_snew(bits))))goto err2;
 	do
 	{
 		gcry_mpi_randomize(key,bits,GCRY_STRONG_RANDOM);
@@ -1834,27 +1841,27 @@ static gcry_mpi_t gcry_ec_mpi_pub_from_key(void *ctx,gcry_mpi_t key,int id)
 	gcry_mpi_t pub=NULL;
 	unsigned char *wrk;
 
-	if(gcry_mpi_ec_new(&c,NULL,gcry_ec_map[id].gcry_name))goto err1;
-	if(!(p=gcry_mpi_ec_get_mpi("p",c,0)))goto err2;
-	if((bits=gcry_mpi_get_nbits(p))<=0)goto err2;
+	if(U(gcry_mpi_ec_new(&c,NULL,gcry_ec_map[id].gcry_name)))goto err1;
+	if(U(!(p=gcry_mpi_ec_get_mpi("p",c,0))))goto err2;
+	if(U((bits=gcry_mpi_get_nbits(p))<=0))goto err2;
 	bytes=(bits+7)>>3;
-	if(!(q=gcry_mpi_point_new(0)))goto err2;
-	if(!(g=gcry_mpi_ec_get_point("g",c,1)))goto err3;
+	if(U(!(q=gcry_mpi_point_new(0))))goto err2;
+	if(U(!(g=gcry_mpi_ec_get_point("g",c,1))))goto err3;
 	gcry_mpi_ec_mul(q,key,g,c);
-	if(!(x=mpi_new(bits)))goto err4;
-	if(!(y=mpi_new(bits)))goto err5;
-	if(gcry_mpi_ec_get_affine(x,y,q,c))goto err6;
-	if(!(wrk=malloc((bytes<<1)+1)))goto err6;
+	if(U(!(x=mpi_new(bits))))goto err4;
+	if(U(!(y=mpi_new(bits))))goto err5;
+	if(U(gcry_mpi_ec_get_affine(x,y,q,c)))goto err6;
+	if(U(!(wrk=malloc((bytes<<1)+1))))goto err6;
 	memset(wrk+1,0,bytes<<1);
 	wrk[0]=0x04;
 	l=(gcry_mpi_get_nbits(x)+7)>>3;
-	if(gcry_mpi_print(GCRYMPI_FMT_USG,wrk+1+bytes-l,l,&n,x)||l!=n)
+	if(U(gcry_mpi_print(GCRYMPI_FMT_USG,wrk+1+bytes-l,l,&n,x))||U(l!=n))
 		goto err7;
 	l=(gcry_mpi_get_nbits(y)+7)>>3;
-	if(gcry_mpi_print(GCRYMPI_FMT_USG,wrk+1+(bytes<<1)-l,l,&n,y)||l!=n)
-		goto err7;
-	if(gcry_mpi_scan(&pub,GCRYMPI_FMT_USG,wrk,(bytes<<1)+1,&n)||
-		n!=(bytes<<1)+1)
+	if(U(gcry_mpi_print(GCRYMPI_FMT_USG,wrk+1+(bytes<<1)-l,l,&n,y))||
+		U(l!=n))goto err7;
+	if(U(gcry_mpi_scan(&pub,GCRYMPI_FMT_USG,wrk,(bytes<<1)+1,&n))||
+		U(n!=(bytes<<1)+1))
 	{
 		if(pub)gcry_mpi_release(pub);
 		pub=NULL;
@@ -1886,35 +1893,36 @@ static unsigned char *gcry_ec_mpi_derive(void *ctx,gcry_mpi_t key,
 	unsigned char *wrk;
 	unsigned char *data=NULL;
 
-	if(gcry_mpi_ec_new(&c,NULL,gcry_ec_map[id].gcry_name))goto err1;
-	if((val=gcry_mpi_get_nbits(pub))<=0)goto err2;
+	if(U(gcry_mpi_ec_new(&c,NULL,gcry_ec_map[id].gcry_name)))goto err1;
+	if(U((val=gcry_mpi_get_nbits(pub))<=0))goto err2;
 	bytes=(val+7)>>3;
-	if(!(bytes&1)||bytes<3)goto err2;
-	if(!(wrk=malloc(bytes)))goto err2;
-	if(gcry_mpi_print(GCRYMPI_FMT_USG,wrk,bytes,&n,pub)||n!=bytes)goto err3;
-	if(*wrk!=0x04)goto err3;
-	if(gcry_mpi_scan(&x,GCRYMPI_FMT_USG,wrk+1,(bytes-1)>>1,&n)||
-		n!=((bytes-1)>>1))goto err4;
-	if(gcry_mpi_scan(&y,GCRYMPI_FMT_USG,wrk+1+((bytes-1)>>1),
-		(bytes-1)>>1,&n)||n!=((bytes-1)>>1))goto err5;
-	if(!(z=gcry_mpi_new(1)))goto err5;
+	if(U(!(bytes&1))||U(bytes<3))goto err2;
+	if(U(!(wrk=malloc(bytes))))goto err2;
+	if(U(gcry_mpi_print(GCRYMPI_FMT_USG,wrk,bytes,&n,pub))||U(n!=bytes))
+		goto err3;
+	if(U(*wrk!=0x04))goto err3;
+	if(U(gcry_mpi_scan(&x,GCRYMPI_FMT_USG,wrk+1,(bytes-1)>>1,&n))||
+		U(n!=((bytes-1)>>1)))goto err4;
+	if(U(gcry_mpi_scan(&y,GCRYMPI_FMT_USG,wrk+1+((bytes-1)>>1),
+		(bytes-1)>>1,&n))||U(n!=((bytes-1)>>1)))goto err5;
+	if(U(!(z=gcry_mpi_new(1))))goto err5;
 	gcry_mpi_set_ui(z,1);
-	if(!(g=gcry_mpi_point_new(0)))goto err6;
+	if(U(!(g=gcry_mpi_point_new(0))))goto err6;
 	gcry_mpi_point_set(g,x,y,z);
-	if(!(gcry_mpi_ec_curve_point(g,c)))goto err7;
-	if(!(r=gcry_mpi_point_new(0)))goto err7;
+	if(U(!(gcry_mpi_ec_curve_point(g,c))))goto err7;
+	if(U(!(r=gcry_mpi_point_new(0))))goto err7;
 	gcry_mpi_ec_mul(r,key,g,c);
-	if(!(p=gcry_mpi_ec_get_mpi("p",c,0)))goto err8;
-	if((val=gcry_mpi_get_nbits(p))<=0)goto err8;
-	if(!(s=gcry_mpi_snew(val)))goto err8;
-	if(gcry_mpi_ec_get_affine(s,NULL,r,c))goto err9;
+	if(U(!(p=gcry_mpi_ec_get_mpi("p",c,0))))goto err8;
+	if(U((val=gcry_mpi_get_nbits(p))<=0))goto err8;
+	if(U(!(s=gcry_mpi_snew(val))))goto err8;
+	if(U(gcry_mpi_ec_get_affine(s,NULL,r,c)))goto err9;
 	*slen=(val+7)>>3;
-	if(!(data=malloc(*slen)))goto err9;
-	if((val=gcry_mpi_get_nbits(s))<=0)goto err10;
+	if(U(!(data=malloc(*slen))))goto err9;
+	if(U((val=gcry_mpi_get_nbits(s))<=0))goto err10;
 	val=(val+7)>>3;
 	if(val!=*slen)memset(data,0,*slen-val);
-	if(val)if(gcry_mpi_print(GCRYMPI_FMT_USG,data+*slen-val,val,&n,s)||
-		n!=val)goto err10;
+	if(val)if(U(gcry_mpi_print(GCRYMPI_FMT_USG,data+*slen-val,val,&n,s))||
+		U(n!=val))goto err10;
 	goto err9;
 
 err10:	((struct usicrypt_thread *)ctx)->global->memclear(data,*slen);
@@ -1939,13 +1947,13 @@ static unsigned char *gcry_ec_mpi_get_pub(void *ctx,gcry_mpi_t pub,int *len,
 	size_t n;
 	unsigned char *data;
 
-	if(((gcry_mpi_get_nbits(pub)+7)>>3)!=gcry_ec_map[id].xylen)goto err1;
+	if(U(((gcry_mpi_get_nbits(pub)+7)>>3)!=gcry_ec_map[id].xylen))goto err1;
 	*len=gcry_ec_map[id].publen;
 	l=gcry_ec_map[id].phdrlen;
-	if(!(data=malloc(*len)))goto err1;
+	if(U(!(data=malloc(*len))))goto err1;
 	memcpy(data,gcry_ec_map[id].phdr,l);
-	if(gcry_mpi_print(GCRYMPI_FMT_USG,data+l,*len-l,&n,pub)||n!=*len-l)
-		goto err2;
+	if(U(gcry_mpi_print(GCRYMPI_FMT_USG,data+l,*len-l,&n,pub))||
+		U(n!=*len-l))goto err2;
 	return data;
 
 err2:	((struct usicrypt_thread *)ctx)->global->memclear(data,*len);
@@ -1964,32 +1972,33 @@ static gcry_mpi_t gcry_ec_mpi_set_pub(void *ctx,unsigned char *pub,int len,
 	gcry_mpi_t pval=NULL;
 	unsigned char *pptr;
 
-	if(gcry_asn_next(pub,len,0x30,&h,&l))goto err1;
+	if(U(gcry_asn_next(pub,len,0x30,&h,&l)))goto err1;
 	pub+=h;
 	len-=h;
 
-	if(gcry_asn_next(pub,len,0x30,&h,&l))goto err1;
+	if(U(gcry_asn_next(pub,len,0x30,&h,&l)))goto err1;
 	pptr=pub+h+l;
 	plen=len-h-l;
 	pub+=h;
 	len=l;
 
-	if(gcry_asn_next(pub,len,0x06,&h,&l))goto err1;
-	if(l!=7||memcmp(pub+h,gcry_ansi_pubkey_type,7))goto err1;
+	if(U(gcry_asn_next(pub,len,0x06,&h,&l)))goto err1;
+	if(U(l!=7)||U(memcmp(pub+h,gcry_ansi_pubkey_type,7)))goto err1;
 	pub+=h+l;
 	len-=h+l;
 
-	if(gcry_asn_next(pub,len,0x06,&h,&l))goto err1;
+	if(U(gcry_asn_next(pub,len,0x06,&h,&l)))goto err1;
 	for(idx=0;idx<USICRYPT_TOT_EC_CURVES;idx++)
 		if(gcry_ec_map[idx].oidlen==l&&
 			!memcmp(pub+h,gcry_ec_map[idx].oid,l))break;
-	if(idx==USICRYPT_TOT_EC_CURVES)goto err1;
+	if(U(idx==USICRYPT_TOT_EC_CURVES))goto err1;
 
-	if(gcry_asn_next(pptr,plen,0x03,&h,&l))goto err1;
-	if(l-1!=gcry_ec_map[idx].xylen||pptr[h]||pptr[h+1]!=0x04)goto err1;
-	if(gcry_mpi_scan(&pval,GCRYMPI_FMT_USG,pptr+h+1,l-1,&n)||n!=l-1)
+	if(U(gcry_asn_next(pptr,plen,0x03,&h,&l)))goto err1;
+	if(U(l-1!=gcry_ec_map[idx].xylen)||U(pptr[h])||U(pptr[h+1]!=0x04))
+		goto err1;
+	if(U(gcry_mpi_scan(&pval,GCRYMPI_FMT_USG,pptr+h+1,l-1,&n))||U(n!=l-1))
 		goto err2;
-	if(gcry_ec_mpi_check_pub(ctx,pval,idx))goto err2;
+	if(U(gcry_ec_mpi_check_pub(ctx,pval,idx)))goto err2;
 	*id=idx;
 	return pval;
 
@@ -2009,13 +2018,14 @@ static unsigned char *gcry_ec_mpi_get_key(void *ctx,gcry_mpi_t key,
 
 	klen=(gcry_mpi_get_nbits(key)+7)>>3;
 	plen=(gcry_mpi_get_nbits(pub)+7)>>3;
-	if(klen>gcry_ec_map[id].kmax||plen!=gcry_ec_map[id].xylen)goto err1;
+	if(U(klen>gcry_ec_map[id].kmax)||U(plen!=gcry_ec_map[id].xylen))
+		goto err1;
 	dlen=gcry_ec_map[id].xylen+gcry_ec_map[id].k1h2len+klen+1+
 		sizeof(gcry_ec_k1h1);
 	*len=dlen+2;
 	if(dlen>=0x80)*len+=1;
 	if(dlen>=0x100)*len+=1;
-	if(!(ptr=data=malloc(*len)))goto err1;
+	if(U(!(ptr=data=malloc(*len))))goto err1;
 	*ptr++=0x30;
 	if(dlen<0x80)*ptr++=(unsigned char)dlen;
 	else if(dlen<0x100)
@@ -2032,11 +2042,13 @@ static unsigned char *gcry_ec_mpi_get_key(void *ctx,gcry_mpi_t key,
 	memcpy(ptr,gcry_ec_k1h1,sizeof(gcry_ec_k1h1));
 	ptr+=sizeof(gcry_ec_k1h1);
 	*ptr++=(unsigned char)klen;
-	if(gcry_mpi_print(GCRYMPI_FMT_USG,ptr,klen,&n,key)||n!=klen)goto err2;
+	if(U(gcry_mpi_print(GCRYMPI_FMT_USG,ptr,klen,&n,key))||U(n!=klen))
+		goto err2;
 	ptr+=klen;
 	memcpy(ptr,gcry_ec_map[id].k1h2,gcry_ec_map[id].k1h2len);
 	ptr+=gcry_ec_map[id].k1h2len;
-	if(gcry_mpi_print(GCRYMPI_FMT_USG,ptr,plen,&n,pub)||n!=plen)goto err2;
+	if(U(gcry_mpi_print(GCRYMPI_FMT_USG,ptr,plen,&n,pub))||U(n!=plen))
+		goto err2;
 	return data;
 
 err2:	((struct usicrypt_thread *)ctx)->global->memclear(data,*len);
@@ -2059,47 +2071,47 @@ static gcry_mpi_t gcry_ec_mpi_set_key(void *ctx,unsigned char *key,int len,
 	unsigned char *kptr;
 	unsigned char *tmp;
 
-	if(gcry_asn_next(key,len,0x30,&h,&l))goto err1;
+	if(U(gcry_asn_next(key,len,0x30,&h,&l)))goto err1;
 	key+=h;
 	len-=h;
 
-	if(gcry_asn_next(key,len,0x02,&h,&l))goto err1;
-	if(l!=1||key[h]!=0x01)goto err1;
+	if(U(gcry_asn_next(key,len,0x02,&h,&l)))goto err1;
+	if(U(l!=1)||U(key[h]!=0x01))goto err1;
 	key+=h+l;
 	len-=h+l;
 
-	if(gcry_asn_next(key,len,0x04,&h,&l))goto err1;
+	if(U(gcry_asn_next(key,len,0x04,&h,&l)))goto err1;
 	kptr=key+h;
 	klen=l;
 	key+=h+l;
 	len-=h+l;
 
-	if(gcry_asn_next(key,len,0xa0,&h,&l))goto err1;
+	if(U(gcry_asn_next(key,len,0xa0,&h,&l)))goto err1;
 	key+=h;
 	len-=h;
 
-	if(gcry_asn_next(key,len,0x06,&h,&l))goto err1;
+	if(U(gcry_asn_next(key,len,0x06,&h,&l)))goto err1;
 	for(idx=0;idx<USICRYPT_TOT_EC_CURVES;idx++)
 		if(gcry_ec_map[idx].oidlen==l&&
 			!memcmp(key+h,gcry_ec_map[idx].oid,l))break;
-	if(idx==USICRYPT_TOT_EC_CURVES)goto err1;
+	if(U(idx==USICRYPT_TOT_EC_CURVES))goto err1;
 	key+=h+l;
 	len-=h+l;
 
-	if(!gcry_asn_next(key,len,0xa1,&h,&l))
+	if(U(!gcry_asn_next(key,len,0xa1,&h,&l)))
 	{
 		key+=h;
 		len-=h;
-		if(gcry_asn_next(key,len,0x03,&h,&l))goto err1;
-		if(l-1!=gcry_ec_map[idx].xylen||key[h]||key[h+1]!=0x04)
+		if(U(gcry_asn_next(key,len,0x03,&h,&l)))goto err1;
+		if(U(l-1!=gcry_ec_map[idx].xylen)||U(key[h])||U(key[h+1]!=0x04))
 			goto err1;
-		if(gcry_mpi_scan(&pval,GCRYMPI_FMT_USG,key+h+1,l-1,&n)||n!=l-1)
-			goto err2;
+		if(U(gcry_mpi_scan(&pval,GCRYMPI_FMT_USG,key+h+1,l-1,&n))||
+			U(n!=l-1))goto err2;
 	}
 
-	if(!(tmp=gcry_malloc_secure(klen)))goto err2;
+	if(U(!(tmp=gcry_malloc_secure(klen))))goto err2;
 	memcpy(tmp,kptr,klen);
-	if(gcry_mpi_scan(&kval,GCRYMPI_FMT_USG,tmp,klen,&n)||n!=klen)
+	if(U(gcry_mpi_scan(&kval,GCRYMPI_FMT_USG,tmp,klen,&n))||U(n!=klen))
 	{
 		((struct usicrypt_thread *)ctx)->global->memclear(tmp,klen);
 		gcry_free(tmp);
@@ -2108,22 +2120,22 @@ static gcry_mpi_t gcry_ec_mpi_set_key(void *ctx,unsigned char *key,int len,
 	((struct usicrypt_thread *)ctx)->global->memclear(tmp,klen);
 	gcry_free(tmp);
 
-	if(gcry_mpi_ec_new(&c,NULL,gcry_ec_map[idx].gcry_name))goto err3;
-	if(!(nn=gcry_mpi_ec_get_mpi("n",c,0)))goto err4;
-	if(mpi_cmp_ui(kval,0)<=0||mpi_cmp(kval,nn)>=0)goto err4;
+	if(U(gcry_mpi_ec_new(&c,NULL,gcry_ec_map[idx].gcry_name)))goto err3;
+	if(U(!(nn=gcry_mpi_ec_get_mpi("n",c,0))))goto err4;
+	if(U(mpi_cmp_ui(kval,0)<=0||mpi_cmp(kval,nn)>=0))goto err4;
 	gcry_ctx_release(c);
 
 	if(!pval)
 	{
-		if(!(pval=gcry_ec_mpi_pub_from_key(ctx,kval,idx)))goto err3;
+		if(U(!(pval=gcry_ec_mpi_pub_from_key(ctx,kval,idx))))goto err3;
 	}
-	else if(gcry_ec_mpi_check_pub(ctx,pval,idx))goto err3;
+	else if(U(gcry_ec_mpi_check_pub(ctx,pval,idx)))goto err3;
 	else
 	{
-		if(!(nn=gcry_ec_mpi_pub_from_key(ctx,kval,idx)))goto err3;
+		if(U(!(nn=gcry_ec_mpi_pub_from_key(ctx,kval,idx))))goto err3;
 		n=gcry_mpi_cmp(nn,pval);
 		gcry_mpi_release(nn);
-		if(n)goto err3;
+		if(U(n))goto err3;
 	}
 
 	*id=idx;
@@ -2186,45 +2198,46 @@ static unsigned char *gcry_ec_mpi_sign(void *ctx,gcry_mpi_t key,
 	default:goto err1;
 	}
 
-	if(gcry_reseed(ctx))goto err1;
+	if(U(gcry_reseed(ctx)))goto err1;
 	if(!mode)gcry_md_hash_buffer(type,hash,data,dlen);
 	else
 	{
-		if(gcry_md_open(&mh,type,GCRY_MD_FLAG_SECURE))goto err1;
+		if(U(gcry_md_open(&mh,type,GCRY_MD_FLAG_SECURE)))goto err1;
 		for(len=0;len<dlen;len++)
 			gcry_md_write(mh,iov[len].data,iov[len].length);
 		memcpy(hash,gcry_md_read(mh,type),gcry_md_get_algo_dlen(type));
 		gcry_md_close(mh);
 	}
-	if(gcry_mpi_ec_new(&c,NULL,gcry_ec_map[id].gcry_name))goto err1;
-	if(!(n=gcry_mpi_ec_get_mpi("n",c,0)))goto err2;
-	if((bits=gcry_mpi_get_nbits(n))<=0)goto err2;
+	if(U(gcry_mpi_ec_new(&c,NULL,gcry_ec_map[id].gcry_name)))goto err1;
+	if(U(!(n=gcry_mpi_ec_get_mpi("n",c,0))))goto err2;
+	if(U((bits=gcry_mpi_get_nbits(n))<=0))goto err2;
 	len=(bits+7)>>3;
 	if(len>gcry_md_get_algo_dlen(type))len=gcry_md_get_algo_dlen(type);
-	if(gcry_mpi_scan(&h,GCRYMPI_FMT_USG,hash,len,&nn)||nn!=len)goto err3;
+	if(U(gcry_mpi_scan(&h,GCRYMPI_FMT_USG,hash,len,&nn))||U(nn!=len))
+		goto err3;
 	len=gcry_mpi_get_nbits(h);
 	if(len>bits)gcry_mpi_rshift(h,h,len-bits);
-	if(!(g=gcry_mpi_ec_get_point("g",c,1)))goto err3;
-	if(!(i=gcry_mpi_point_new(0)))goto err4;
-	if(!(x=gcry_mpi_new(bits)))goto err5;
-	if(!(r=gcry_mpi_new(bits)))goto err6;
-	if(!(dr=gcry_mpi_new(bits)))goto err7;
-	if(!(sum=gcry_mpi_new(bits)))goto err8;
-	if(!(k1=gcry_mpi_new(bits)))goto err9;
-	if(!(s=gcry_mpi_new(bits)))goto err10;
+	if(U(!(g=gcry_mpi_ec_get_point("g",c,1))))goto err3;
+	if(U(!(i=gcry_mpi_point_new(0))))goto err4;
+	if(U(!(x=gcry_mpi_new(bits))))goto err5;
+	if(U(!(r=gcry_mpi_new(bits))))goto err6;
+	if(U(!(dr=gcry_mpi_new(bits))))goto err7;
+	if(U(!(sum=gcry_mpi_new(bits))))goto err8;
+	if(U(!(k1=gcry_mpi_new(bits))))goto err9;
+	if(U(!(s=gcry_mpi_new(bits))))goto err10;
 	do
 	{
 		do
 		{
 			if(k)gcry_mpi_release(k);
-			if(!(k=gcry_ec_mpi_generate(id)))goto err11;
+			if(U(!(k=gcry_ec_mpi_generate(id))))goto err11;
 			gcry_mpi_ec_mul(i,k,g,c);
-			if(gcry_mpi_ec_get_affine(x,NULL,i,c))goto err11;
+			if(U(gcry_mpi_ec_get_affine(x,NULL,i,c)))goto err11;
 			gcry_mpi_mod(r,x,n);
 		} while(!gcry_mpi_cmp_ui(r,0));
 		gcry_mpi_mulm(dr,key,r,n);
 		gcry_mpi_addm(sum,h,dr,n);
-		if(!gcry_mpi_invm(k1,k,n))goto err11;
+		if(U(!gcry_mpi_invm(k1,k,n)))goto err11;
 		gcry_mpi_mulm(s,k1,sum,n);
 	} while(!gcry_mpi_cmp_ui(s,0));
 	len=4;
@@ -2237,7 +2250,7 @@ static unsigned char *gcry_ec_mpi_sign(void *ctx,gcry_mpi_t key,
 	if(len<0x80)*slen=len+2;
 	else if(len<0x100)*slen=len+3;
 	else *slen=len+4;
-	if(!(ptr=sig=malloc(*slen)))goto err11;
+	if(U(!(ptr=sig=malloc(*slen))))goto err11;
 	*ptr++=0x30;
 	if(len<0x80)*ptr++=(unsigned char)len;
 	else if(len<0x100)
@@ -2256,14 +2269,16 @@ static unsigned char *gcry_ec_mpi_sign(void *ctx,gcry_mpi_t key,
 	len=(bits+7)>>3;
 	*ptr++=(unsigned char)(len+((!(bits&7))?1:0));
 	if(!(bits&7))*ptr++=0x00;
-	if(gcry_mpi_print(GCRYMPI_FMT_USG,ptr,len,&nn,r)||nn!=len)goto err12;
+	if(U(gcry_mpi_print(GCRYMPI_FMT_USG,ptr,len,&nn,r))||U(nn!=len))
+		goto err12;
 	ptr+=len;
 	*ptr++=0x02;
 	bits=gcry_mpi_get_nbits(s);
 	len=(bits+7)>>3;
 	*ptr++=(unsigned char)(len+((!(bits&7))?1:0));
 	if(!(bits&7))*ptr++=0x00;
-	if(gcry_mpi_print(GCRYMPI_FMT_USG,ptr,len,&nn,s)||nn!=len)goto err12;
+	if(U(gcry_mpi_print(GCRYMPI_FMT_USG,ptr,len,&nn,s))||U(nn!=len))
+		goto err12;
 	goto err11;
 
 err12:	((struct usicrypt_thread *)ctx)->global->memclear(sig,*slen);
@@ -2348,78 +2363,82 @@ static int gcry_ec_mpi_verify(void *ctx,gcry_mpi_t pub,unsigned char *data,
 	default:goto err1;
 	}
 
-	if(gcry_asn_next(sig,slen,0x30,&hh,&ll))goto err1;
+	if(U(gcry_asn_next(sig,slen,0x30,&hh,&ll)))goto err1;
 	sig+=hh;
 	slen-=hh;
 
-	if(gcry_asn_next(sig,slen,0x02,&hh,&ll))goto err1;
+	if(U(gcry_asn_next(sig,slen,0x02,&hh,&ll)))goto err1;
 	rptr=sig+hh;
 	rl=ll;
 	sig+=hh+ll;
 	slen-=hh+ll;
 
-	if(gcry_asn_next(sig,slen,0x02,&hh,&ll))goto err1;
+	if(U(gcry_asn_next(sig,slen,0x02,&hh,&ll)))goto err1;
 	sptr=sig+hh;
 	sl=ll;
 
-	if(gcry_mpi_ec_new(&c,NULL,gcry_ec_map[id].gcry_name))goto err1;
+	if(U(gcry_mpi_ec_new(&c,NULL,gcry_ec_map[id].gcry_name)))goto err1;
 	if(!mode)gcry_md_hash_buffer(type,hash,data,dlen);
 	else
 	{
-		if(gcry_md_open(&mh,type,GCRY_MD_FLAG_SECURE))goto err1;
+		if(U(gcry_md_open(&mh,type,GCRY_MD_FLAG_SECURE)))goto err1;
 		for(len=0;len<dlen;len++)
 			gcry_md_write(mh,iov[len].data,iov[len].length);
 		memcpy(hash,gcry_md_read(mh,type),gcry_md_get_algo_dlen(type));
 		gcry_md_close(mh);
 	}
-	if((bits=gcry_mpi_get_nbits(pub))<=0)goto err2;
+	if(U((bits=gcry_mpi_get_nbits(pub))<=0))goto err2;
 	len=(bits+7)>>3;
-	if(!(len&1)||len<3)goto err2;
-	if(!(wrk=malloc(len)))goto err2;
-	if(gcry_mpi_print(GCRYMPI_FMT_USG,wrk,len,&nn,pub)||nn!=len)goto err3;
-	if(*wrk!=0x04)goto err3;
-	if(gcry_mpi_scan(&x,GCRYMPI_FMT_USG,wrk+1,(len-1)>>1,&nn)||
-		nn!=((len-1)>>1))goto err4;
-	if(gcry_mpi_scan(&y,GCRYMPI_FMT_USG,wrk+1+((len-1)>>1),
-		(len-1)>>1,&nn)||nn!=((len-1)>>1))goto err5;
-	if(!(z=gcry_mpi_new(1)))goto err5;
+	if(U(!(len&1))||U(len<3))goto err2;
+	if(U(!(wrk=malloc(len))))goto err2;
+	if(U(gcry_mpi_print(GCRYMPI_FMT_USG,wrk,len,&nn,pub))||U(nn!=len))
+		goto err3;
+	if(U(*wrk!=0x04))goto err3;
+	if(U(gcry_mpi_scan(&x,GCRYMPI_FMT_USG,wrk+1,(len-1)>>1,&nn))||
+		U(nn!=((len-1)>>1)))goto err4;
+	if(U(gcry_mpi_scan(&y,GCRYMPI_FMT_USG,wrk+1+((len-1)>>1),
+		(len-1)>>1,&nn))||U(nn!=((len-1)>>1)))goto err5;
+	if(U(!(z=gcry_mpi_new(1))))goto err5;
 	gcry_mpi_set_ui(z,1);
-	if(!(q=gcry_mpi_point_new(0)))goto err6;
+	if(U(!(q=gcry_mpi_point_new(0))))goto err6;
 	gcry_mpi_point_set(q,x,y,z);
-	if(!(gcry_mpi_ec_curve_point(q,c)))goto err7;
-	if(!(n=gcry_mpi_ec_get_mpi("n",c,0)))goto err7;
-	if((bits=gcry_mpi_get_nbits(n))<=0)goto err7;
+	if(U(!(gcry_mpi_ec_curve_point(q,c))))goto err7;
+	if(U(!(n=gcry_mpi_ec_get_mpi("n",c,0))))goto err7;
+	if(U((bits=gcry_mpi_get_nbits(n))<=0))goto err7;
 	len=(bits+7)>>3;
 	if(len>gcry_md_get_algo_dlen(type))len=gcry_md_get_algo_dlen(type);
-	if(gcry_mpi_scan(&h,GCRYMPI_FMT_USG,hash,len,&nn)||nn!=len)goto err8;
+	if(U(gcry_mpi_scan(&h,GCRYMPI_FMT_USG,hash,len,&nn))||U(nn!=len))
+		goto err8;
 	len=gcry_mpi_get_nbits(h);
 	if(len>bits)gcry_mpi_rshift(h,h,len-bits);
-	if(!(h0=gcry_mpi_new(bits)))goto err8;
-	if(!(h1=gcry_mpi_new(bits)))goto err9;
-	if(!(h2=gcry_mpi_new(bits)))goto err10;
-	if(!(q0=gcry_mpi_point_new(0)))goto err11;
-	if(!(q1=gcry_mpi_point_new(0)))goto err12;
-	if(!(q2=gcry_mpi_point_new(0)))goto err13;
-	if(gcry_mpi_scan(&r,GCRYMPI_FMT_USG,rptr,rl,&nn)||nn!=rl)goto err14;
-	if(gcry_mpi_cmp_ui(r,0)<=0||gcry_mpi_cmp(r,n)>=0)goto err14;
-	if(gcry_mpi_scan(&s,GCRYMPI_FMT_USG,sptr,sl,&nn)||nn!=sl)goto err15;
-	if(gcry_mpi_cmp_ui(s,0)<=0||gcry_mpi_cmp(s,n)>=0)goto err15;
-	if(!(g=gcry_mpi_ec_get_point("g",c,1)))goto err15;
-	if(!gcry_mpi_invm(h0,s,n))goto err16;
+	if(U(!(h0=gcry_mpi_new(bits))))goto err8;
+	if(U(!(h1=gcry_mpi_new(bits))))goto err9;
+	if(U(!(h2=gcry_mpi_new(bits))))goto err10;
+	if(U(!(q0=gcry_mpi_point_new(0))))goto err11;
+	if(U(!(q1=gcry_mpi_point_new(0))))goto err12;
+	if(U(!(q2=gcry_mpi_point_new(0))))goto err13;
+	if(U(gcry_mpi_scan(&r,GCRYMPI_FMT_USG,rptr,rl,&nn))||U(nn!=rl))
+		goto err14;
+	if(U(gcry_mpi_cmp_ui(r,0)<=0)||U(gcry_mpi_cmp(r,n)>=0))goto err14;
+	if(U(gcry_mpi_scan(&s,GCRYMPI_FMT_USG,sptr,sl,&nn))||U(nn!=sl))
+		goto err15;
+	if(U(gcry_mpi_cmp_ui(s,0)<=0)||U(gcry_mpi_cmp(s,n)>=0))goto err15;
+	if(U(!(g=gcry_mpi_ec_get_point("g",c,1))))goto err15;
+	if(U(!gcry_mpi_invm(h0,s,n)))goto err16;
 	gcry_mpi_mulm(h1,h,h0,n);
 	gcry_mpi_ec_mul(q1,h1,g,c);
 	gcry_mpi_mulm(h2,r,h0,n);
 	gcry_mpi_ec_mul(q2,h2,q,c);
 	gcry_mpi_ec_add(q0,q1,q2,c);
-	if(!(x0=gcry_mpi_new(bits)))goto err16;
-	if(!(y0=gcry_mpi_new(bits)))goto err17;
-	if(!(z0=gcry_mpi_new(bits)))goto err18;
+	if(U(!(x0=gcry_mpi_new(bits))))goto err16;
+	if(U(!(y0=gcry_mpi_new(bits))))goto err17;
+	if(U(!(z0=gcry_mpi_new(bits))))goto err18;
 	gcry_mpi_point_get(x0,y0,z0,q0);
-	if(!gcry_mpi_cmp_ui(z0,0))goto err19;
-	if(!(xx=gcry_mpi_new(bits)))goto err19;
-	if(gcry_mpi_ec_get_affine(xx,NULL,q0,c))goto err20;
+	if(U(!gcry_mpi_cmp_ui(z0,0)))goto err19;
+	if(U(!(xx=gcry_mpi_new(bits))))goto err19;
+	if(U(gcry_mpi_ec_get_affine(xx,NULL,q0,c)))goto err20;
 	gcry_mpi_mod(xx,xx,n);
-	if(gcry_mpi_cmp(xx,r))goto err20;
+	if(U(gcry_mpi_cmp(xx,r)))goto err20;
 	res=0;
 
 err20:	gcry_mpi_release(xx);
@@ -2455,7 +2474,7 @@ static gcry_mpi_t gcry_x25519_mpi_generate(void)
 {
 	gcry_mpi_t key;
 
-	if(!(key=gcry_mpi_snew(256)))return NULL;
+	if(U(!(key=gcry_mpi_snew(256))))return NULL;
 	gcry_mpi_randomize(key,256,GCRY_STRONG_RANDOM);
 	gcry_mpi_set_bit(key,254);
 	gcry_mpi_clear_bit(key,255);
@@ -2472,12 +2491,12 @@ static gcry_mpi_t gcry_x25519_mpi_pub_fom_key(gcry_mpi_t key)
 	gcry_mpi_point_t g;
 	gcry_ctx_t ctx;
 
-	if(!(pub=gcry_mpi_new(256)))goto err1;
-	if(gcry_mpi_ec_new(&ctx,NULL,"Curve25519"))goto err2;
-	if(!(q=gcry_mpi_point_new(0)))goto err3;
-	if(!(g=gcry_mpi_ec_get_point("g",ctx,1)))goto err4;
+	if(U(!(pub=gcry_mpi_new(256))))goto err1;
+	if(U(gcry_mpi_ec_new(&ctx,NULL,"Curve25519")))goto err2;
+	if(U(!(q=gcry_mpi_point_new(0))))goto err3;
+	if(U(!(g=gcry_mpi_ec_get_point("g",ctx,1))))goto err4;
 	gcry_mpi_ec_mul(q,key,g,ctx);
-	if(gcry_mpi_ec_get_affine(pub,NULL,q,ctx))goto err5;
+	if(U(gcry_mpi_ec_get_affine(pub,NULL,q,ctx)))goto err5;
 	gcry_mpi_point_release(g);
 	gcry_mpi_point_release(q);
 	gcry_ctx_release(ctx);
@@ -2499,17 +2518,17 @@ static gcry_mpi_t gcry_x25519_mpi_derive(gcry_mpi_t key,gcry_mpi_t pub)
 	gcry_mpi_point_t p;
 	gcry_ctx_t ctx;
 
-	if(!(y=gcry_mpi_new(0)))goto err1;
-	if(!(z=gcry_mpi_new(1)))goto err2;
-	if(!(p=gcry_mpi_point_new(0)))goto err3;
-	if(!(q=gcry_mpi_point_new(0)))goto err4;
-	if(gcry_mpi_ec_new(&ctx,NULL,"Curve25519"))goto err5;
+	if(U(!(y=gcry_mpi_new(0))))goto err1;
+	if(U(!(z=gcry_mpi_new(1))))goto err2;
+	if(U(!(p=gcry_mpi_point_new(0))))goto err3;
+	if(U(!(q=gcry_mpi_point_new(0))))goto err4;
+	if(U(gcry_mpi_ec_new(&ctx,NULL,"Curve25519")))goto err5;
 	gcry_mpi_set_ui(z,1);
 	gcry_mpi_point_set(p,pub,y,z);
-	if(!gcry_mpi_ec_curve_point(p,ctx))goto err6;
+	if(U(!gcry_mpi_ec_curve_point(p,ctx)))goto err6;
 	gcry_mpi_ec_mul(q,key,p,ctx);
-	if(!(sec=gcry_mpi_snew(256)))goto err6;
-	if(gcry_mpi_ec_get_affine(sec,NULL,q,ctx))goto err7;
+	if(U(!(sec=gcry_mpi_snew(256))))goto err6;
+	if(U(gcry_mpi_ec_get_affine(sec,NULL,q,ctx)))goto err7;
 	gcry_ctx_release(ctx);
 	gcry_mpi_point_release(q);
 	gcry_mpi_point_release(p);
@@ -2534,13 +2553,13 @@ static int gcry_x25519_mpi_check_pub(gcry_mpi_t pub)
 	gcry_mpi_point_t p;
 	gcry_ctx_t ctx;
 
-	if(!(y=gcry_mpi_new(0)))goto err1;
-	if(!(z=gcry_mpi_new(1)))goto err2;
-	if(!(p=gcry_mpi_point_new(0)))goto err3;
-	if(gcry_mpi_ec_new(&ctx,NULL,"Curve25519"))goto err4;
+	if(U(!(y=gcry_mpi_new(0))))goto err1;
+	if(U(!(z=gcry_mpi_new(1))))goto err2;
+	if(U(!(p=gcry_mpi_point_new(0))))goto err3;
+	if(U(gcry_mpi_ec_new(&ctx,NULL,"Curve25519")))goto err4;
 	gcry_mpi_set_ui(z,1);
 	gcry_mpi_point_set(p,pub,y,z);
-	if(!gcry_mpi_ec_curve_point(p,ctx))goto err5;
+	if(U(!gcry_mpi_ec_curve_point(p,ctx)))goto err5;
 	r=0;
 err5:	gcry_ctx_release(ctx);
 err4:	gcry_mpi_point_release(p);
@@ -2555,7 +2574,7 @@ static int gcry_x25519_mpi_to_le32(void *ctx,gcry_mpi_t val,unsigned char *bfr)
 	size_t n=0;
 	unsigned char tmp[32];
 
-	if(gcry_mpi_print(GCRYMPI_FMT_USG,tmp,sizeof(tmp),&n,val))goto err1;
+	if(U(gcry_mpi_print(GCRYMPI_FMT_USG,tmp,sizeof(tmp),&n,val)))goto err1;
 	for(i=0;i<n;i++)bfr[i]=tmp[n-i-1];
 	for(;i<32;i++)bfr[i]=0x00;
 	((struct usicrypt_thread *)ctx)->global->memclear(tmp,sizeof(tmp));
@@ -2572,7 +2591,7 @@ static int gcry_x25519_mpi_from_le32(void *ctx,gcry_mpi_t *val,
 	unsigned char tmp[32];
 
 	for(*val=NULL,i=0;i<32;i++)tmp[i]=bfr[31-i];
-	if(gcry_mpi_scan(val,GCRYMPI_FMT_USG,tmp,sizeof(tmp),NULL))goto err1;
+	if(U(gcry_mpi_scan(val,GCRYMPI_FMT_USG,tmp,sizeof(tmp),NULL)))goto err1;
 	((struct usicrypt_thread *)ctx)->global->memclear(tmp,sizeof(tmp));
 	return 0;
 
@@ -2636,10 +2655,10 @@ static void *gcry_cipher_init(void *ctx,int type,int mode,int flags,
 	default:goto err1;
 	}
 	if(extra)extra+=sizeof(struct usicrypt_global *);
-	if(!(cipher=malloc(sizeof(struct gcry_cipher)+extra)))goto err1;
-	if(gcry_cipher_open(&cipher->h,id,mode,GCRY_CIPHER_SECURE|flags))
+	if(U(!(cipher=malloc(sizeof(struct gcry_cipher)+extra))))goto err1;
+	if(U(gcry_cipher_open(&cipher->h,id,mode,GCRY_CIPHER_SECURE|flags)))
 		goto err2;
-	if(gcry_cipher_setkey(cipher->h,key,klen>>3))goto err3;
+	if(U(gcry_cipher_setkey(cipher->h,key,klen>>3)))goto err3;
 	if(iv)
 	{
 		if(extra)
@@ -2652,7 +2671,7 @@ static void *gcry_cipher_init(void *ctx,int type,int mode,int flags,
 		}
 		else if(gcry_cipher_setiv(cipher->h,iv,len))goto err3;
 	}
-	if(ctr)if(gcry_cipher_setctr(cipher->h,ctr,len))goto err3;
+	if(ctr)if(U(gcry_cipher_setctr(cipher->h,ctr,len)))goto err3;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return cipher;
 
@@ -2669,11 +2688,11 @@ static int gcry_cipher_1_encrypt(void *ctx,void *src,int slen,void *dst)
 {
 	if(src==dst)
 	{
-		if(gcry_cipher_encrypt(((struct gcry_cipher *)ctx)->h,dst,
-			slen,NULL,0))return -1;
+		if(U(gcry_cipher_encrypt(((struct gcry_cipher *)ctx)->h,dst,
+			slen,NULL,0)))return -1;
 	}
-	else if(gcry_cipher_encrypt(((struct gcry_cipher *)ctx)->h,dst,
-		slen,src,slen))return -1;
+	else if(U(gcry_cipher_encrypt(((struct gcry_cipher *)ctx)->h,dst,
+		slen,src,slen)))return -1;
 	return 0;
 }
 
@@ -2706,27 +2725,27 @@ static void gcry_cipher_iv16_reset(void *ctx,void *iv)
 
 static int gcry_cipher_16_encrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	if(src==dst)
 	{
-		if(gcry_cipher_encrypt(((struct gcry_cipher *)ctx)->h,dst,slen,
-			NULL,0))return -1;
+		if(U(gcry_cipher_encrypt(((struct gcry_cipher *)ctx)->h,dst,
+			slen,NULL,0)))return -1;
 	}
-	else if(gcry_cipher_encrypt(((struct gcry_cipher *)ctx)->h,dst,slen,src,
-		slen))return -1;
+	else if(U(gcry_cipher_encrypt(((struct gcry_cipher *)ctx)->h,dst,slen,
+		src,slen)))return -1;
 	return 0;
 }
 
 static int gcry_cipher_16_decrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	if(src==dst)
 	{
-		if(gcry_cipher_decrypt(((struct gcry_cipher *)ctx)->h,dst,slen,
-			NULL,0))return -1;
+		if(U(gcry_cipher_decrypt(((struct gcry_cipher *)ctx)->h,dst,
+			slen,NULL,0)))return -1;
 	}
-	else if(gcry_cipher_decrypt(((struct gcry_cipher *)ctx)->h,dst,slen,src,
-		slen))return -1;
+	else if(U(gcry_cipher_decrypt(((struct gcry_cipher *)ctx)->h,dst,slen,
+		src,slen)))return -1;
 	return 0;
 }
 
@@ -2735,27 +2754,27 @@ static int gcry_cipher_16_decrypt(void *ctx,void *src,int slen,void *dst)
 
 static int gcry_cipher_17_encrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen<=16)return -1;
+	if(U(slen<=16))return -1;
 	if(src==dst)
 	{
-		if(gcry_cipher_encrypt(((struct gcry_cipher *)ctx)->h,dst,slen,
-			NULL,0))return -1;
+		if(U(gcry_cipher_encrypt(((struct gcry_cipher *)ctx)->h,dst,
+			slen,NULL,0)))return -1;
 	}
-	else if(gcry_cipher_encrypt(((struct gcry_cipher *)ctx)->h,dst,slen,src,
-		slen))return -1;
+	else if(U(gcry_cipher_encrypt(((struct gcry_cipher *)ctx)->h,dst,slen,
+		src,slen)))return -1;
 	return 0;
 }
 
 static int gcry_cipher_17_decrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen<=16)return -1;
+	if(U(slen<=16))return -1;
 	if(src==dst)
 	{
-		if(gcry_cipher_decrypt(((struct gcry_cipher *)ctx)->h,dst,slen,
-			NULL,0))return -1;
+		if(U(gcry_cipher_decrypt(((struct gcry_cipher *)ctx)->h,dst,
+			slen,NULL,0)))return -1;
 	}
-	else if(gcry_cipher_decrypt(((struct gcry_cipher *)ctx)->h,dst,slen,src,
-		slen))return -1;
+	else if(U(gcry_cipher_decrypt(((struct gcry_cipher *)ctx)->h,dst,slen,
+		src,slen)))return -1;
 	return 0;
 }
 
@@ -2766,11 +2785,11 @@ static int gcry_cipher_1_decrypt(void *ctx,void *src,int slen,void *dst)
 {
 	if(src==dst)
 	{
-		if(gcry_cipher_decrypt(((struct gcry_cipher *)ctx)->h,dst,
-			slen,NULL,0))return -1;
+		if(U(gcry_cipher_decrypt(((struct gcry_cipher *)ctx)->h,dst,
+			slen,NULL,0)))return -1;
 	}
-	else if(gcry_cipher_decrypt(((struct gcry_cipher *)ctx)->h,dst,
-		slen,src,slen))return -1;
+	else if(U(gcry_cipher_decrypt(((struct gcry_cipher *)ctx)->h,dst,
+		slen,src,slen)))return -1;
 	return 0;
 }
 
@@ -2785,8 +2804,8 @@ static int gcry_cipher_cfb8_encrypt(void *ctx,void *src,int slen,void *dst)
 
 	while(slen--)
 	{
-		if(gcry_cipher_encrypt(cipher->hd,cipher->mem,16,cipher->iv,16))
-			return -1;
+		if(U(gcry_cipher_encrypt(cipher->hd,cipher->mem,16,cipher->iv,
+			16)))return -1;
 		memmove(cipher->iv,cipher->iv+1,15);
 		*d++=cipher->iv[15]=*s++^cipher->mem[0];
 	}
@@ -2801,8 +2820,8 @@ static int gcry_cipher_cfb8_decrypt(void *ctx,void *src,int slen,void *dst)
 
 	while(slen--)
 	{
-		if(gcry_cipher_encrypt(cipher->hd,cipher->mem,16,cipher->iv,16))
-			return -1;
+		if(U(gcry_cipher_encrypt(cipher->hd,cipher->mem,16,cipher->iv,
+			16)))return -1;
 		memmove(cipher->iv,cipher->iv+1,15);
 		cipher->iv[15]=*s;
 		*d++=*s++^cipher->mem[0];
@@ -2837,18 +2856,18 @@ static int gcry_cipher_zero_crypt(void *ctx,void *src,int slen,void *dst)
 	{
 		memset(zero,0,sizeof(zero));
 		for(d=dst;slen>16;slen-=16,d+=16)
-			if(gcry_cipher_encrypt(((struct gcry_cipher *)ctx)->h,
-				d,16,zero,16))return -1;
-		if(gcry_cipher_encrypt(((struct gcry_cipher *)ctx)->h,d,slen,
-			zero,slen))return -1;
+			if(U(gcry_cipher_encrypt(((struct gcry_cipher *)ctx)->h,
+				d,16,zero,16)))return -1;
+		if(U(gcry_cipher_encrypt(((struct gcry_cipher *)ctx)->h,d,slen,
+			zero,slen)))return -1;
 	}
 	else if(src==dst)
 	{
-		if(gcry_cipher_encrypt(((struct gcry_cipher *)ctx)->h,dst,slen,
-			NULL,0))return -1;
+		if(U(gcry_cipher_encrypt(((struct gcry_cipher *)ctx)->h,dst,
+			slen,NULL,0)))return -1;
 	}
-	else if(gcry_cipher_encrypt(((struct gcry_cipher *)ctx)->h,dst,slen,src,
-		slen))return -1;
+	else if(U(gcry_cipher_encrypt(((struct gcry_cipher *)ctx)->h,dst,slen,
+		src,slen)))return -1;
 	return 0;
 }
 
@@ -2873,14 +2892,14 @@ static int gcry_cipher_xts_encrypt(void *ctx,void *iv,void *src,int slen,
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<16)return -1;
+	if(U(slen<16))return -1;
 
-	if(gcry_cipher_encrypt(cipher->tw,cipher->twk,16,iv,16))return -1;
+	if(U(gcry_cipher_encrypt(cipher->tw,cipher->twk,16,iv,16)))return -1;
 
 	for(;slen>=16;slen-=16,s+=16,d+=16)
 	{
 		for(i=0;i<16;i++)cipher->wrk[i]=s[i]^cipher->twk[i];
-		if(gcry_cipher_encrypt(cipher->ed,d,16,cipher->wrk,16))
+		if(U(gcry_cipher_encrypt(cipher->ed,d,16,cipher->wrk,16)))
 			return -1;
 		for(n=0,i=0;i<16;i++,n>>=8)
 		{
@@ -2897,7 +2916,7 @@ static int gcry_cipher_xts_encrypt(void *ctx,void *iv,void *src,int slen,
 		memcpy(cipher->wrk,s,slen);
 		memcpy(cipher->wrk+slen,d+slen,16-slen);
 		for(i=0;i<16;i++)cipher->wrk[i]^=cipher->twk[i];
-		if(gcry_cipher_encrypt(cipher->ed,d,16,cipher->wrk,16))
+		if(U(gcry_cipher_encrypt(cipher->ed,d,16,cipher->wrk,16)))
 			return -1;
 		for(i=0;i<16;i++)d[i]^=cipher->twk[i];
 	}
@@ -2916,12 +2935,12 @@ static int gcry_cipher_xts_decrypt(void *ctx,void *iv,void *src,int slen,
 
 	if(slen<16)return -1;
 
-	if(gcry_cipher_encrypt(cipher->tw,cipher->twk,16,iv,16))return -1;
+	if(U(gcry_cipher_encrypt(cipher->tw,cipher->twk,16,iv,16)))return -1;
 
 	for(slen-=(slen&0xf)?16:0;slen>=16;slen-=16,s+=16,d+=16)
 	{
 		for(i=0;i<16;i++)cipher->wrk[i]=s[i]^cipher->twk[i];
-		if(gcry_cipher_decrypt(cipher->ed,d,16,cipher->wrk,16))
+		if(U(gcry_cipher_decrypt(cipher->ed,d,16,cipher->wrk,16)))
 			return -1;
 		for(n=0,i=0;i<16;i++,n>>=8)
 		{
@@ -2938,14 +2957,14 @@ static int gcry_cipher_xts_decrypt(void *ctx,void *iv,void *src,int slen,
 			cipher->twk[i]=(unsigned char)(n|=(cipher->twk[i]<<1));
 		if(n)cipher->twk[0]^=0x87;
 		for(i=0;i<16;i++)cipher->wrk[i]=s[i]^cipher->twk[i];
-		if(gcry_cipher_decrypt(cipher->ed,d,16,cipher->wrk,16))
+		if(U(gcry_cipher_decrypt(cipher->ed,d,16,cipher->wrk,16)))
 			return -1;
 		for(i=0;i<16;i++)d[i]^=cipher->twk[i];
 		memcpy(d+16,d,slen);
 		memcpy(cipher->wrk,s+16,slen);
 		memcpy(cipher->wrk+slen,d+slen,16-slen);
 		for(i=0;i<16;i++)cipher->wrk[i]^=cipher->mem[i];
-		if(gcry_cipher_decrypt(cipher->ed,d,16,cipher->wrk,16))
+		if(U(gcry_cipher_decrypt(cipher->ed,d,16,cipher->wrk,16)))
 			return -1;
 		for(i=0;i<16;i++)d[i]^=cipher->mem[i];
 	}
@@ -2968,13 +2987,13 @@ static void *gcry_cipher_xts_init(void *ctx,int type,void *key,int klen)
 		break;
 	default:goto err1;
 	}
-	if(!(cipher=malloc(sizeof(struct gcry_cipher_xts))))goto err1;
-	if(gcry_cipher_open(&cipher->ed,mode,GCRY_CIPHER_MODE_ECB,
-		GCRY_CIPHER_SECURE))goto err2;
-	if(gcry_cipher_open(&cipher->tw,mode,GCRY_CIPHER_MODE_ECB,
-		GCRY_CIPHER_SECURE))goto err3;
-	if(gcry_cipher_setkey(cipher->ed,key,klen>>4))goto err4;
-	if(gcry_cipher_setkey(cipher->tw,key+(klen>>4),klen>>4))goto err4;
+	if(U(!(cipher=malloc(sizeof(struct gcry_cipher_xts)))))goto err1;
+	if(U(gcry_cipher_open(&cipher->ed,mode,GCRY_CIPHER_MODE_ECB,
+		GCRY_CIPHER_SECURE)))goto err2;
+	if(U(gcry_cipher_open(&cipher->tw,mode,GCRY_CIPHER_MODE_ECB,
+		GCRY_CIPHER_SECURE)))goto err3;
+	if(U(gcry_cipher_setkey(cipher->ed,key,klen>>4)))goto err4;
+	if(U(gcry_cipher_setkey(cipher->tw,key+(klen>>4),klen>>4)))goto err4;
 	cipher->global=((struct usicrypt_thread *)ctx)->global;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return cipher;
@@ -3007,15 +3026,15 @@ static int gcry_cipher_essiv_encrypt(void *ctx,void *iv,void *src,int slen,
 {
 	struct gcry_cipher_essiv *cipher=ctx;
 
-	if(slen&0xf)return -1;
-	if(gcry_cipher_encrypt(cipher->aux,cipher->iv,16,iv,16))return -1;
+	if(U(slen&0xf))return -1;
+	if(U(gcry_cipher_encrypt(cipher->aux,cipher->iv,16,iv,16)))return -1;
 	gcry_cipher_reset(cipher->h);
-	if(gcry_cipher_setiv(cipher->h,cipher->iv,16))return -1;
+	if(U(gcry_cipher_setiv(cipher->h,cipher->iv,16)))return -1;
 	if(src==dst)
 	{
-		if(gcry_cipher_encrypt(cipher->h,dst,slen,NULL,0))return -1;
+		if(U(gcry_cipher_encrypt(cipher->h,dst,slen,NULL,0)))return -1;
 	}
-	else if(gcry_cipher_encrypt(cipher->h,dst,slen,src,slen))return -1;
+	else if(U(gcry_cipher_encrypt(cipher->h,dst,slen,src,slen)))return -1;
 	return 0;
 }
 
@@ -3024,15 +3043,15 @@ static int gcry_cipher_essiv_decrypt(void *ctx,void *iv,void *src,int slen,
 {
 	struct gcry_cipher_essiv *cipher=ctx;
 
-	if(slen&0xf)return -1;
-	if(gcry_cipher_encrypt(cipher->aux,cipher->iv,16,iv,16))return -1;
+	if(U(slen&0xf))return -1;
+	if(U(gcry_cipher_encrypt(cipher->aux,cipher->iv,16,iv,16)))return -1;
 	gcry_cipher_reset(cipher->h);
-	if(gcry_cipher_setiv(cipher->h,cipher->iv,16))return -1;
+	if(U(gcry_cipher_setiv(cipher->h,cipher->iv,16)))return -1;
 	if(src==dst)
 	{
-		if(gcry_cipher_decrypt(cipher->h,dst,slen,NULL,0))return -1;
+		if(U(gcry_cipher_decrypt(cipher->h,dst,slen,NULL,0)))return -1;
 	}
-	else if(gcry_cipher_decrypt(cipher->h,dst,slen,src,slen))return -1;
+	else if(U(gcry_cipher_decrypt(cipher->h,dst,slen,src,slen)))return -1;
 	return 0;
 }
 
@@ -3055,16 +3074,16 @@ static void *gcry_cipher_essiv_init(void *ctx,int type,void *key,int klen)
 		break;
 	default:goto err1;
 	}
-	if(!(cipher=malloc(sizeof(struct gcry_cipher_essiv))))goto err1;
+	if(U(!(cipher=malloc(sizeof(struct gcry_cipher_essiv)))))goto err1;
 	cipher->global=((struct usicrypt_thread *)ctx)->global;
-	if(gcry_cipher_open(&cipher->h,mode,GCRY_CIPHER_MODE_CBC,
-		GCRY_CIPHER_SECURE))goto err2;
-	if(gcry_cipher_setkey(cipher->h,key,klen>>3))goto err3;
+	if(U(gcry_cipher_open(&cipher->h,mode,GCRY_CIPHER_MODE_CBC,
+		GCRY_CIPHER_SECURE)))goto err2;
+	if(U(gcry_cipher_setkey(cipher->h,key,klen>>3)))goto err3;
 	gcry_md_hash_buffer(GCRY_MD_SHA256,tmp,key,klen>>3);
-	if(gcry_cipher_open(&cipher->aux,
+	if(U(gcry_cipher_open(&cipher->aux,
 		type?GCRY_CIPHER_CAMELLIA256:GCRY_CIPHER_AES256,
-		GCRY_CIPHER_MODE_ECB,GCRY_CIPHER_SECURE))goto err4;
-	if(gcry_cipher_setkey(cipher->aux,tmp,32))goto err5;
+		GCRY_CIPHER_MODE_ECB,GCRY_CIPHER_SECURE)))goto err4;
+	if(U(gcry_cipher_setkey(cipher->aux,tmp,32)))goto err5;
 	((struct usicrypt_thread *)ctx)->global->memclear(tmp,sizeof(tmp));
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return cipher;
@@ -3096,10 +3115,10 @@ static int gcry_cipher_cmac(void *ctx,int mode,void *key,int klen,
 	size_t len=16;
 	gcry_mac_hd_t h;
 
-	if(gcry_mac_open(&h,mode,GCRY_MAC_FLAG_SECURE,NULL))goto err1;
-	if(gcry_mac_setkey(h,key,klen>>3))goto err2;
-	if(gcry_mac_write(h,src,slen))goto err2;
-	if(!gcry_mac_read(h,dst,&len))r=0;
+	if(U(gcry_mac_open(&h,mode,GCRY_MAC_FLAG_SECURE,NULL)))goto err1;
+	if(U(gcry_mac_setkey(h,key,klen>>3)))goto err2;
+	if(U(gcry_mac_write(h,src,slen)))goto err2;
+	if(L(!gcry_mac_read(h,dst,&len)))r=0;
 err2:	gcry_mac_close(h);
 err1:	return r;
 }
@@ -3114,11 +3133,11 @@ static int gcry_cipher_cmac_iov(void *ctx,int mode,void *key,int klen,
 	size_t len=16;
 	gcry_mac_hd_t h;
 
-	if(gcry_mac_open(&h,mode,GCRY_MAC_FLAG_SECURE,NULL))goto err1;
-	if(gcry_mac_setkey(h,key,klen>>3))goto err2;
-	for(i=0;i<niov;i++)if(gcry_mac_write(h,iov[i].data,iov[i].length))
+	if(U(gcry_mac_open(&h,mode,GCRY_MAC_FLAG_SECURE,NULL)))goto err1;
+	if(U(gcry_mac_setkey(h,key,klen>>3)))goto err2;
+	for(i=0;i<niov;i++)if(U(gcry_mac_write(h,iov[i].data,iov[i].length)))
 		goto err2;
-	if(!gcry_mac_read(h,dst,&len))r=0;
+	if(L(!gcry_mac_read(h,dst,&len)))r=0;
 err2:	gcry_mac_close(h);
 err1:	return r;
 }
@@ -3143,14 +3162,15 @@ static int gcry_chacha_poly_encrypt(void *ctx,void *iv,void *src,int slen,
 {
 	struct gcry_chacha_poly *chp=ctx;
 
-	if(gcry_cipher_setiv(chp->ctx,iv,12))return -1;
-	if(aad&&alen)if(gcry_cipher_authenticate(chp->ctx,aad,alen))return -1;
+	if(U(gcry_cipher_setiv(chp->ctx,iv,12)))return -1;
+	if(aad&&alen)if(U(gcry_cipher_authenticate(chp->ctx,aad,alen)))
+		return -1;
 	if(src==dst)
 	{
-		if(gcry_cipher_encrypt(chp->ctx,dst,slen,NULL,0))return -1;
+		if(U(gcry_cipher_encrypt(chp->ctx,dst,slen,NULL,0)))return -1;
 	}
-	else if(gcry_cipher_encrypt(chp->ctx,dst,slen,src,slen))return -1;
-	if(gcry_cipher_gettag(chp->ctx,tag,16))return -1;
+	else if(U(gcry_cipher_encrypt(chp->ctx,dst,slen,src,slen)))return -1;
+	if(U(gcry_cipher_gettag(chp->ctx,tag,16)))return -1;
 	return 0;
 }
 
@@ -3162,15 +3182,15 @@ static int gcry_chacha_poly_encrypt_iov(void *ctx,void *iv,void *src,int slen,
 	int i;
 	struct gcry_chacha_poly *chp=ctx;
 
-	if(gcry_cipher_setiv(chp->ctx,iv,12))return -1;
-	for(i=0;i<niov;i++)if(gcry_cipher_authenticate(chp->ctx,iov[i].data,
-		iov[i].length))return -1;
+	if(U(gcry_cipher_setiv(chp->ctx,iv,12)))return -1;
+	for(i=0;i<niov;i++)if(U(gcry_cipher_authenticate(chp->ctx,iov[i].data,
+		iov[i].length)))return -1;
 	if(src==dst)
 	{
-		if(gcry_cipher_encrypt(chp->ctx,dst,slen,NULL,0))return -1;
+		if(U(gcry_cipher_encrypt(chp->ctx,dst,slen,NULL,0)))return -1;
 	}
-	else if(gcry_cipher_encrypt(chp->ctx,dst,slen,src,slen))return -1;
-	if(gcry_cipher_gettag(chp->ctx,tag,16))return -1;
+	else if(U(gcry_cipher_encrypt(chp->ctx,dst,slen,src,slen)))return -1;
+	if(U(gcry_cipher_gettag(chp->ctx,tag,16)))return -1;
 	return 0;
 }
 
@@ -3181,14 +3201,15 @@ static int gcry_chacha_poly_decrypt(void *ctx,void *iv,void *src,int slen,
 {
 	struct gcry_chacha_poly *chp=ctx;
 
-	if(gcry_cipher_setiv(chp->ctx,iv,12))return -1;
-	if(aad&&alen)if(gcry_cipher_authenticate(chp->ctx,aad,alen))return -1;
+	if(U(gcry_cipher_setiv(chp->ctx,iv,12)))return -1;
+	if(aad&&alen)if(U(gcry_cipher_authenticate(chp->ctx,aad,alen)))
+		return -1;
 	if(src==dst)
 	{
-		if(gcry_cipher_decrypt(chp->ctx,dst,slen,NULL,0))return -1;
+		if(U(gcry_cipher_decrypt(chp->ctx,dst,slen,NULL,0)))return -1;
 	}
-	else if(gcry_cipher_decrypt(chp->ctx,dst,slen,src,slen))return -1;
-	if(gcry_cipher_checktag(chp->ctx,tag,16))return -1;
+	else if(U(gcry_cipher_decrypt(chp->ctx,dst,slen,src,slen)))return -1;
+	if(U(gcry_cipher_checktag(chp->ctx,tag,16)))return -1;
 	return 0;
 }
 
@@ -3200,15 +3221,15 @@ static int gcry_chacha_poly_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 	int i;
 	struct gcry_chacha_poly *chp=ctx;
 
-	if(gcry_cipher_setiv(chp->ctx,iv,12))return -1;
-	for(i=0;i<niov;i++)if(gcry_cipher_authenticate(chp->ctx,iov[i].data,
-		iov[i].length))return -1;
+	if(U(gcry_cipher_setiv(chp->ctx,iv,12)))return -1;
+	for(i=0;i<niov;i++)if(U(gcry_cipher_authenticate(chp->ctx,iov[i].data,
+		iov[i].length)))return -1;
 	if(src==dst)
 	{
-		if(gcry_cipher_decrypt(chp->ctx,dst,slen,NULL,0))return -1;
+		if(U(gcry_cipher_decrypt(chp->ctx,dst,slen,NULL,0)))return -1;
 	}
-	else if(gcry_cipher_decrypt(chp->ctx,dst,slen,src,slen))return -1;
-	if(gcry_cipher_checktag(chp->ctx,tag,16))return -1;
+	else if(U(gcry_cipher_decrypt(chp->ctx,dst,slen,src,slen)))return -1;
+	if(U(gcry_cipher_checktag(chp->ctx,tag,16)))return -1;
 	return 0;
 }
 
@@ -3219,11 +3240,11 @@ static void *gcry_chacha_poly_init(void *ctx,void *key,int klen,int ilen,
 {
 	struct gcry_chacha_poly *chp;
 
-	if(klen!=256||ilen!=12||tlen!=16)goto err1;
-	if(!(chp=malloc(sizeof(struct gcry_chacha_poly))))goto err1;
-	if(gcry_cipher_open(&chp->ctx,GCRY_CIPHER_CHACHA20,
-		GCRY_CIPHER_MODE_POLY1305,GCRY_CIPHER_SECURE))goto err2;
-	if(gcry_cipher_setkey(chp->ctx,key,32))goto err3;
+	if(U(klen!=256)||U(ilen!=12)||U(tlen!=16))goto err1;
+	if(U(!(chp=malloc(sizeof(struct gcry_chacha_poly)))))goto err1;
+	if(U(gcry_cipher_open(&chp->ctx,GCRY_CIPHER_CHACHA20,
+		GCRY_CIPHER_MODE_POLY1305,GCRY_CIPHER_SECURE)))goto err2;
+	if(U(gcry_cipher_setkey(chp->ctx,key,32)))goto err3;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,32);
 	return chp;
 
@@ -3249,14 +3270,15 @@ static int gcry_aes_gcm_encrypt(void *ctx,void *iv,void *src,int slen,
 {
 	struct gcry_aes_xcm *aes=ctx;
 
-	if(gcry_cipher_setiv(aes->ctx,iv,aes->ilen))return -1;
-	if(aad&&alen)if(gcry_cipher_authenticate(aes->ctx,aad,alen))return -1;
+	if(U(gcry_cipher_setiv(aes->ctx,iv,aes->ilen)))return -1;
+	if(aad&&alen)if(U(gcry_cipher_authenticate(aes->ctx,aad,alen)))
+		return -1;
 	if(src==dst)
 	{
-		if(gcry_cipher_encrypt(aes->ctx,dst,slen,NULL,0))return -1;
+		if(U(gcry_cipher_encrypt(aes->ctx,dst,slen,NULL,0)))return -1;
 	}
-	else if(gcry_cipher_encrypt(aes->ctx,dst,slen,src,slen))return -1;
-	if(gcry_cipher_gettag(aes->ctx,tag,aes->tlen))return -1;
+	else if(U(gcry_cipher_encrypt(aes->ctx,dst,slen,src,slen)))return -1;
+	if(U(gcry_cipher_gettag(aes->ctx,tag,aes->tlen)))return -1;
 	return 0;
 }
 
@@ -3268,15 +3290,15 @@ static int gcry_aes_gcm_encrypt_iov(void *ctx,void *iv,void *src,int slen,
 	int i;
 	struct gcry_aes_xcm *aes=ctx;
 
-	if(gcry_cipher_setiv(aes->ctx,iv,aes->ilen))return -1;
-	for(i=0;i<niov;i++)if(gcry_cipher_authenticate(aes->ctx,iov[i].data,
-		iov[i].length))return -1;
+	if(U(gcry_cipher_setiv(aes->ctx,iv,aes->ilen)))return -1;
+	for(i=0;i<niov;i++)if(U(gcry_cipher_authenticate(aes->ctx,iov[i].data,
+		iov[i].length)))return -1;
 	if(src==dst)
 	{
-		if(gcry_cipher_encrypt(aes->ctx,dst,slen,NULL,0))return -1;
+		if(U(gcry_cipher_encrypt(aes->ctx,dst,slen,NULL,0)))return -1;
 	}
-	else if(gcry_cipher_encrypt(aes->ctx,dst,slen,src,slen))return -1;
-	if(gcry_cipher_gettag(aes->ctx,tag,aes->tlen))return -1;
+	else if(U(gcry_cipher_encrypt(aes->ctx,dst,slen,src,slen)))return -1;
+	if(U(gcry_cipher_gettag(aes->ctx,tag,aes->tlen)))return -1;
 	return 0;
 }
 
@@ -3287,14 +3309,15 @@ static int gcry_aes_gcm_decrypt(void *ctx,void *iv,void *src,int slen,
 {
 	struct gcry_aes_xcm *aes=ctx;
 
-	if(gcry_cipher_setiv(aes->ctx,iv,aes->ilen))return -1;
-	if(aad&&alen)if(gcry_cipher_authenticate(aes->ctx,aad,alen))return -1;
+	if(U(gcry_cipher_setiv(aes->ctx,iv,aes->ilen)))return -1;
+	if(aad&&alen)if(U(gcry_cipher_authenticate(aes->ctx,aad,alen)))
+		return -1;
 	if(src==dst)
 	{
-		if(gcry_cipher_decrypt(aes->ctx,dst,slen,NULL,0))return -1;
+		if(U(gcry_cipher_decrypt(aes->ctx,dst,slen,NULL,0)))return -1;
 	}
-	else if(gcry_cipher_decrypt(aes->ctx,dst,slen,src,slen))return -1;
-	if(gcry_cipher_checktag(aes->ctx,tag,aes->tlen))return -1;
+	else if(U(gcry_cipher_decrypt(aes->ctx,dst,slen,src,slen)))return -1;
+	if(U(gcry_cipher_checktag(aes->ctx,tag,aes->tlen)))return -1;
 	return 0;
 }
 
@@ -3306,15 +3329,15 @@ static int gcry_aes_gcm_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 	int i;
 	struct gcry_aes_xcm *aes=ctx;
 
-	if(gcry_cipher_setiv(aes->ctx,iv,aes->ilen))return -1;
-	for(i=0;i<niov;i++)if(gcry_cipher_authenticate(aes->ctx,iov[i].data,
-		iov[i].length))return -1;
+	if(U(gcry_cipher_setiv(aes->ctx,iv,aes->ilen)))return -1;
+	for(i=0;i<niov;i++)if(U(gcry_cipher_authenticate(aes->ctx,iov[i].data,
+		iov[i].length)))return -1;
 	if(src==dst)
 	{
-		if(gcry_cipher_decrypt(aes->ctx,dst,slen,NULL,0))return -1;
+		if(U(gcry_cipher_decrypt(aes->ctx,dst,slen,NULL,0)))return -1;
 	}
-	else if(gcry_cipher_decrypt(aes->ctx,dst,slen,src,slen))return -1;
-	if(gcry_cipher_checktag(aes->ctx,tag,aes->tlen))return -1;
+	else if(U(gcry_cipher_decrypt(aes->ctx,dst,slen,src,slen)))return -1;
+	if(U(gcry_cipher_checktag(aes->ctx,tag,aes->tlen)))return -1;
 	return 0;
 }
 
@@ -3338,10 +3361,10 @@ static void *gcry_aes_gcm_init(void *ctx,void *key,int klen,int ilen,int tlen)
 		break;
 	default:goto err1;
 	}
-	if(!(aes=malloc(sizeof(struct gcry_aes_xcm))))goto err1;
-	if(gcry_cipher_open(&aes->ctx,mode,GCRY_CIPHER_MODE_GCM,
-		GCRY_CIPHER_SECURE))goto err2;
-	if(gcry_cipher_setkey(aes->ctx,key,klen>>3))goto err3;
+	if(U(!(aes=malloc(sizeof(struct gcry_aes_xcm)))))goto err1;
+	if(U(gcry_cipher_open(&aes->ctx,mode,GCRY_CIPHER_MODE_GCM,
+		GCRY_CIPHER_SECURE)))goto err2;
+	if(U(gcry_cipher_setkey(aes->ctx,key,klen>>3)))goto err3;
 	aes->ilen=ilen;
 	aes->tlen=tlen;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
@@ -3368,19 +3391,20 @@ static int gcry_aes_ccm_encrypt(void *ctx,void *iv,void *src,int slen,
 	uint64_t prm[3];
 	struct gcry_aes_xcm *aes=ctx;
 
-	if(gcry_cipher_setiv(aes->ctx,iv,aes->ilen))return -1;
+	if(U(gcry_cipher_setiv(aes->ctx,iv,aes->ilen)))return -1;
 	prm[0]=slen;
 	prm[1]=(aad&&alen)?alen:0;
 	prm[2]=aes->tlen;
-	if(gcry_cipher_ctl(aes->ctx,GCRYCTL_SET_CCM_LENGTHS,prm,sizeof(prm)))
+	if(U(gcry_cipher_ctl(aes->ctx,GCRYCTL_SET_CCM_LENGTHS,prm,sizeof(prm))))
 		return -1;
-	if(aad&&alen)if(gcry_cipher_authenticate(aes->ctx,aad,alen))return -1;
+	if(aad&&alen)if(U(gcry_cipher_authenticate(aes->ctx,aad,alen)))
+		return -1;
 	if(src==dst)
 	{
-		if(gcry_cipher_encrypt(aes->ctx,dst,slen,NULL,0))return -1;
+		if(U(gcry_cipher_encrypt(aes->ctx,dst,slen,NULL,0)))return -1;
 	}
-	else if(gcry_cipher_encrypt(aes->ctx,dst,slen,src,slen))return -1;
-	if(gcry_cipher_gettag(aes->ctx,tag,aes->tlen))return -1;
+	else if(U(gcry_cipher_encrypt(aes->ctx,dst,slen,src,slen)))return -1;
+	if(U(gcry_cipher_gettag(aes->ctx,tag,aes->tlen)))return -1;
 	return 0;
 }
 
@@ -3394,21 +3418,21 @@ static int gcry_aes_ccm_encrypt_iov(void *ctx,void *iv,void *src,int slen,
 	uint64_t prm[3];
 	struct gcry_aes_xcm *aes=ctx;
 
-	if(gcry_cipher_setiv(aes->ctx,iv,aes->ilen))return -1;
+	if(U(gcry_cipher_setiv(aes->ctx,iv,aes->ilen)))return -1;
 	for(i=0,alen=0;i<niov;i++)alen+=iov[i].length;
 	prm[0]=slen;
 	prm[1]=alen;
 	prm[2]=aes->tlen;
-	if(gcry_cipher_ctl(aes->ctx,GCRYCTL_SET_CCM_LENGTHS,prm,sizeof(prm)))
+	if(U(gcry_cipher_ctl(aes->ctx,GCRYCTL_SET_CCM_LENGTHS,prm,sizeof(prm))))
 		return -1;
-	for(i=0;i<niov;i++)if(gcry_cipher_authenticate(aes->ctx,iov[i].data,
-		iov[i].length))return -1;
+	for(i=0;i<niov;i++)if(U(gcry_cipher_authenticate(aes->ctx,iov[i].data,
+		iov[i].length)))return -1;
 	if(src==dst)
 	{
-		if(gcry_cipher_encrypt(aes->ctx,dst,slen,NULL,0))return -1;
+		if(U(gcry_cipher_encrypt(aes->ctx,dst,slen,NULL,0)))return -1;
 	}
-	else if(gcry_cipher_encrypt(aes->ctx,dst,slen,src,slen))return -1;
-	if(gcry_cipher_gettag(aes->ctx,tag,aes->tlen))return -1;
+	else if(U(gcry_cipher_encrypt(aes->ctx,dst,slen,src,slen)))return -1;
+	if(U(gcry_cipher_gettag(aes->ctx,tag,aes->tlen)))return -1;
 	return 0;
 }
 
@@ -3420,19 +3444,20 @@ static int gcry_aes_ccm_decrypt(void *ctx,void *iv,void *src,int slen,
 	uint64_t prm[3];
 	struct gcry_aes_xcm *aes=ctx;
 
-	if(gcry_cipher_setiv(aes->ctx,iv,aes->ilen))return -1;
+	if(U(gcry_cipher_setiv(aes->ctx,iv,aes->ilen)))return -1;
 	prm[0]=slen;
 	prm[1]=(aad&&alen)?alen:0;
 	prm[2]=aes->tlen;
-	if(gcry_cipher_ctl(aes->ctx,GCRYCTL_SET_CCM_LENGTHS,prm,sizeof(prm)))
+	if(U(gcry_cipher_ctl(aes->ctx,GCRYCTL_SET_CCM_LENGTHS,prm,sizeof(prm))))
 		return -1;
-	if(aad&&alen)if(gcry_cipher_authenticate(aes->ctx,aad,alen))return -1;
+	if(aad&&alen)if(U(gcry_cipher_authenticate(aes->ctx,aad,alen)))
+		return -1;
 	if(src==dst)
 	{
-		if(gcry_cipher_decrypt(aes->ctx,dst,slen,NULL,0))return -1;
+		if(U(gcry_cipher_decrypt(aes->ctx,dst,slen,NULL,0)))return -1;
 	}
-	else if(gcry_cipher_decrypt(aes->ctx,dst,slen,src,slen))return -1;
-	if(gcry_cipher_checktag(aes->ctx,tag,aes->tlen))return -1;
+	else if(U(gcry_cipher_decrypt(aes->ctx,dst,slen,src,slen)))return -1;
+	if(U(gcry_cipher_checktag(aes->ctx,tag,aes->tlen)))return -1;
 	return 0;
 }
 
@@ -3446,21 +3471,21 @@ static int gcry_aes_ccm_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 	uint64_t prm[3];
 	struct gcry_aes_xcm *aes=ctx;
 
-	if(gcry_cipher_setiv(aes->ctx,iv,aes->ilen))return -1;
+	if(U(gcry_cipher_setiv(aes->ctx,iv,aes->ilen)))return -1;
 	for(i=0,alen=0;i<niov;i++)alen+=iov[i].length;
 	prm[0]=slen;
 	prm[1]=alen;
 	prm[2]=aes->tlen;
-	if(gcry_cipher_ctl(aes->ctx,GCRYCTL_SET_CCM_LENGTHS,prm,sizeof(prm)))
+	if(U(gcry_cipher_ctl(aes->ctx,GCRYCTL_SET_CCM_LENGTHS,prm,sizeof(prm))))
 		return -1;
-	for(i=0;i<niov;i++)if(gcry_cipher_authenticate(aes->ctx,iov[i].data,
-		iov[i].length))return -1;
+	for(i=0;i<niov;i++)if(U(gcry_cipher_authenticate(aes->ctx,iov[i].data,
+		iov[i].length)))return -1;
 	if(src==dst)
 	{
-		if(gcry_cipher_decrypt(aes->ctx,dst,slen,NULL,0))return -1;
+		if(U(gcry_cipher_decrypt(aes->ctx,dst,slen,NULL,0)))return -1;
 	}
-	else if(gcry_cipher_decrypt(aes->ctx,dst,slen,src,slen))return -1;
-	if(gcry_cipher_checktag(aes->ctx,tag,aes->tlen))return -1;
+	else if(U(gcry_cipher_decrypt(aes->ctx,dst,slen,src,slen)))return -1;
+	if(U(gcry_cipher_checktag(aes->ctx,tag,aes->tlen)))return -1;
 	return 0;
 }
 
@@ -3484,10 +3509,10 @@ static void *gcry_aes_ccm_init(void *ctx,void *key,int klen,int ilen,int tlen)
 		break;
 	default:goto err1;
 	}
-	if(!(aes=malloc(sizeof(struct gcry_aes_xcm))))goto err1;
-	if(gcry_cipher_open(&aes->ctx,mode,GCRY_CIPHER_MODE_CCM,
-		GCRY_CIPHER_SECURE))goto err2;
-	if(gcry_cipher_setkey(aes->ctx,key,klen>>3))goto err3;
+	if(U(!(aes=malloc(sizeof(struct gcry_aes_xcm)))))goto err1;
+	if(U(gcry_cipher_open(&aes->ctx,mode,GCRY_CIPHER_MODE_CCM,
+		GCRY_CIPHER_SECURE)))goto err2;
+	if(U(gcry_cipher_setkey(aes->ctx,key,klen>>3)))goto err3;
 	aes->ilen=ilen;
 	aes->tlen=tlen;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
@@ -3510,9 +3535,9 @@ static void gcry_aes_ccm_exit(void *ctx)
 
 int USICRYPT(random)(void *ctx,void *data,int len)
 {
-	if((((struct usicrypt_thread *)ctx)->total+=1)>=10000)
+	if(U((((struct usicrypt_thread *)ctx)->total+=1)>=10000))
 	{
-		if(gcry_reseed(ctx))return -1;
+		if(U(gcry_reseed(ctx)))return -1;
 		((struct usicrypt_thread *)ctx)->total=0;
 	}
 	gcry_randomize(data,len,GCRY_STRONG_RANDOM);
@@ -3610,7 +3635,7 @@ int USICRYPT(digest_iov)(void *ctx,int md,struct usicrypt_iov *iov,int niov,
 	default:goto err1;
 	}
 
-	if(gcry_md_open(&h,digest,GCRY_MD_FLAG_SECURE))goto err1;
+	if(U(gcry_md_open(&h,digest,GCRY_MD_FLAG_SECURE)))goto err1;
 	for(i=0;i<niov;i++)gcry_md_write(h,iov[i].data,iov[i].length);
 	memcpy(out,gcry_md_read(h,digest),gcry_md_get_algo_dlen(digest));
 	r=0;
@@ -3651,9 +3676,9 @@ int USICRYPT(hmac)(void *ctx,int md,void *data,int dlen,void *key,int klen,
 	default:goto err1;
 	}
 
-	if(gcry_md_open(&hm,type,GCRY_MD_FLAG_HMAC|GCRY_MD_FLAG_SECURE))
+	if(U(gcry_md_open(&hm,type,GCRY_MD_FLAG_HMAC|GCRY_MD_FLAG_SECURE)))
 		goto err1;
-	if(gcry_md_setkey(hm,key,klen))goto err2;
+	if(U(gcry_md_setkey(hm,key,klen)))goto err2;
 	gcry_md_write(hm,data,dlen);
 	memcpy(out,gcry_md_read(hm,type),gcry_md_get_algo_dlen(type));
 	gcry_md_close(hm);
@@ -3698,9 +3723,9 @@ int USICRYPT(hmac_iov)(void *ctx,int md,struct usicrypt_iov *iov,int niov,
 	default:goto err1;
 	}
 
-	if(gcry_md_open(&hm,digest,GCRY_MD_FLAG_HMAC|GCRY_MD_FLAG_SECURE))
+	if(U(gcry_md_open(&hm,digest,GCRY_MD_FLAG_HMAC|GCRY_MD_FLAG_SECURE)))
 		goto err1;
-	if(gcry_md_setkey(hm,key,klen))goto err2;
+	if(U(gcry_md_setkey(hm,key,klen)))goto err2;
 	for(i=0;i<niov;i++)gcry_md_write(hm,iov[i].data,iov[i].length);
 	memcpy(out,gcry_md_read(hm,digest),gcry_md_get_algo_dlen(digest));
 	r=0;
@@ -3718,30 +3743,30 @@ int USICRYPT(pbkdf2)(void *ctx,int md,void *key,int klen,void *salt,int slen,
 #ifndef USICRYPT_NO_PBKDF2
 #ifndef USICRYPT_NO_SHA1
 	case USICRYPT_SHA1:
-		if(gcry_kdf_derive(key,klen,GCRY_KDF_PBKDF2,GCRY_MD_SHA1,
+		if(U(gcry_kdf_derive(key,klen,GCRY_KDF_PBKDF2,GCRY_MD_SHA1,
 			salt,slen,iter,gcry_md_get_algo_dlen(GCRY_MD_SHA1),
-			out))r=-1;
+			out)))r=-1;
 		break;
 #endif
 #ifndef USICRYPT_NO_SHA256
 	case USICRYPT_SHA256:
-		if(gcry_kdf_derive(key,klen,GCRY_KDF_PBKDF2,GCRY_MD_SHA256,
+		if(U(gcry_kdf_derive(key,klen,GCRY_KDF_PBKDF2,GCRY_MD_SHA256,
 			salt,slen,iter,gcry_md_get_algo_dlen(GCRY_MD_SHA256),
-			out))r=-1;
+			out)))r=-1;
 		break;
 #endif
 #ifndef USICRYPT_NO_SHA384
 	case USICRYPT_SHA384:
-		if(gcry_kdf_derive(key,klen,GCRY_KDF_PBKDF2,GCRY_MD_SHA384,
+		if(U(gcry_kdf_derive(key,klen,GCRY_KDF_PBKDF2,GCRY_MD_SHA384,
 			salt,slen,iter,gcry_md_get_algo_dlen(GCRY_MD_SHA384),
-			out))r=-1;
+			out)))r=-1;
 		break;
 #endif
 #ifndef USICRYPT_NO_SHA512
 	case USICRYPT_SHA512:
-		if(gcry_kdf_derive(key,klen,GCRY_KDF_PBKDF2,GCRY_MD_SHA512,
+		if(U(gcry_kdf_derive(key,klen,GCRY_KDF_PBKDF2,GCRY_MD_SHA512,
 			salt,slen,iter,gcry_md_get_algo_dlen(GCRY_MD_SHA512),
-			out))r=-1;
+			out)))r=-1;
 		break;
 #endif
 #endif
@@ -3791,13 +3816,13 @@ int USICRYPT(hkdf)(void *ctx,int md,void *key,int klen,void *salt,int slen,
 		salt=s;
 		memset(s,0,slen);
 	}
-	if(gcry_md_open(&hm,type,GCRY_MD_FLAG_HMAC|GCRY_MD_FLAG_SECURE))
+	if(U(gcry_md_open(&hm,type,GCRY_MD_FLAG_HMAC|GCRY_MD_FLAG_SECURE)))
 		goto err1;
-	if(gcry_md_setkey(hm,salt,slen))goto err2;
+	if(U(gcry_md_setkey(hm,salt,slen)))goto err2;
 	gcry_md_write(hm,key,klen);
 	memcpy(out,gcry_md_read(hm,type),gcry_md_get_algo_dlen(type));
 	gcry_md_reset(hm);
-	if(gcry_md_setkey(hm,out,gcry_md_get_algo_dlen(type)))goto err2;
+	if(U(gcry_md_setkey(hm,out,gcry_md_get_algo_dlen(type))))goto err2;
 	gcry_md_write(hm,info,ilen);
 	s[0]=1;
 	gcry_md_write(hm,s,1);
@@ -3822,7 +3847,7 @@ void *USICRYPT(base64_encode)(void *ctx,void *in,int ilen,int *olen)
 	unsigned char *data=NULL;
 
 	*olen=(ilen/3+(ilen%3?1:0))<<2;
-	if(!(d=data=malloc(*olen+1)))goto err1;
+	if(U(!(d=data=malloc(*olen+1))))goto err1;
 	for(n=ilen-ilen%3,i=0;i<n;i+=3)
 	{
 		*d++=gcry_b64enc[s[i]>>2];
@@ -3861,7 +3886,7 @@ void *USICRYPT(base64_decode)(void *ctx,void *in,int ilen,int *olen)
 	unsigned char *d;
 	unsigned char *data=NULL;
 
-	if(ilen<=0||(ilen&3))goto err1;
+	if(U(ilen<=0)||U(ilen&3))goto err1;
 	for(i=0;i<ilen;i++)if(s[i]=='=')
 	{
 		if(i+1==ilen)n=1;
@@ -3869,9 +3894,9 @@ void *USICRYPT(base64_decode)(void *ctx,void *in,int ilen,int *olen)
 		else goto err1;
 		break;
 	}
-	else if(gcry_b64dec[s[i]]==0xff)goto err1;
+	else if(U(gcry_b64dec[s[i]]==0xff))goto err1;
 	*olen=(ilen>>2)*3-n;
-	if(!(d=data=malloc(*olen)))goto err1;
+	if(U(!(d=data=malloc(*olen))))goto err1;
 	for(ilen-=(n?4:0),i=0;i<ilen;i+=4)
 	{
 		*d++=(gcry_b64dec[s[i]]<<2)|(gcry_b64dec[s[i+1]]>>4);
@@ -3895,9 +3920,9 @@ err1:	return data;
 void *USICRYPT(rsa_generate)(void *ctx,int bits)
 {
 #ifndef USICRYPT_NO_RSA
-	if(bits<USICRYPT_RSA_BITS_MIN||bits>USICRYPT_RSA_BITS_MAX||(bits&7))
-		goto err1;
-	if(gcry_reseed(ctx))goto err1;
+	if(U(bits<USICRYPT_RSA_BITS_MIN)||U(bits>USICRYPT_RSA_BITS_MAX)||
+		U(bits&7))goto err1;
+	if(U(gcry_reseed(ctx)))goto err1;
 	return gcry_rsa_mpi_generate(bits,USICRYPT_RSA_EXPONENT);
 
 err1:	return NULL;
@@ -3936,7 +3961,7 @@ void *USICRYPT(rsa_get_pub)(void *ctx,void *key,int *len)
 	sum1=gcry_rsa_mpi_hdr_add(sum0)+1;
 	sum2=gcry_rsa_mpi_hdr_add(sum1);
 	*len=gcry_rsa_mpi_hdr_add(sum2+sizeof(gcry_rsa_pub_oid)+6);
-	if(!(ptr=data=malloc(*len)))goto err1;
+	if(U(!(ptr=data=malloc(*len))))goto err1;
 	ptr+=gcry_rsa_mpi_write_hdr(0x30,ptr,sum2+sizeof(gcry_rsa_pub_oid)+6);
 	ptr+=gcry_rsa_mpi_write_hdr(0x30,ptr,sizeof(gcry_rsa_pub_oid)+4);
 	*ptr++=0x06;
@@ -3948,9 +3973,9 @@ void *USICRYPT(rsa_get_pub)(void *ctx,void *key,int *len)
 	ptr+=gcry_rsa_mpi_write_hdr(0x03,ptr,sum1);
 	*ptr++=0x00;
 	ptr+=gcry_rsa_mpi_write_hdr(0x30,ptr,sum0);
-	if((r=gcry_rsa_mpi_write_int(ptr,rsa->n))==-1)goto err2;
+	if(U((r=gcry_rsa_mpi_write_int(ptr,rsa->n))==-1))goto err2;
 	ptr+=r;
-	if((r=gcry_rsa_mpi_write_int(ptr,rsa->e))==-1)goto err2;
+	if(U((r=gcry_rsa_mpi_write_int(ptr,rsa->e))==-1))goto err2;
 	return data;
 
 err2:	((struct usicrypt_thread *)ctx)->global->memclear(data,*len);
@@ -3971,50 +3996,51 @@ void *USICRYPT(rsa_set_pub)(void *ctx,void *key,int len)
 	struct gcry_rsa *rsa;
 	unsigned char *pub=key;
 
-	if(gcry_asn_next(pub,len,0x30,&h,&l))goto err1;
+	if(U(gcry_asn_next(pub,len,0x30,&h,&l)))goto err1;
 	pub+=h;
 	len-=h;
 
-	if(gcry_asn_next(pub,len,0x30,&h,&l))goto err1;
+	if(U(gcry_asn_next(pub,len,0x30,&h,&l)))goto err1;
 	pub+=h;
 	len-=h;
 
-	if(gcry_asn_next(pub,len,0x06,&h,&l))goto err1;
-	if(l!=sizeof(gcry_rsa_pub_oid)||memcmp(pub+h,gcry_rsa_pub_oid,l))
+	if(U(gcry_asn_next(pub,len,0x06,&h,&l)))goto err1;
+	if(U(l!=sizeof(gcry_rsa_pub_oid))||U(memcmp(pub+h,gcry_rsa_pub_oid,l)))
 		goto err1;
 	pub+=h+l;
 	len-=h+l;
 
-	if(gcry_asn_next(pub,len,0x05,&h,&l))goto err1;
+	if(U(gcry_asn_next(pub,len,0x05,&h,&l)))goto err1;
 	if(l)goto err1;
 	pub+=h;
 	len-=h;
 
-	if(gcry_asn_next(pub,len,0x03,&h,&l))goto err1;
+	if(U(gcry_asn_next(pub,len,0x03,&h,&l)))goto err1;
 	if(l<1||pub[h])goto err1;
 	pub+=h+1;
 	len-=h+1;
 
-	if(gcry_asn_next(pub,len,0x30,&h,&l))goto err1;
+	if(U(gcry_asn_next(pub,len,0x30,&h,&l)))goto err1;
 	pub+=h;
 	len-=h;
 
-	if(gcry_asn_next(pub,len,0x02,&h,&l))goto err1;
-	if(!(n=gcry_rsa_mpi_read_int(ctx,pub+h,l,0)))goto err1;
+	if(U(gcry_asn_next(pub,len,0x02,&h,&l)))goto err1;
+	if(U(!(n=gcry_rsa_mpi_read_int(ctx,pub+h,l,0))))goto err1;
 	pub+=h+l;
 	len-=h+l;
 
-	if(gcry_asn_next(pub,len,0x02,&h,&l))goto err2;
-	if(!(e=gcry_rsa_mpi_read_int(ctx,pub+h,l,0)))goto err2;
+	if(U(gcry_asn_next(pub,len,0x02,&h,&l)))goto err2;
+	if(U(!(e=gcry_rsa_mpi_read_int(ctx,pub+h,l,0))))goto err2;
 
-	if(!gcry_mpi_cmp_ui(n,0)||!gcry_mpi_cmp_ui(e,0))goto err3;
-	if(!gcry_mpi_test_bit(n,0)||!gcry_mpi_test_bit(e,0))goto err3;
+	if(U(!gcry_mpi_cmp_ui(n,0))||U(!gcry_mpi_cmp_ui(e,0)))goto err3;
+	if(U(!gcry_mpi_test_bit(n,0))||U(!gcry_mpi_test_bit(e,0)))goto err3;
 	h=gcry_mpi_get_nbits(n);
 	l=gcry_mpi_get_nbits(e);
-	if(h<USICRYPT_RSA_BITS_MIN||h>USICRYPT_RSA_BITS_MAX||l<2)goto err3;
-	if(gcry_mpi_cmp(e,n)>=0)goto err3;
+	if(U(h<USICRYPT_RSA_BITS_MIN)||U(h>USICRYPT_RSA_BITS_MAX)||U(l<2))
+		goto err3;
+	if(U(gcry_mpi_cmp(e,n)>=0))goto err3;
 
-	if(!(rsa=malloc(sizeof(struct gcry_rsa))))goto err3;
+	if(U(!(rsa=malloc(sizeof(struct gcry_rsa)))))goto err3;
 	rsa->n=n;
 	rsa->e=e;
 	rsa->d=NULL;
@@ -4060,26 +4086,26 @@ void *USICRYPT(rsa_get_key)(void *ctx,void *key,int *len)
 	lc=gcry_rsa_mpi_int_size(rsa->c);
 	sum=ln+le+ld+lp+lq+le1+le2+lc+3;
 	*len=gcry_rsa_mpi_hdr_add(sum);
-	if(!(ptr=data=malloc(*len)))goto err1;
+	if(U(!(ptr=data=malloc(*len))))goto err1;
 	ptr+=gcry_rsa_mpi_write_hdr(0x30,ptr,sum);
 	*ptr++=0x02;
 	*ptr++=0x01;
 	*ptr++=0x00;
-	if((r=gcry_rsa_mpi_write_int(ptr,rsa->n))==-1)goto err2;
+	if(U((r=gcry_rsa_mpi_write_int(ptr,rsa->n))==-1))goto err2;
 	ptr+=r;
-	if((r=gcry_rsa_mpi_write_int(ptr,rsa->e))==-1)goto err2;
+	if(U((r=gcry_rsa_mpi_write_int(ptr,rsa->e))==-1))goto err2;
 	ptr+=r;
-	if((r=gcry_rsa_mpi_write_int(ptr,rsa->d))==-1)goto err2;
+	if(U((r=gcry_rsa_mpi_write_int(ptr,rsa->d))==-1))goto err2;
 	ptr+=r;
-	if((r=gcry_rsa_mpi_write_int(ptr,rsa->p))==-1)goto err2;
+	if(U((r=gcry_rsa_mpi_write_int(ptr,rsa->p))==-1))goto err2;
 	ptr+=r;
-	if((r=gcry_rsa_mpi_write_int(ptr,rsa->q))==-1)goto err2;
+	if(U((r=gcry_rsa_mpi_write_int(ptr,rsa->q))==-1))goto err2;
 	ptr+=r;
-	if((r=gcry_rsa_mpi_write_int(ptr,rsa->e1))==-1)goto err2;
+	if(U((r=gcry_rsa_mpi_write_int(ptr,rsa->e1))==-1))goto err2;
 	ptr+=r;
-	if((r=gcry_rsa_mpi_write_int(ptr,rsa->e2))==-1)goto err2;
+	if(U((r=gcry_rsa_mpi_write_int(ptr,rsa->e2))==-1))goto err2;
 	ptr+=r;
-	if((r=gcry_rsa_mpi_write_int(ptr,rsa->c))==-1)goto err2;
+	if(U((r=gcry_rsa_mpi_write_int(ptr,rsa->c))==-1))goto err2;
 	return data;
 
 err2:	((struct usicrypt_thread *)ctx)->global->memclear(data,*len);
@@ -4106,62 +4132,63 @@ void *USICRYPT(rsa_set_key)(void *ctx,void *key,int len)
 	struct gcry_rsa *rsa;
 	unsigned char *prv=key;
 
-	if(gcry_asn_next(prv,len,0x30,&h,&l))goto err1;
+	if(U(gcry_asn_next(prv,len,0x30,&h,&l)))goto err1;
 	prv+=h;
 	len-=h;
 
-	if(gcry_asn_next(prv,len,0x02,&h,&l))goto err1;
+	if(U(gcry_asn_next(prv,len,0x02,&h,&l)))goto err1;
 	if(l!=1||prv[h])goto err1;
 	prv+=h+l;
 	len-=h+l;
 
-	if(gcry_asn_next(prv,len,0x02,&h,&l))goto err1;
-	if(!(n=gcry_rsa_mpi_read_int(ctx,prv+h,l,0)))goto err1;
+	if(U(gcry_asn_next(prv,len,0x02,&h,&l)))goto err1;
+	if(U(!(n=gcry_rsa_mpi_read_int(ctx,prv+h,l,0))))goto err1;
 	prv+=h+l;
 	len-=h+l;
 
-	if(gcry_asn_next(prv,len,0x02,&h,&l))goto err2;
-	if(!(e=gcry_rsa_mpi_read_int(ctx,prv+h,l,0)))goto err2;
+	if(U(gcry_asn_next(prv,len,0x02,&h,&l)))goto err2;
+	if(U(!(e=gcry_rsa_mpi_read_int(ctx,prv+h,l,0))))goto err2;
 	prv+=h+l;
 	len-=h+l;
 
-	if(gcry_asn_next(prv,len,0x02,&h,&l))goto err3;
-	if(!(d=gcry_rsa_mpi_read_int(ctx,prv+h,l,1)))goto err3;
+	if(U(gcry_asn_next(prv,len,0x02,&h,&l)))goto err3;
+	if(U(!(d=gcry_rsa_mpi_read_int(ctx,prv+h,l,1))))goto err3;
 	prv+=h+l;
 	len-=h+l;
 
-	if(gcry_asn_next(prv,len,0x02,&h,&l))goto err4;
-	if(!(p=gcry_rsa_mpi_read_int(ctx,prv+h,l,1)))goto err4;
+	if(U(gcry_asn_next(prv,len,0x02,&h,&l)))goto err4;
+	if(U(!(p=gcry_rsa_mpi_read_int(ctx,prv+h,l,1))))goto err4;
 	prv+=h+l;
 	len-=h+l;
 
-	if(gcry_asn_next(prv,len,0x02,&h,&l))goto err5;
-	if(!(q=gcry_rsa_mpi_read_int(ctx,prv+h,l,1)))goto err5;
+	if(U(gcry_asn_next(prv,len,0x02,&h,&l)))goto err5;
+	if(U(!(q=gcry_rsa_mpi_read_int(ctx,prv+h,l,1))))goto err5;
 	prv+=h+l;
 	len-=h+l;
 
-	if(gcry_asn_next(prv,len,0x02,&h,&l))goto err6;
-	if(!(e1=gcry_rsa_mpi_read_int(ctx,prv+h,l,1)))goto err6;
+	if(U(gcry_asn_next(prv,len,0x02,&h,&l)))goto err6;
+	if(U(!(e1=gcry_rsa_mpi_read_int(ctx,prv+h,l,1))))goto err6;
 	prv+=h+l;
 	len-=h+l;
 
-	if(gcry_asn_next(prv,len,0x02,&h,&l))goto err7;
-	if(!(e2=gcry_rsa_mpi_read_int(ctx,prv+h,l,1)))goto err7;
+	if(U(gcry_asn_next(prv,len,0x02,&h,&l)))goto err7;
+	if(U(!(e2=gcry_rsa_mpi_read_int(ctx,prv+h,l,1))))goto err7;
 	prv+=h+l;
 	len-=h+l;
 
-	if(gcry_asn_next(prv,len,0x02,&h,&l))goto err8;
-	if(!(c=gcry_rsa_mpi_read_int(ctx,prv+h,l,1)))goto err8;
+	if(U(gcry_asn_next(prv,len,0x02,&h,&l)))goto err8;
+	if(U(!(c=gcry_rsa_mpi_read_int(ctx,prv+h,l,1))))goto err8;
 
-	if(!gcry_mpi_cmp_ui(n,0)||!gcry_mpi_cmp_ui(e,0))goto err9;
-	if(!gcry_mpi_test_bit(n,0)||!gcry_mpi_test_bit(e,0))goto err9;
+	if(U(!gcry_mpi_cmp_ui(n,0))||U(!gcry_mpi_cmp_ui(e,0)))goto err9;
+	if(U(!gcry_mpi_test_bit(n,0))||U(!gcry_mpi_test_bit(e,0)))goto err9;
 	h=gcry_mpi_get_nbits(n);
 	l=gcry_mpi_get_nbits(e);
-	if(h<USICRYPT_RSA_BITS_MIN||h>USICRYPT_RSA_BITS_MAX||l<2)goto err9;
-	if(gcry_mpi_cmp(e,n)>=0)goto err9;
-	if(gcry_rsa_mpi_check(n,e,d,p,q,e1,e2,c))goto err9;
+	if(U(h<USICRYPT_RSA_BITS_MIN)||U(h>USICRYPT_RSA_BITS_MAX)||U(l<2))
+		goto err9;
+	if(U(gcry_mpi_cmp(e,n)>=0))goto err9;
+	if(U(gcry_rsa_mpi_check(n,e,d,p,q,e1,e2,c)))goto err9;
 
-	if(!(rsa=malloc(sizeof(struct gcry_rsa))))goto err9;
+	if(U(!(rsa=malloc(sizeof(struct gcry_rsa)))))goto err9;
 	rsa->n=n;
 	rsa->e=e;
 	rsa->d=d;
@@ -4275,13 +4302,13 @@ void *USICRYPT(rsa_encrypt_v15)(void *ctx,void *key,void *data,int dlen,
 	unsigned char *tmp;
 	unsigned char *out=NULL;
 
-	if(gcry_reseed(ctx))goto err1;
+	if(U(gcry_reseed(ctx)))goto err1;
 	*olen=(gcry_mpi_get_nbits(rsa->n)+7)>>3;
-	if(dlen>*olen-11)goto err1;
-	if(!(tmp=malloc(*olen)))goto err1;
-	if(!(out=malloc(*olen)))goto err2;
-	if(gcry_rsa_mpi_add_type2(tmp,*olen,data,dlen))goto err3;
-	if(!gcry_rsa_mpi_public(tmp,*olen,out,&l,rsa)&&l==*olen)goto err2;
+	if(U(dlen>*olen-11))goto err1;
+	if(U(!(tmp=malloc(*olen))))goto err1;
+	if(U(!(out=malloc(*olen))))goto err2;
+	if(U(gcry_rsa_mpi_add_type2(tmp,*olen,data,dlen)))goto err3;
+	if(L(!gcry_rsa_mpi_public(tmp,*olen,out,&l,rsa))&&U(l==*olen))goto err2;
 
 err3:	((struct usicrypt_thread *)ctx)->global->memclear(out,*olen);
 	free(out);
@@ -4304,12 +4331,13 @@ void *USICRYPT(rsa_decrypt_v15)(void *ctx,void *key,void *data,int dlen,
 	unsigned char *out=NULL;
 
 	*olen=(gcry_mpi_get_nbits(rsa->n)+7)>>3;
-	if(dlen!=*olen)goto err1;
-	if(!(tmp=malloc(*olen)))goto err1;
-	if(!(out=malloc(*olen)))goto err2;
-	if(gcry_rsa_mpi_private(data,*olen,tmp,&l,rsa)||l!=*olen)goto err3;
-	if(tmp[0])goto err3;
-	if((l=gcry_rsa_mpi_check_type2(out,*olen,tmp,*olen))==-1)goto err3;
+	if(U(dlen!=*olen))goto err1;
+	if(U(!(tmp=malloc(*olen))))goto err1;
+	if(U(!(out=malloc(*olen))))goto err2;
+	if(U(gcry_rsa_mpi_private(data,*olen,tmp,&l,rsa))||U(l!=*olen))
+		goto err3;
+	if(U(tmp[0]))goto err3;
+	if(U((l=gcry_rsa_mpi_check_type2(out,*olen,tmp,*olen))==-1))goto err3;
 	out=USICRYPT(do_realloc)(ctx,out,*olen,l);
 	*olen=l;
 	goto err2;
@@ -4360,14 +4388,14 @@ void *USICRYPT(rsa_encrypt_oaep)(void *ctx,int md,void *key,void *data,int dlen,
 	default:goto err1;
 	}
 
-	if(gcry_reseed(ctx))goto err1;
+	if(U(gcry_reseed(ctx)))goto err1;
 	*olen=(gcry_mpi_get_nbits(rsa->n)+7)>>3;
-	if(dlen>*olen-2*gcry_md_get_algo_dlen(type)-2)goto err1;
-	if(!(tmp=malloc(*olen)))goto err1;
-	if(!(out=malloc(*olen)))goto err2;
-	if(gcry_add_oaep_mgf1(ctx,tmp,*olen,data,dlen,NULL,0,type))
+	if(U(dlen>*olen-2*gcry_md_get_algo_dlen(type)-2))goto err1;
+	if(U(!(tmp=malloc(*olen))))goto err1;
+	if(U(!(out=malloc(*olen))))goto err2;
+	if(U(gcry_add_oaep_mgf1(ctx,tmp,*olen,data,dlen,NULL,0,type)))
 		goto err3;
-	if(!gcry_rsa_mpi_public(tmp,*olen,out,&l,rsa)&&l==*olen)goto err2;
+	if(L(!gcry_rsa_mpi_public(tmp,*olen,out,&l,rsa))&&L(l==*olen))goto err2;
 
 err3:	((struct usicrypt_thread *)ctx)->global->memclear(out,*olen);
 	free(out);
@@ -4416,13 +4444,14 @@ void *USICRYPT(rsa_decrypt_oaep)(void *ctx,int md,void *key,void *data,int dlen,
 	}
 
 	*olen=(gcry_mpi_get_nbits(rsa->n)+7)>>3;
-	if(dlen!=*olen)goto err1;
-	if(!(tmp=malloc(*olen)))goto err1;
-	if(!(out=malloc(*olen)))goto err2;
-	if(gcry_rsa_mpi_private(data,*olen,tmp,&l,rsa)||l!=*olen)goto err3;
-	if(tmp[0])goto err3;
-	if((l=gcry_check_oaep_mgf1(ctx,out,*olen,tmp+1,*olen-1,*olen,NULL,0,
-		type))==-1)goto err3;
+	if(U(dlen!=*olen))goto err1;
+	if(U(!(tmp=malloc(*olen))))goto err1;
+	if(U(!(out=malloc(*olen))))goto err2;
+	if(U(gcry_rsa_mpi_private(data,*olen,tmp,&l,rsa))||U(l!=*olen))
+		goto err3;
+	if(U(tmp[0]))goto err3;
+	if(U((l=gcry_check_oaep_mgf1(ctx,out,*olen,tmp+1,*olen-1,*olen,NULL,0,
+		type))==-1))goto err3;
 	out=USICRYPT(do_realloc)(ctx,out,*olen,l);
 	*olen=l;
 	goto err2;
@@ -4467,11 +4496,11 @@ void *USICRYPT(dh_generate)(void *ctx,int bits,int generator,int *len)
 	unsigned char *data;
 	unsigned char *ptr;
 
-	if(bits<USICRYPT_DH_BITS_MIN||bits>USICRYPT_DH_BITS_MAX||
-		(bits&7)||(generator!=2&&generator!=5))goto err1;
-	if(gcry_reseed(ctx))goto err1;
-	if(!(p=gcry_mpi_new(bits)))goto err1;
-	if(!(x=gcry_mpi_new(bits)))goto err2;
+	if(U(bits<USICRYPT_DH_BITS_MIN)||U(bits>USICRYPT_DH_BITS_MAX)||
+		U(bits&7)||U(generator!=2&&generator!=5))goto err1;
+	if(U(gcry_reseed(ctx)))goto err1;
+	if(U(!(p=gcry_mpi_new(bits))))goto err1;
+	if(U(!(x=gcry_mpi_new(bits))))goto err2;
 	while(1)
 	{
 		if(gcry_dh_mpi_gen_prime(&p,bits))goto err3;
@@ -4495,8 +4524,8 @@ void *USICRYPT(dh_generate)(void *ctx,int bits,int generator,int *len)
 		break;
 	}
 	l=(gcry_mpi_get_nbits(p)+7)>>3;
-	if(!(bfr=malloc(l)))goto err3;
-	if(gcry_mpi_print(GCRYMPI_FMT_USG,bfr,l,&nn,p)||nn!=l)goto err4;
+	if(U(!(bfr=malloc(l))))goto err3;
+	if(U(gcry_mpi_print(GCRYMPI_FMT_USG,bfr,l,&nn,p))||U(nn!=l))goto err4;
 
 	n=l+((*bfr&0x80)?1:0);
 	if(n>=0x100)n+=7;
@@ -4506,7 +4535,7 @@ void *USICRYPT(dh_generate)(void *ctx,int bits,int generator,int *len)
 	else if(n>=0x80)n+=3;
 	else n+=2;
 	*len=n;
-	if(!(ptr=data=malloc(n)))goto err4;
+	if(U(!(ptr=data=malloc(n))))goto err4;
 
 	*ptr++=0x30;
 	n=l+((*bfr&0x80)?1:0);
@@ -4560,8 +4589,8 @@ void *USICRYPT(dh_init)(void *ctx,void *params,int len)
 #ifndef USICRYPT_NO_DH
 	struct gcry_dh *dh;
 
-	if(!(dh=malloc(sizeof(struct gcry_dh))))goto err1;
-	if(gcry_dh_mpi_parse_param(params,len,&dh->p,&dh->g))goto err2;
+	if(U(!(dh=malloc(sizeof(struct gcry_dh)))))goto err1;
+	if(U(gcry_dh_mpi_parse_param(params,len,&dh->p,&dh->g)))goto err2;
 	dh->key=NULL;
 	return dh;
 
@@ -4579,10 +4608,10 @@ void *USICRYPT(dh_genex)(void *ctx,void *dh,int *len)
 	gcry_mpi_t pub;
 	unsigned char *data=NULL;
 
-	if(gcry_reseed(ctx))goto err1;
+	if(U(gcry_reseed(ctx)))goto err1;
 	if(d->key)gcry_mpi_release(d->key);
-	if(!(d->key=gcry_dh_mpi_generate(d->p)))goto err1;
-	if(!(pub=gcry_dh_mpi_pub_from_key(d->key,d->p,d->g)))goto err1;
+	if(U(!(d->key=gcry_dh_mpi_generate(d->p))))goto err1;
+	if(U(!(pub=gcry_dh_mpi_pub_from_key(d->key,d->p,d->g))))goto err1;
 	data=gcry_dh_mpi_get_val(ctx,pub,len);
 	gcry_mpi_release(pub);
 err1:	return data;
@@ -4599,8 +4628,8 @@ void *USICRYPT(dh_derive)(void *ctx,void *dh,void *pub,int plen,int *slen)
 	gcry_mpi_t s;
 	unsigned char *data=NULL;
 
-	if(!(p=gcry_dh_mpi_set_pub(pub,plen)))goto err1;
-	if(!(s=gcry_dh_mpi_derive(d->key,p,d->p)))goto err2;
+	if(U(!(p=gcry_dh_mpi_set_pub(pub,plen))))goto err1;
+	if(U(!(s=gcry_dh_mpi_derive(d->key,p,d->p))))goto err2;
 	data=gcry_dh_mpi_get_val(ctx,s,slen);
 	gcry_mpi_release(s);
 err2:	gcry_mpi_release(p);
@@ -4639,10 +4668,10 @@ void *USICRYPT(ec_generate)(void *ctx,int curve)
 		break;
 	default:goto err1;
 	}
-	if(!(ec=malloc(sizeof(struct gcry_ec))))goto err1;
+	if(U(!(ec=malloc(sizeof(struct gcry_ec)))))goto err1;
 	ec->curve=curve;
-	if(!(ec->key=gcry_ec_mpi_generate(curve)))goto err2;
-	if(!(ec->pub=gcry_ec_mpi_pub_from_key(ctx,ec->key,curve)))goto err3;
+	if(U(!(ec->key=gcry_ec_mpi_generate(curve))))goto err2;
+	if(U(!(ec->pub=gcry_ec_mpi_pub_from_key(ctx,ec->key,curve))))goto err3;
 	return ec;
 
 err3:	gcry_mpi_release(ec->key);
@@ -4670,7 +4699,7 @@ void *USICRYPT(ec_derive)(void *ctx,void *key,void *pub,int *klen)
 	struct gcry_ec *k=key;
 	struct gcry_ec *p=pub;
 
-	if(k->curve!=p->curve)return NULL;
+	if(U(k->curve!=p->curve))return NULL;
 	return gcry_ec_mpi_derive(ctx,k->key,p->pub,klen,k->curve);
 #else
 	return NULL;
@@ -4693,9 +4722,9 @@ void *USICRYPT(ec_set_pub)(void *ctx,void *key,int len)
 #ifndef USICRYPT_NO_EC
 	struct gcry_ec *ec;
 
-	if(!(ec=malloc(sizeof(struct gcry_ec))))goto err1;
+	if(U(!(ec=malloc(sizeof(struct gcry_ec)))))goto err1;
 	ec->key=NULL;
-	if(!(ec->pub=gcry_ec_mpi_set_pub(ctx,key,len,&ec->curve)))goto err2;
+	if(U(!(ec->pub=gcry_ec_mpi_set_pub(ctx,key,len,&ec->curve))))goto err2;
 	return ec;
 
 err2:	free(ec);
@@ -4721,8 +4750,8 @@ void *USICRYPT(ec_set_key)(void *ctx,void *key,int len)
 #ifndef USICRYPT_NO_EC
 	struct gcry_ec *ec;
 
-	if(!(ec=malloc(sizeof(struct gcry_ec))))goto err1;
-	if(!(ec->key=gcry_ec_mpi_set_key(ctx,key,len,&ec->curve,&ec->pub)))
+	if(U(!(ec=malloc(sizeof(struct gcry_ec)))))goto err1;
+	if(U(!(ec->key=gcry_ec_mpi_set_key(ctx,key,len,&ec->curve,&ec->pub))))
 		goto err2;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,len);
 	return ec;
@@ -4793,10 +4822,10 @@ void *USICRYPT(x25519_generate)(void *ctx)
 #ifndef USICRYPT_NO_X25519
 	struct gcry_x25519 *x;
 
-	if(gcry_reseed(ctx))goto err1;
-	if(!(x=malloc(sizeof(struct gcry_x25519))))goto err1;
-	if(!(x->key=gcry_x25519_mpi_generate()))goto err2;
-	if(!(x->pub=gcry_x25519_mpi_pub_fom_key(x->key)))goto err3;
+	if(U(gcry_reseed(ctx)))goto err1;
+	if(U(!(x=malloc(sizeof(struct gcry_x25519)))))goto err1;
+	if(U(!(x->key=gcry_x25519_mpi_generate())))goto err2;
+	if(U(!(x->pub=gcry_x25519_mpi_pub_fom_key(x->key))))goto err3;
 	return x;
 
 err3:	gcry_mpi_release(x->key);
@@ -4815,10 +4844,10 @@ void *USICRYPT(x25519_derive)(void *ctx,void *key,void *pub,int *klen)
 	gcry_mpi_t s;
 	unsigned char *data;
 
-	if(!(s=gcry_x25519_mpi_derive(k->key,p->pub)))goto err1;
+	if(U(!(s=gcry_x25519_mpi_derive(k->key,p->pub))))goto err1;
 	*klen=32;
-	if(!(data=malloc(*klen)))goto err2;
-	if(gcry_x25519_mpi_to_le32(ctx,s,data))goto err3;
+	if(U(!(data=malloc(*klen))))goto err2;
+	if(U(gcry_x25519_mpi_to_le32(ctx,s,data)))goto err3;
 	gcry_mpi_release(s);
 	return data;
 
@@ -4838,10 +4867,10 @@ void *USICRYPT(x25519_get_pub)(void *ctx,void *key,int *len)
 	unsigned char *data;
 
 	*len=sizeof(gcry_x25519_asn1_pub)+32;
-	if(!(data=malloc(*len)))goto err1;
+	if(U(!(data=malloc(*len))))goto err1;
 	memcpy(data,gcry_x25519_asn1_pub,sizeof(gcry_x25519_asn1_pub));
-	if(gcry_x25519_mpi_to_le32(ctx,x->pub,
-		data+sizeof(gcry_x25519_asn1_pub)))goto err2;
+	if(U(gcry_x25519_mpi_to_le32(ctx,x->pub,
+		data+sizeof(gcry_x25519_asn1_pub))))goto err2;
 	return data;
 
 err2:	free(data);
@@ -4856,14 +4885,14 @@ void *USICRYPT(x25519_set_pub)(void *ctx,void *key,int len)
 #ifndef USICRYPT_NO_X25519
 	struct gcry_x25519 *x;
 
-	if(len<sizeof(gcry_x25519_asn1_pub)+32||
-		memcmp(key,gcry_x25519_asn1_pub,sizeof(gcry_x25519_asn1_pub)))
+	if(U(len<sizeof(gcry_x25519_asn1_pub)+32)||
+	    U(memcmp(key,gcry_x25519_asn1_pub,sizeof(gcry_x25519_asn1_pub))))
 		goto err1;
-	if(!(x=malloc(sizeof(struct gcry_x25519))))goto err1;
+	if(U(!(x=malloc(sizeof(struct gcry_x25519)))))goto err1;
 	x->key=NULL;
-	if(gcry_x25519_mpi_from_le32(ctx,&x->pub,
-		((unsigned char *)key)+sizeof(gcry_x25519_asn1_pub)))goto err2;
-	if(gcry_x25519_mpi_check_pub(x->pub))goto err3;
+	if(U(gcry_x25519_mpi_from_le32(ctx,&x->pub,
+		((unsigned char *)key)+sizeof(gcry_x25519_asn1_pub))))goto err2;
+	if(U(gcry_x25519_mpi_check_pub(x->pub)))goto err3;
 	return x;
 
 err3:	gcry_mpi_release(x->pub);
@@ -4881,10 +4910,10 @@ void *USICRYPT(x25519_get_key)(void *ctx,void *key,int *len)
 	unsigned char *data;
 
 	*len=sizeof(gcry_x25519_asn1_key)+32;
-	if(!(data=malloc(*len)))goto err1;
+	if(U(!(data=malloc(*len))))goto err1;
 	memcpy(data,gcry_x25519_asn1_key,sizeof(gcry_x25519_asn1_key));
-	if(gcry_x25519_mpi_to_le32(ctx,x->key,
-		data+sizeof(gcry_x25519_asn1_key)))goto err2;
+	if(U(gcry_x25519_mpi_to_le32(ctx,x->key,
+		data+sizeof(gcry_x25519_asn1_key))))goto err2;
 	return data;
 
 err2:	free(data);
@@ -4899,13 +4928,13 @@ void *USICRYPT(x25519_set_key)(void *ctx,void *key,int len)
 #ifndef USICRYPT_NO_X25519
 	struct gcry_x25519 *x;
 
-	if(len<sizeof(gcry_x25519_asn1_key)+32||
-		memcmp(key,gcry_x25519_asn1_key,sizeof(gcry_x25519_asn1_key)))
+	if(U(len<sizeof(gcry_x25519_asn1_key)+32)||
+	    U(memcmp(key,gcry_x25519_asn1_key,sizeof(gcry_x25519_asn1_key))))
 		goto err1;
-	if(!(x=malloc(sizeof(struct gcry_x25519))))goto err1;
-	if(gcry_x25519_mpi_from_le32(ctx,&x->key,
-		((unsigned char *)key)+sizeof(gcry_x25519_asn1_key)))goto err2;
-	if(!(x->pub=gcry_x25519_mpi_pub_fom_key(x->key)))goto err3;
+	if(U(!(x=malloc(sizeof(struct gcry_x25519)))))goto err1;
+	if(U(gcry_x25519_mpi_from_le32(ctx,&x->key,
+		((unsigned char *)key)+sizeof(gcry_x25519_asn1_key))))goto err2;
+	if(U(!(x->pub=gcry_x25519_mpi_pub_fom_key(x->key))))goto err3;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,len);
 	return x;
 
@@ -4945,29 +4974,31 @@ void *USICRYPT(encrypt_p8)(void *ctx,void *key,int klen,void *data,int dlen,
 	unsigned char iv[16];
 	unsigned char salt[8];
 
-	if(dlen>0x3fff||iter<=0||(digest==USICRYPT_SHA1&&bits!=128))goto err1;
+	if(U(dlen>0x3fff)||U(iter<=0)||U(digest==USICRYPT_SHA1&&bits!=128))
+		goto err1;
 
-	if(gcry_asn_next(data,dlen,0x30,&cidx,&didx))goto err1;
-	if(cidx+didx!=dlen)goto err1;
+	if(U(gcry_asn_next(data,dlen,0x30,&cidx,&didx)))goto err1;
+	if(U(cidx+didx!=dlen))goto err1;
 
 	for(didx=0;didx<4;didx++)if(gcry_digest_asn[didx].oidlen&&
 		gcry_digest_asn[didx].digest==digest)break;
-	if(didx==4)goto err1;
+	if(U(didx==4))goto err1;
 
 	for(cidx=0;cidx<24;cidx++)if(gcry_cipher_asn[cidx].oidlen&&
 		gcry_cipher_asn[cidx].cipher==cipher&&
 		gcry_cipher_asn[cidx].mode==mode&&
 		gcry_cipher_asn[cidx].bits==bits)break;
-	if(cidx==24)goto err1;
+	if(U(cidx==24))goto err1;
 
-	if(USICRYPT(random)(ctx,salt,8))goto err1;
-	if(USICRYPT(pbkdf2)(ctx,digest,key,klen,salt,8,iter,bfr))goto err2;
+	if(U(USICRYPT(random)(ctx,salt,8)))goto err1;
+	if(U(USICRYPT(pbkdf2)(ctx,digest,key,klen,salt,8,iter,bfr)))goto err2;
 
 	if(gcry_cipher_asn[cidx].ivlen)
-		if(USICRYPT(random)(ctx,iv,gcry_cipher_asn[cidx].ivlen))
+		if(U(USICRYPT(random)(ctx,iv,gcry_cipher_asn[cidx].ivlen)))
 			goto err3;
 
-	if(!(c=USICRYPT(blkcipher_init)(ctx,cipher,mode,bfr,bits,iv)))goto err4;
+	if(U(!(c=USICRYPT(blkcipher_init)(ctx,cipher,mode,bfr,bits,iv))))
+		goto err4;
 
 	if(iter>=0x800000)ilen=4;
 	else if(iter>=0x8000)ilen=3;
@@ -4984,7 +5015,7 @@ void *USICRYPT(encrypt_p8)(void *ctx,void *key,int klen,void *data,int dlen,
 	*rlen=gcry_asn_length(NULL,len1+len2+len3+dlen+plen)+
 		len1+len2+len3+dlen+plen+1;
 
-	if(!(ptr=out=malloc(*rlen)))goto err5;
+	if(U(!(ptr=out=malloc(*rlen))))goto err5;
 
 	*ptr++=0x30;
 	ptr+=gcry_asn_length(ptr,len1+len2+len3+dlen+plen);
@@ -5049,7 +5080,7 @@ void *USICRYPT(encrypt_p8)(void *ctx,void *key,int klen,void *data,int dlen,
 	memcpy(ptr,data,dlen);
 	if(gcry_cipher_asn[cidx].pad)usicrypt_cipher_padding_add(ctx,ptr,dlen);
 
-	if(USICRYPT(blkcipher_encrypt)(c,ptr,dlen+plen,ptr))goto err6;
+	if(U(USICRYPT(blkcipher_encrypt)(c,ptr,dlen+plen,ptr)))goto err6;
 	USICRYPT(blkcipher_exit)(c);
 
 	((struct usicrypt_thread *)ctx)->global->memclear(salt,sizeof(salt));
@@ -5091,137 +5122,139 @@ void *USICRYPT(decrypt_p8)(void *ctx,void *key,int klen,void *data,int dlen,
 	unsigned char *iv;
 	unsigned char bfr[64];
 
-	if(dlen>0x3fff)goto err1;
+	if(U(dlen>0x3fff))goto err1;
 
-	if(gcry_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(gcry_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	data+=h;
 	dlen-=h;
 
-	if(gcry_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(gcry_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	eptr=data+h+l;
 	elen=dlen-h-l;
 	data+=h;
 	dlen=l;
 
-	if(gcry_asn_next(data,dlen,0x06,&h,&l))goto err1;
-	if(l!=sizeof(gcry_pbes2_oid)||memcmp(data+h,gcry_pbes2_oid,l))goto err1;
-	data+=h+l;
-	dlen-=h+l;
-
-	if(gcry_asn_next(data,dlen,0x30,&h,&l))goto err1;
-	data+=h;
-	dlen-=h;
-
-	if(gcry_asn_next(data,dlen,0x30,&h,&l))goto err1;
-	data+=h;
-	dlen-=h;
-
-	if(gcry_asn_next(data,dlen,0x06,&h,&l))goto err1;
-	if(l!=sizeof(gcry_pbkdf2_oid)||memcmp(data+h,gcry_pbkdf2_oid,l))
+	if(U(gcry_asn_next(data,dlen,0x06,&h,&l)))goto err1;
+	if(U(l!=sizeof(gcry_pbes2_oid))||U(memcmp(data+h,gcry_pbes2_oid,l)))
 		goto err1;
 	data+=h+l;
 	dlen-=h+l;
 
-	if(gcry_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(gcry_asn_next(data,dlen,0x30,&h,&l)))goto err1;
+	data+=h;
+	dlen-=h;
+
+	if(U(gcry_asn_next(data,dlen,0x30,&h,&l)))goto err1;
+	data+=h;
+	dlen-=h;
+
+	if(U(gcry_asn_next(data,dlen,0x06,&h,&l)))goto err1;
+	if(U(l!=sizeof(gcry_pbkdf2_oid))||U(memcmp(data+h,gcry_pbkdf2_oid,l)))
+		goto err1;
+	data+=h+l;
+	dlen-=h+l;
+
+	if(U(gcry_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	data+=h;
 	dlen-=h;
 	mlen=l;
 
-	if(gcry_asn_next(data,dlen,0x04,&h,&l))goto err1;
+	if(U(gcry_asn_next(data,dlen,0x04,&h,&l)))goto err1;
 	salt=data+h;
 	slen=l;
 	data+=h+l;
 	dlen-=h+l;
 	mlen-=h+l;
 
-	if(gcry_asn_next(data,dlen,0x02,&h,&l))goto err1;
-	if(!l||l>sizeof(int))goto err1;
+	if(U(gcry_asn_next(data,dlen,0x02,&h,&l)))goto err1;
+	if(U(!l)||U(l>sizeof(int)))goto err1;
 	iter=data+h;
 	ilen=l;
 	data+=h+l;
 	dlen-=h+l;
 	mlen-=h+l;
 
-	if(mlen<0)goto err1;
+	if(U(mlen<0))goto err1;
 	else if(mlen)
 	{
-		if(gcry_asn_next(data,dlen,0x30,&h,&l))goto err1;
+		if(U(gcry_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 		data+=h;
 		dlen-=h;
 
-		if(gcry_asn_next(data,dlen,0x06,&h,&l))goto err1;
+		if(U(gcry_asn_next(data,dlen,0x06,&h,&l)))goto err1;
 		md=data+h;
 		mlen=l;
 		data+=h+l;
 		dlen-=h+l;
 
-		if(gcry_asn_next(data,dlen,0x05,&h,&l))goto err1;
-		if(l)goto err1;
+		if(U(gcry_asn_next(data,dlen,0x05,&h,&l)))goto err1;
+		if(U(l))goto err1;
 		data+=h;
 		dlen-=h;
 	}
 
-	if(gcry_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(gcry_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	data+=h;
 	dlen-=h;
 
-	if(gcry_asn_next(data,dlen,0x06,&h,&l))goto err1;
+	if(U(gcry_asn_next(data,dlen,0x06,&h,&l)))goto err1;
 	cipher=data+h;
 	clen=l;
 	data+=h+l;
 	dlen-=h+l;
 
-	if(gcry_asn_next(data,dlen,0x04,&h,&l))goto err1;
+	if(U(gcry_asn_next(data,dlen,0x04,&h,&l)))goto err1;
 	iv=data+h;
 	ivlen=l;
 	data+=h+l;
 	dlen-=h+l;
 	if(data!=eptr)goto err1;
 
-	if(gcry_asn_next(eptr,elen,0x04,&h,&l))goto err1;
+	if(U(gcry_asn_next(eptr,elen,0x04,&h,&l)))goto err1;
 	eptr+=h;
 	elen=l;
 
 	for(l=0,h=0;h<ilen;h++)l=(l<<8)|iter[h];
-	if(!l)goto err1;
+	if(U(!l))goto err1;
 
 	if(mlen)
 	{
 		for(h=0;h<4;h++)if(gcry_digest_asn[h].oidlen&&
 			mlen==gcry_digest_asn[h].oidlen&&
 			!memcmp(md,gcry_digest_asn[h].oid,mlen))break;
-		if(h==4)goto err1;
+		if(U(h==4))goto err1;
 		else digest=gcry_digest_asn[h].digest;
 	}
 
 	for(h=0;h<24;h++)if(gcry_cipher_asn[h].oidlen&&
 		clen==gcry_cipher_asn[h].oidlen&&
 		!memcmp(cipher,gcry_cipher_asn[h].oid,clen))break;
-	if(h==24||gcry_cipher_asn[h].ivlen!=ivlen||
-		(gcry_cipher_asn[h].bits!=128&&digest==USICRYPT_SHA1))goto err1;
+	if(U(h==24)||U(gcry_cipher_asn[h].ivlen!=ivlen)||
+		U(gcry_cipher_asn[h].bits!=128&&digest==USICRYPT_SHA1))
+			goto err1;
 
-	if(gcry_cipher_asn[h].pad)if(elen&0x0f)goto err1;
+	if(gcry_cipher_asn[h].pad)if(U(elen&0x0f))goto err1;
 
-	if(USICRYPT(pbkdf2)(ctx,digest,key,klen,salt,slen,l,bfr))goto err1;
+	if(U(USICRYPT(pbkdf2)(ctx,digest,key,klen,salt,slen,l,bfr)))goto err1;
 
-	if(!(out=malloc(elen)))goto err2;
+	if(U(!(out=malloc(elen))))goto err2;
 
-	if(!(c=USICRYPT(blkcipher_init)(ctx,gcry_cipher_asn[h].cipher,
-		gcry_cipher_asn[h].mode,bfr,gcry_cipher_asn[h].bits,iv)))
+	if(U(!(c=USICRYPT(blkcipher_init)(ctx,gcry_cipher_asn[h].cipher,
+		gcry_cipher_asn[h].mode,bfr,gcry_cipher_asn[h].bits,iv))))
 		goto err3;
-	if(USICRYPT(blkcipher_decrypt)(c,eptr,elen,out))goto err5;
+	if(U(USICRYPT(blkcipher_decrypt)(c,eptr,elen,out)))goto err5;
 	USICRYPT(blkcipher_exit)(c);
 
 	if(gcry_cipher_asn[h].pad)
 	{
-		if((*rlen=usicrypt_cipher_padding_get(ctx,out,elen))==-1)
+		if(U((*rlen=usicrypt_cipher_padding_get(ctx,out,elen))==-1))
 			goto err4;
 		else *rlen=elen-*rlen;
 	}
 	else *rlen=elen;
 
-	if(gcry_asn_next(out,*rlen,0x30,&h,&l))goto err4;
-	if(h+l!=*rlen)goto err4;
+	if(U(gcry_asn_next(out,*rlen,0x30,&h,&l)))goto err4;
+	if(U(h+l!=*rlen))goto err4;
 
 	((struct usicrypt_thread *)ctx)->global->memclear(bfr,sizeof(bfr));
 	return USICRYPT(do_realloc)(ctx,out,elen,*rlen);
@@ -5281,25 +5314,27 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 	void *iv)
 {
 	struct usicrypt_cipher *c=NULL;
+	unsigned long long zero[2]={0,0};
+
+	if(!iv)iv=zero;
 
 	switch(cipher|mode)
 	{
 #ifndef USICRYPT_NO_AES
 #ifndef USICRYPT_NO_ECB
 	case USICRYPT_AES|USICRYPT_ECB:
-		if(!(c=gcry_cipher_init(ctx,0,GCRY_CIPHER_MODE_ECB,
-			0,key,klen,NULL,NULL,0)))break;
+		if(U(!(c=gcry_cipher_init(ctx,0,GCRY_CIPHER_MODE_ECB,
+			0,key,klen,NULL,NULL,0))))break;
 		c->encrypt=gcry_cipher_16_encrypt;
 		c->decrypt=gcry_cipher_16_decrypt;
 		c->reset=NULL;
 		c->exit=gcry_cipher_exit;
 		break;
-		return c;
 #endif
 #ifndef USICRYPT_NO_CBC
 	case USICRYPT_AES|USICRYPT_CBC:
-		if(!(c=gcry_cipher_init(ctx,0,GCRY_CIPHER_MODE_CBC,
-			0,key,klen,iv,NULL,0)))break;
+		if(U(!(c=gcry_cipher_init(ctx,0,GCRY_CIPHER_MODE_CBC,
+			0,key,klen,iv,NULL,0))))break;
 		c->encrypt=gcry_cipher_16_encrypt;
 		c->decrypt=gcry_cipher_16_decrypt;
 		c->reset=gcry_cipher_iv16_reset;
@@ -5308,8 +5343,8 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CTS
 	case USICRYPT_AES|USICRYPT_CTS:
-		if(!(c=gcry_cipher_init(ctx,0,GCRY_CIPHER_MODE_CBC,
-			GCRY_CIPHER_CBC_CTS,key,klen,iv,NULL,0)))break;
+		if(U(!(c=gcry_cipher_init(ctx,0,GCRY_CIPHER_MODE_CBC,
+			GCRY_CIPHER_CBC_CTS,key,klen,iv,NULL,0))))break;
 		c->encrypt=gcry_cipher_17_encrypt;
 		c->decrypt=gcry_cipher_17_decrypt;
 		c->reset=gcry_cipher_iv16_reset;
@@ -5318,8 +5353,8 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CFB
 	case USICRYPT_AES|USICRYPT_CFB:
-		if(!(c=gcry_cipher_init(ctx,0,GCRY_CIPHER_MODE_CFB,
-			0,key,klen,iv,NULL,0)))break;
+		if(U(!(c=gcry_cipher_init(ctx,0,GCRY_CIPHER_MODE_CFB,
+			0,key,klen,iv,NULL,0))))break;
 		c->encrypt=gcry_cipher_1_encrypt;
 		c->decrypt=gcry_cipher_1_decrypt;
 		c->reset=gcry_cipher_iv16_reset;
@@ -5328,8 +5363,8 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CFB8
 	case USICRYPT_AES|USICRYPT_CFB8:
-		if(!(c=gcry_cipher_init(ctx,0,GCRY_CIPHER_MODE_ECB,
-			0,key,klen,iv,NULL,32)))break;
+		if(U(!(c=gcry_cipher_init(ctx,0,GCRY_CIPHER_MODE_ECB,
+			0,key,klen,iv,NULL,32))))break;
 		c->encrypt=gcry_cipher_cfb8_encrypt;
 		c->decrypt=gcry_cipher_cfb8_decrypt;
 		c->reset=gcry_cipher_cfb8_reset;
@@ -5338,8 +5373,8 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_OFB
 	case USICRYPT_AES|USICRYPT_OFB:
-		if(!(c=gcry_cipher_init(ctx,0,GCRY_CIPHER_MODE_OFB,
-			0,key,klen,iv,NULL,0)))break;
+		if(U(!(c=gcry_cipher_init(ctx,0,GCRY_CIPHER_MODE_OFB,
+			0,key,klen,iv,NULL,0))))break;
 		c->encrypt=gcry_cipher_zero_crypt;
 		c->decrypt=gcry_cipher_zero_crypt;
 		c->reset=gcry_cipher_iv16_reset;
@@ -5348,8 +5383,8 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CTR
 	case USICRYPT_AES|USICRYPT_CTR:
-		if(!(c=gcry_cipher_init(ctx,0,GCRY_CIPHER_MODE_CTR,
-			0,key,klen,NULL,iv,0)))break;
+		if(U(!(c=gcry_cipher_init(ctx,0,GCRY_CIPHER_MODE_CTR,
+			0,key,klen,NULL,iv,0))))break;
 		c->encrypt=gcry_cipher_zero_crypt;
 		c->decrypt=gcry_cipher_zero_crypt;
 		c->reset=gcry_cipher_ctr_reset;
@@ -5360,19 +5395,18 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #ifndef USICRYPT_NO_CAMELLIA
 #ifndef USICRYPT_NO_ECB
 	case USICRYPT_CAMELLIA|USICRYPT_ECB:
-		if(!(c=gcry_cipher_init(ctx,1,GCRY_CIPHER_MODE_ECB,
-			0,key,klen,NULL,NULL,0)))break;
+		if(U(!(c=gcry_cipher_init(ctx,1,GCRY_CIPHER_MODE_ECB,
+			0,key,klen,NULL,NULL,0))))break;
 		c->encrypt=gcry_cipher_16_encrypt;
 		c->decrypt=gcry_cipher_16_decrypt;
 		c->reset=NULL;
 		c->exit=gcry_cipher_exit;
 		break;
-		return c;
 #endif
 #ifndef USICRYPT_NO_CBC
 	case USICRYPT_CAMELLIA|USICRYPT_CBC:
-		if(!(c=gcry_cipher_init(ctx,1,GCRY_CIPHER_MODE_CBC,
-			0,key,klen,iv,NULL,0)))break;
+		if(U(!(c=gcry_cipher_init(ctx,1,GCRY_CIPHER_MODE_CBC,
+			0,key,klen,iv,NULL,0))))break;
 		c->encrypt=gcry_cipher_16_encrypt;
 		c->decrypt=gcry_cipher_16_decrypt;
 		c->reset=gcry_cipher_iv16_reset;
@@ -5381,8 +5415,8 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CTS
 	case USICRYPT_CAMELLIA|USICRYPT_CTS:
-		if(!(c=gcry_cipher_init(ctx,1,GCRY_CIPHER_MODE_CBC,
-			GCRY_CIPHER_CBC_CTS,key,klen,iv,NULL,0)))break;
+		if(U(!(c=gcry_cipher_init(ctx,1,GCRY_CIPHER_MODE_CBC,
+			GCRY_CIPHER_CBC_CTS,key,klen,iv,NULL,0))))break;
 		c->encrypt=gcry_cipher_17_encrypt;
 		c->decrypt=gcry_cipher_17_decrypt;
 		c->reset=gcry_cipher_iv16_reset;
@@ -5391,8 +5425,8 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CFB
 	case USICRYPT_CAMELLIA|USICRYPT_CFB:
-		if(!(c=gcry_cipher_init(ctx,1,GCRY_CIPHER_MODE_CFB,
-			0,key,klen,iv,NULL,0)))break;
+		if(U(!(c=gcry_cipher_init(ctx,1,GCRY_CIPHER_MODE_CFB,
+			0,key,klen,iv,NULL,0))))break;
 		c->encrypt=gcry_cipher_1_encrypt;
 		c->decrypt=gcry_cipher_1_decrypt;
 		c->reset=gcry_cipher_iv16_reset;
@@ -5401,8 +5435,8 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CFB8
 	case USICRYPT_CAMELLIA|USICRYPT_CFB8:
-		if(!(c=gcry_cipher_init(ctx,1,GCRY_CIPHER_MODE_ECB,
-			0,key,klen,iv,NULL,32)))break;
+		if(U(!(c=gcry_cipher_init(ctx,1,GCRY_CIPHER_MODE_ECB,
+			0,key,klen,iv,NULL,32))))break;
 		c->encrypt=gcry_cipher_cfb8_encrypt;
 		c->decrypt=gcry_cipher_cfb8_decrypt;
 		c->reset=gcry_cipher_cfb8_reset;
@@ -5411,8 +5445,8 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_OFB
 	case USICRYPT_CAMELLIA|USICRYPT_OFB:
-		if(!(c=gcry_cipher_init(ctx,1,GCRY_CIPHER_MODE_OFB,
-			0,key,klen,iv,NULL,0)))break;
+		if(U(!(c=gcry_cipher_init(ctx,1,GCRY_CIPHER_MODE_OFB,
+			0,key,klen,iv,NULL,0))))break;
 		c->encrypt=gcry_cipher_zero_crypt;
 		c->decrypt=gcry_cipher_zero_crypt;
 		c->reset=gcry_cipher_iv16_reset;
@@ -5421,8 +5455,8 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CTR
 	case USICRYPT_CAMELLIA|USICRYPT_CTR:
-		if(!(c=gcry_cipher_init(ctx,1,GCRY_CIPHER_MODE_CTR,
-			0,key,klen,NULL,iv,0)))break;
+		if(U(!(c=gcry_cipher_init(ctx,1,GCRY_CIPHER_MODE_CTR,
+			0,key,klen,NULL,iv,0))))break;
 		c->encrypt=gcry_cipher_zero_crypt;
 		c->decrypt=gcry_cipher_zero_crypt;
 		c->reset=gcry_cipher_ctr_reset;
@@ -5433,8 +5467,8 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #ifndef USICRYPT_NO_CHACHA
 #ifndef USICRYPT_NO_STREAM
 	case USICRYPT_CHACHA20|USICRYPT_STREAM:
-		if(!(c=gcry_cipher_init(ctx,2,GCRY_CIPHER_MODE_STREAM,
-			0,key,klen,iv,NULL,0)))break;
+		if(U(!(c=gcry_cipher_init(ctx,2,GCRY_CIPHER_MODE_STREAM,
+			0,key,klen,iv,NULL,0))))break;
 		c->encrypt=gcry_cipher_1_encrypt;
 		c->decrypt=gcry_cipher_1_encrypt;
 		c->reset=gcry_cipher_iv8_reset;
@@ -5477,7 +5511,7 @@ void *USICRYPT(dskcipher_init)(void *ctx,int cipher,int mode,void *key,int klen)
 #ifndef USICRYPT_NO_AES
 #ifndef USICRYPT_NO_XTS
 	case USICRYPT_AES|USICRYPT_XTS:
-		if(!(c=gcry_cipher_xts_init(ctx,0,key,klen)))break;
+		if(U(!(c=gcry_cipher_xts_init(ctx,0,key,klen))))break;
 		c->encrypt=gcry_cipher_xts_encrypt;
 		c->decrypt=gcry_cipher_xts_decrypt;
 		c->exit=gcry_cipher_xts_exit;
@@ -5485,7 +5519,7 @@ void *USICRYPT(dskcipher_init)(void *ctx,int cipher,int mode,void *key,int klen)
 #endif
 #ifndef USICRYPT_NO_ESSIV
 	case USICRYPT_AES|USICRYPT_ESSIV:
-		if(!(c=gcry_cipher_essiv_init(ctx,0,key,klen)))break;
+		if(U(!(c=gcry_cipher_essiv_init(ctx,0,key,klen))))break;
 		c->encrypt=gcry_cipher_essiv_encrypt;
 		c->decrypt=gcry_cipher_essiv_decrypt;
 		c->exit=gcry_cipher_essiv_exit;
@@ -5495,7 +5529,7 @@ void *USICRYPT(dskcipher_init)(void *ctx,int cipher,int mode,void *key,int klen)
 #ifndef USICRYPT_NO_CAMELLIA
 #ifndef USICRYPT_NO_XTS
 	case USICRYPT_CAMELLIA|USICRYPT_XTS:
-		if(!(c=gcry_cipher_xts_init(ctx,1,key,klen)))break;
+		if(U(!(c=gcry_cipher_xts_init(ctx,1,key,klen))))break;
 		c->encrypt=gcry_cipher_xts_encrypt;
 		c->decrypt=gcry_cipher_xts_decrypt;
 		c->exit=gcry_cipher_xts_exit;
@@ -5503,7 +5537,7 @@ void *USICRYPT(dskcipher_init)(void *ctx,int cipher,int mode,void *key,int klen)
 #endif
 #ifndef USICRYPT_NO_ESSIV
 	case USICRYPT_CAMELLIA|USICRYPT_ESSIV:
-		if(!(c=gcry_cipher_essiv_init(ctx,1,key,klen)))break;
+		if(U(!(c=gcry_cipher_essiv_init(ctx,1,key,klen))))break;
 		c->encrypt=gcry_cipher_essiv_encrypt;
 		c->decrypt=gcry_cipher_essiv_decrypt;
 		c->exit=gcry_cipher_essiv_exit;
@@ -5541,7 +5575,7 @@ void *USICRYPT(aeadcipher_init)(void *ctx,int cipher,void *key,int klen,
 #ifndef USICRYPT_NO_AES
 #ifndef USICRYPT_NO_GCM
 	case USICRYPT_AES_GCM:
-		if(!(c=gcry_aes_gcm_init(ctx,key,klen,ilen,tlen)))break;
+		if(U(!(c=gcry_aes_gcm_init(ctx,key,klen,ilen,tlen))))break;
 		c->encrypt=gcry_aes_gcm_encrypt;
 		c->decrypt=gcry_aes_gcm_decrypt;
 #ifndef USICRYPT_NO_IOV
@@ -5553,7 +5587,7 @@ void *USICRYPT(aeadcipher_init)(void *ctx,int cipher,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CCM
 	case USICRYPT_AES_CCM:
-		if(!(c=gcry_aes_ccm_init(ctx,key,klen,ilen,tlen)))break;
+		if(U(!(c=gcry_aes_ccm_init(ctx,key,klen,ilen,tlen))))break;
 		c->encrypt=gcry_aes_ccm_encrypt;
 		c->decrypt=gcry_aes_ccm_decrypt;
 #ifndef USICRYPT_NO_IOV
@@ -5567,7 +5601,7 @@ void *USICRYPT(aeadcipher_init)(void *ctx,int cipher,void *key,int klen,
 #ifndef USICRYPT_NO_CHACHA
 #ifndef USICRYPT_NO_POLY
 	case USICRYPT_CHACHA20_POLY1305:
-		if(!(c=gcry_chacha_poly_init(ctx,key,klen,ilen,tlen)))break;
+		if(U(!(c=gcry_chacha_poly_init(ctx,key,klen,ilen,tlen))))break;
 		c->encrypt=gcry_chacha_poly_encrypt;
 		c->decrypt=gcry_chacha_poly_decrypt;
 #ifndef USICRYPT_NO_IOV
@@ -5671,7 +5705,7 @@ void *USICRYPT(thread_init)(void *global)
 {
 	struct usicrypt_thread *ctx;
 
-	if(!(ctx=malloc(sizeof(struct usicrypt_thread))))goto err1;
+	if(U(!(ctx=malloc(sizeof(struct usicrypt_thread)))))goto err1;
 	ctx->global=global;
 	ctx->total=0;
 err1:	return ctx;
@@ -5689,22 +5723,22 @@ void *USICRYPT(global_init)(int (*rng_seed)(void *data,int len),
 	unsigned char bfr[32];
 
 	USICRYPT(do_realloc)(NULL,NULL,0,0);
-	if(!(ctx=malloc(sizeof(struct usicrypt_global))))goto err1;
+	if(U(!(ctx=malloc(sizeof(struct usicrypt_global)))))goto err1;
 	ctx->rng_seed=(rng_seed?rng_seed:USICRYPT(get_random));
 	ctx->memclear=(memclear?memclear:USICRYPT(do_memclear));
 	/* we do not want to wait on a blocking /dev/random */
-	if(gcry_control(GCRYCTL_ENABLE_QUICK_RANDOM))goto err2;
+	if(U(gcry_control(GCRYCTL_ENABLE_QUICK_RANDOM)))goto err2;
 	/* we do not want any crazy secure memory noise */
-	if(gcry_control(GCRYCTL_DISABLE_SECMEM_WARN))goto err2;
+	if(U(gcry_control(GCRYCTL_DISABLE_SECMEM_WARN)))goto err2;
 	/* we do not want libgcrypt to mess up privileges */
-	if(gcry_control(GCRYCTL_DISABLE_PRIV_DROP))goto err2;
+	if(U(gcry_control(GCRYCTL_DISABLE_PRIV_DROP)))goto err2;
 	/* we do not want to need root or capabilities */
-	if(gcry_control(GCRYCTL_DISABLE_LOCKED_SECMEM))goto err2;
+	if(U(gcry_control(GCRYCTL_DISABLE_LOCKED_SECMEM)))goto err2;
 	/* 64KB secure memory should be enough */
-	if(gcry_control(GCRYCTL_INIT_SECMEM,65536))goto err2;
-	if(gcry_control(GCRYCTL_INITIALIZATION_FINISHED))goto err3;
-	if(ctx->rng_seed(bfr,sizeof(bfr)))goto err4;
-	if(gcry_random_add_bytes(bfr,sizeof(bfr),100))goto err5;
+	if(U(gcry_control(GCRYCTL_INIT_SECMEM,65536)))goto err2;
+	if(U(gcry_control(GCRYCTL_INITIALIZATION_FINISHED)))goto err3;
+	if(U(ctx->rng_seed(bfr,sizeof(bfr))))goto err4;
+	if(U(gcry_random_add_bytes(bfr,sizeof(bfr),100)))goto err5;
 	ctx->memclear(bfr,sizeof(bfr));
 	return ctx;
 

@@ -528,13 +528,13 @@ static int mbed_asn_next(unsigned char *prm,int len,unsigned char id,
 	int n;
 
 	*hlen=2;
-	if(len<=1)goto err1;
-	if(prm[0]!=id)goto err1;
+	if(U(len<=1))goto err1;
+	if(U(prm[0]!=id))goto err1;
 	if(prm[1]&0x80)
 	{
 		*hlen=prm[1]&0x7f;
-		if(*hlen<1||*hlen>3)goto err1;
-		if(len<*hlen+2)goto err1;
+		if(U(*hlen<1)||U(*hlen>3))goto err1;
+		if(U(len<*hlen+2))goto err1;
 		*dlen=0;
 		n=2;
 		switch(*hlen)
@@ -548,7 +548,7 @@ static int mbed_asn_next(unsigned char *prm,int len,unsigned char id,
 		*hlen+=2;
 	}
 	else *dlen=prm[1];
-	if(*hlen+*dlen>len)goto err1;
+	if(U(*hlen+*dlen>len))goto err1;
 	return 0;
 
 err1:	return -1;
@@ -563,8 +563,8 @@ static int mbed_reseed(void *ctx)
 	int r=-1;
 	unsigned char bfr[32];
 
-	if(((struct usicrypt_thread *)ctx)->global->rng_seed(bfr,sizeof(bfr)))
-		goto err1;
+	if(U(((struct usicrypt_thread *)ctx)->global->
+		rng_seed(bfr,sizeof(bfr))))goto err1;
 	mbedtls_hmac_drbg_update(&((struct usicrypt_thread *)ctx)->rng,
 		bfr,sizeof(bfr));
 	r=0;
@@ -613,26 +613,26 @@ static void *mbed_rsa_do_sign_v15(void *ctx,int md,void *key,void *data,
 	if(mbed_reseed(ctx))goto err1;
 
 	mbedtls_md_init(&c);
-	if(mbedtls_md_setup(&c,mbedtls_md_info_from_type(type),0))goto err2;
-	if(mbedtls_md_starts(&c))goto err2;
+	if(U(mbedtls_md_setup(&c,mbedtls_md_info_from_type(type),0)))goto err2;
+	if(U(mbedtls_md_starts(&c)))goto err2;
 	if(!mode)
 	{
-		if(mbedtls_md_update(&c,data,dlen))goto err2;
+		if(U(mbedtls_md_update(&c,data,dlen)))goto err2;
 	}
 	else for(i=0;i<dlen;i++)
-		if(mbedtls_md_update(&c,iov[i].data,iov[i].length))
+		if(U(mbedtls_md_update(&c,iov[i].data,iov[i].length)))
 			goto err2;
-	if(mbedtls_md_finish(&c,hash))goto err2;
+	if(U(mbedtls_md_finish(&c,hash)))goto err2;
 
 	*slen=mbedtls_pk_get_len(key);
-	if(!(sig=malloc(*slen)))goto err3;
+	if(U(!(sig=malloc(*slen))))goto err3;
 	mbedtls_rsa_set_padding(mbedtls_pk_rsa(*((mbedtls_pk_context *)key)),
 		MBEDTLS_RSA_PKCS_V15,MBEDTLS_MD_NONE);
-	if(mbedtls_rsa_rsassa_pkcs1_v15_sign(
+	if(U(mbedtls_rsa_rsassa_pkcs1_v15_sign(
 		mbedtls_pk_rsa(*((mbedtls_pk_context *)key)),
 		mbedtls_hmac_drbg_random,&((struct usicrypt_thread *)ctx)->rng,
 		MBEDTLS_RSA_PRIVATE,MBEDTLS_MD_NONE,
-		mbedtls_md_get_size(mbedtls_md_info_from_type(type)),hash,sig))
+		mbedtls_md_get_size(mbedtls_md_info_from_type(type)),hash,sig)))
 		goto err4;
 	mbedtls_rsa_set_padding(mbedtls_pk_rsa(*((mbedtls_pk_context *)key)),
 		MBEDTLS_RSA_PKCS_V21,MBEDTLS_MD_SHA256);
@@ -684,19 +684,19 @@ static int mbed_rsa_do_verify_v15(void *ctx,int md,void *key,void *data,
 	default:goto err1;
 	}
 
-	if(slen<mbedtls_pk_get_len(key))goto err1;
+	if(U(slen<mbedtls_pk_get_len(key)))goto err1;
 
 	mbedtls_md_init(&c);
-	if(mbedtls_md_setup(&c,mbedtls_md_info_from_type(type),0))goto err2;
-	if(mbedtls_md_starts(&c))goto err2;
+	if(U(mbedtls_md_setup(&c,mbedtls_md_info_from_type(type),0)))goto err2;
+	if(U(mbedtls_md_starts(&c)))goto err2;
 	if(!mode)
 	{
-		if(mbedtls_md_update(&c,data,dlen))goto err2;
+		if(U(mbedtls_md_update(&c,data,dlen)))goto err2;
 	}
 	else for(i=0;i<dlen;i++)
-		if(mbedtls_md_update(&c,iov[i].data,iov[i].length))
+		if(U(mbedtls_md_update(&c,iov[i].data,iov[i].length)))
 			goto err2;
-	if(mbedtls_md_finish(&c,hash))goto err2;
+	if(U(mbedtls_md_finish(&c,hash)))goto err2;
 
 	mbedtls_rsa_set_padding(mbedtls_pk_rsa(*((mbedtls_pk_context *)key)),
 		MBEDTLS_RSA_PKCS_V15,MBEDTLS_MD_NONE);
@@ -711,7 +711,7 @@ static int mbed_rsa_do_verify_v15(void *ctx,int md,void *key,void *data,
 	((struct usicrypt_thread *)ctx)->global->memclear(hash,sizeof(hash));
 
 err2:	mbedtls_md_free(&c);
-err1:	return r?-1:0;
+err1:	return U(r)?-1:0;
 }
 
 static void *mbed_rsa_do_sign_pss(void *ctx,int md,void *key,void *data,
@@ -749,28 +749,28 @@ static void *mbed_rsa_do_sign_pss(void *ctx,int md,void *key,void *data,
 	default:goto err1;
 	}
 
-	if(mbed_reseed(ctx))goto err1;
+	if(U(mbed_reseed(ctx)))goto err1;
 
 	mbedtls_md_init(&c);
-	if(mbedtls_md_setup(&c,mbedtls_md_info_from_type(type),0))goto err2;
-	if(mbedtls_md_starts(&c))goto err2;
+	if(U(mbedtls_md_setup(&c,mbedtls_md_info_from_type(type),0)))goto err2;
+	if(U(mbedtls_md_starts(&c)))goto err2;
 	if(!mode)
 	{
-		if(mbedtls_md_update(&c,data,dlen))goto err2;
+		if(U(mbedtls_md_update(&c,data,dlen)))goto err2;
 	}
 	else for(i=0;i<dlen;i++)
-		if(mbedtls_md_update(&c,iov[i].data,iov[i].length))
+		if(U(mbedtls_md_update(&c,iov[i].data,iov[i].length)))
 			goto err2;
-	if(mbedtls_md_finish(&c,hash))goto err2;
+	if(U(mbedtls_md_finish(&c,hash)))goto err2;
 
 	*slen=mbedtls_pk_get_len(key);
-	if(!(sig=malloc(*slen)))goto err3;
+	if(U(!(sig=malloc(*slen))))goto err3;
 	mbedtls_rsa_set_padding(mbedtls_pk_rsa(*((mbedtls_pk_context *)key)),
 		MBEDTLS_RSA_PKCS_V21,type);
-	if(mbedtls_rsa_rsassa_pss_sign(
+	if(U(mbedtls_rsa_rsassa_pss_sign(
 		mbedtls_pk_rsa(*((mbedtls_pk_context *)key)),
 		mbedtls_hmac_drbg_random,&((struct usicrypt_thread *)ctx)->rng,
-		MBEDTLS_RSA_PRIVATE,type,0,hash,sig))goto err4;
+		MBEDTLS_RSA_PRIVATE,type,0,hash,sig)))goto err4;
 	mbedtls_rsa_set_padding(mbedtls_pk_rsa(*((mbedtls_pk_context *)key)),
 		MBEDTLS_RSA_PKCS_V21,MBEDTLS_MD_SHA256);
 	((struct usicrypt_thread *)ctx)->global->memclear(hash,sizeof(hash));
@@ -820,28 +820,28 @@ static int mbed_rsa_do_verify_pss(void *ctx,int md,void *key,void *data,
 	default:goto err1;
 	}
 
-	if(slen!=mbedtls_pk_get_len(key))goto err1;
-	if(slen-2*mbedtls_md_get_size(mbedtls_md_info_from_type(type))-2<0)
+	if(U(slen!=mbedtls_pk_get_len(key)))goto err1;
+	if(U(slen-2*mbedtls_md_get_size(mbedtls_md_info_from_type(type))-2<0))
 		goto err1;
 
 	mbedtls_md_init(&c);
-	if(mbedtls_md_setup(&c,mbedtls_md_info_from_type(type),0))goto err2;
-	if(mbedtls_md_starts(&c))goto err2;
+	if(U(mbedtls_md_setup(&c,mbedtls_md_info_from_type(type),0)))goto err2;
+	if((mbedtls_md_starts(&c)))goto err2;
 	if(!mode)
 	{
-		if(mbedtls_md_update(&c,data,dlen))goto err2;
+		if(U(mbedtls_md_update(&c,data,dlen)))goto err2;
 	}
 	else for(i=0;i<dlen;i++)
-		if(mbedtls_md_update(&c,iov[i].data,iov[i].length))
+		if(U(mbedtls_md_update(&c,iov[i].data,iov[i].length)))
 			goto err2;
-	if(mbedtls_md_finish(&c,hash))goto err2;
+	if(U(mbedtls_md_finish(&c,hash)))goto err2;
 
 	mbedtls_rsa_set_padding(mbedtls_pk_rsa(*((mbedtls_pk_context *)key)),
 		MBEDTLS_RSA_PKCS_V21,type);
-	if(mbedtls_rsa_rsassa_pss_verify(
+	if(U(mbedtls_rsa_rsassa_pss_verify(
 		mbedtls_pk_rsa(*((mbedtls_pk_context *)key)),
 		mbedtls_hmac_drbg_random,&((struct usicrypt_thread *)ctx)->rng,
-		MBEDTLS_RSA_PUBLIC,type,0,hash,sig))goto err3;
+		MBEDTLS_RSA_PUBLIC,type,0,hash,sig)))goto err3;
 	((struct usicrypt_thread *)ctx)->global->memclear(hash,sizeof(hash));
 	mbedtls_rsa_set_padding(mbedtls_pk_rsa(*((mbedtls_pk_context *)key)),
 		MBEDTLS_RSA_PKCS_V21,MBEDTLS_MD_SHA256);
@@ -895,26 +895,26 @@ static void *mbed_ec_do_sign(void *ctx,int md,void *key,void *data,int dlen,
 	default:goto err1;
 	}
 
-	if(mbed_reseed(ctx))goto err1;
+	if(U(mbed_reseed(ctx)))goto err1;
 	if(!mode)
 	{
-		if(mbedtls_md(mbedtls_md_info_from_type(type),data,dlen,hash))
-			goto err2;
+		if(U(mbedtls_md(mbedtls_md_info_from_type(type),data,dlen,
+			hash)))goto err2;
 	}
 	else
 	{
 		mbedtls_md_init(&c);
-		if(mbedtls_md_setup(&c,mbedtls_md_info_from_type(type),0))
+		if(U(mbedtls_md_setup(&c,mbedtls_md_info_from_type(type),0)))
 			goto err3;
-		if(mbedtls_md_starts(&c))goto err3;
+		if(U(mbedtls_md_starts(&c)))goto err3;
 		for(i=0;i<dlen;i++)
-			if(mbedtls_md_update(&c,iov[i].data,iov[i].length))
+			if(U(mbedtls_md_update(&c,iov[i].data,iov[i].length)))
 				goto err3;
-		if(mbedtls_md_finish(&c,hash))goto err3;
+		if(U(mbedtls_md_finish(&c,hash)))goto err3;
 	}
-	if(mbedtls_pk_sign(key,type,hash,0,sig,&len,mbed_seed,
-		((struct usicrypt_thread *)ctx)->global))goto err3;
-	if(!(r=malloc(len)))goto err4;
+	if(U(mbedtls_pk_sign(key,type,hash,0,sig,&len,mbed_seed,
+		((struct usicrypt_thread *)ctx)->global)))goto err3;
+	if(U(!(r=malloc(len))))goto err4;
 	memcpy(r,sig,len);
 	*slen=len;
 err4:	((struct usicrypt_thread *)ctx)->global->memclear(sig,len);
@@ -960,21 +960,21 @@ static int mbed_ec_do_verify(void *ctx,int md,void *key,void *data,int dlen,
 
 	if(!mode)
 	{
-		if(mbedtls_md(mbedtls_md_info_from_type(type),data,dlen,hash))
-			goto err2;
+		if(U(mbedtls_md(mbedtls_md_info_from_type(type),data,dlen,
+			hash)))goto err2;
 	}
 	else
 	{
 		mbedtls_md_init(&c);
-		if(mbedtls_md_setup(&c,mbedtls_md_info_from_type(type),0))
+		if(U(mbedtls_md_setup(&c,mbedtls_md_info_from_type(type),0)))
 			goto err3;
-		if(mbedtls_md_starts(&c))goto err3;
+		if(U(mbedtls_md_starts(&c)))goto err3;
 		for(i=0;i<dlen;i++)
-			if(mbedtls_md_update(&c,iov[i].data,iov[i].length))
+			if(U(mbedtls_md_update(&c,iov[i].data,iov[i].length)))
 				goto err3;
-		if(mbedtls_md_finish(&c,hash))goto err3;
+		if(U(mbedtls_md_finish(&c,hash)))goto err3;
 	}
-	if(mbedtls_pk_verify(key,type,hash,0,sig,slen))goto err3;
+	if(U(mbedtls_pk_verify(key,type,hash,0,sig,slen)))goto err3;
 	r=0;
 
 err3:	if(mode)mbedtls_md_free(&c);
@@ -1005,8 +1005,8 @@ static int mbed_aes_cmac(void *ctx,void *key,int klen,void *src,int slen,
 	default:return -1;
 	}
 
-	if(mbedtls_cipher_cmac(mbedtls_cipher_info_from_type(type),
-		key,klen,src,slen,dst))return -1;
+	if(U(mbedtls_cipher_cmac(mbedtls_cipher_info_from_type(type),
+		key,klen,src,slen,dst)))return -1;
 	return 0;
 }
 
@@ -1034,12 +1034,12 @@ static int mbed_aes_cmac_iov(void *ctx,void *key,int klen,
 	}
 
 	mbedtls_cipher_init(&c);
-	if(mbedtls_cipher_setup(&c,mbedtls_cipher_info_from_type(type)))
+	if(U(mbedtls_cipher_setup(&c,mbedtls_cipher_info_from_type(type))))
 		goto err1;
-	if(mbedtls_cipher_cmac_starts(&c,key,klen))goto err1;
-	for(i=0;i<niov;i++)if(mbedtls_cipher_cmac_update(&c,iov[i].data,
-		iov[i].length))goto err1;
-	if(mbedtls_cipher_cmac_finish(&c,dst))goto err1;
+	if(U(mbedtls_cipher_cmac_starts(&c,key,klen)))goto err1;
+	for(i=0;i<niov;i++)if(U(mbedtls_cipher_cmac_update(&c,iov[i].data,
+		iov[i].length)))goto err1;
+	if(U(mbedtls_cipher_cmac_finish(&c,dst)))goto err1;
 	mbedtls_cipher_free(&c);
 	return 0;
 
@@ -1057,9 +1057,9 @@ static int mbed_aes_ecb_encrypt(void *ctx,void *src,int slen,void *dst)
 	unsigned char *d=dst;
 
 	if(slen&0xf)return -1;
-	for(;slen;s+=16,d+=16,slen-=16)if(mbedtls_aes_crypt_ecb(
+	for(;slen;s+=16,d+=16,slen-=16)if(U(mbedtls_aes_crypt_ecb(
 		&((struct mbed_aes_ecb *)ctx)->enc,
-		MBEDTLS_AES_ENCRYPT,s,d))return -1;
+		MBEDTLS_AES_ENCRYPT,s,d)))return -1;
 	return 0;
 }
 
@@ -1069,9 +1069,9 @@ static int mbed_aes_ecb_decrypt(void *ctx,void *src,int slen,void *dst)
 	unsigned char *d=dst;
 
 	if(slen&0xf)return -1;
-	for(;slen;s+=16,d+=16,slen-=16)if(mbedtls_aes_crypt_ecb(
+	for(;slen;s+=16,d+=16,slen-=16)if(U(mbedtls_aes_crypt_ecb(
 		&((struct mbed_aes_ecb *)ctx)->dec,
-		MBEDTLS_AES_DECRYPT,s,d))return -1;
+		MBEDTLS_AES_DECRYPT,s,d)))return -1;
 	return 0;
 }
 
@@ -1079,11 +1079,11 @@ static void *mbed_aes_ecb_init(void *ctx,void *key,int klen)
 {
 	struct mbed_aes_ecb *aes;
 
-	if(!(aes=malloc(sizeof(struct mbed_aes_ecb))))goto err1;
+	if(U(!(aes=malloc(sizeof(struct mbed_aes_ecb)))))goto err1;
 	mbedtls_aes_init(&aes->enc);
 	mbedtls_aes_init(&aes->dec);
-	if(mbedtls_aes_setkey_enc(&aes->enc,key,klen))goto err2;
-	if(mbedtls_aes_setkey_dec(&aes->dec,key,klen))goto err2;
+	if(U(mbedtls_aes_setkey_enc(&aes->enc,key,klen)))goto err2;
+	if(U(mbedtls_aes_setkey_dec(&aes->dec,key,klen)))goto err2;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
 
@@ -1106,19 +1106,19 @@ static void mbed_aes_ecb_exit(void *ctx)
 
 static int mbed_aes_cbc_encrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen&0xf)return -1;
-	if(mbedtls_aes_crypt_cbc(&((struct mbed_aes_cbc *)ctx)->enc,
+	if(U(slen&0xf))return -1;
+	if(U(mbedtls_aes_crypt_cbc(&((struct mbed_aes_cbc *)ctx)->enc,
 		MBEDTLS_AES_ENCRYPT,slen,((struct mbed_aes_cbc *)ctx)->iv,
-		src,dst))return -1;
+		src,dst)))return -1;
 	return 0;
 }
 
 static int mbed_aes_cbc_decrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen&0xf)return -1;
-	if(mbedtls_aes_crypt_cbc(&((struct mbed_aes_cbc *)ctx)->dec,
+	if(U(slen&0xf))return -1;
+	if(U(mbedtls_aes_crypt_cbc(&((struct mbed_aes_cbc *)ctx)->dec,
 		MBEDTLS_AES_DECRYPT,slen,((struct mbed_aes_cbc *)ctx)->iv,
-		src,dst))return -1;
+		src,dst)))return -1;
 	return 0;
 }
 
@@ -1126,12 +1126,13 @@ static void *mbed_aes_cbc_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct mbed_aes_cbc *aes;
 
-	if(!(aes=malloc(sizeof(struct mbed_aes_cbc))))goto err1;
+	if(U(!(aes=malloc(sizeof(struct mbed_aes_cbc)))))goto err1;
 	mbedtls_aes_init(&aes->enc);
 	mbedtls_aes_init(&aes->dec);
-	if(mbedtls_aes_setkey_enc(&aes->enc,key,klen))goto err2;
-	if(mbedtls_aes_setkey_dec(&aes->dec,key,klen))goto err2;
-	memcpy(aes->iv,iv,16);
+	if(U(mbedtls_aes_setkey_enc(&aes->enc,key,klen)))goto err2;
+	if(U(mbedtls_aes_setkey_dec(&aes->dec,key,klen)))goto err2;
+	if(iv)memcpy(aes->iv,iv,16);
+	else memset(aes->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
 
@@ -1164,17 +1165,17 @@ static int mbed_aes_cts_encrypt(void *ctx,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<=16)return -1;
+	if(U(slen<=16))return -1;
 	if(!(rem=slen&0xf))rem=0x10;
-	if(mbedtls_aes_crypt_cbc(&aes->enc,MBEDTLS_AES_ENCRYPT,slen-rem,
-		aes->iv,s,d))return -1;
+	if(U(mbedtls_aes_crypt_cbc(&aes->enc,MBEDTLS_AES_ENCRYPT,slen-rem,
+		aes->iv,s,d)))return -1;
 	s+=slen-rem;
 	d+=slen-rem;
 	memcpy(aes->tmp,s,rem);
 	if(rem<16)memset(aes->tmp+rem,0,16-rem);
 	memcpy(d,d-16,rem);
-	if(mbedtls_aes_crypt_cbc(&aes->enc,MBEDTLS_AES_ENCRYPT,16,aes->iv,
-		aes->tmp,d-16))return -1;
+	if(U(mbedtls_aes_crypt_cbc(&aes->enc,MBEDTLS_AES_ENCRYPT,16,aes->iv,
+		aes->tmp,d-16)))return -1;
 	return 0;
 }
 
@@ -1185,21 +1186,21 @@ static int mbed_aes_cts_decrypt(void *ctx,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<=16)return -1;
+	if(U(slen<=16))return -1;
 	if(!(rem=slen&0xf))rem=0x10;
 	if(slen-rem-16)
 	{
-		if(mbedtls_aes_crypt_cbc(&aes->dec,MBEDTLS_AES_DECRYPT,
-			slen-rem-16,aes->iv,s,d))return -1;
+		if(U(mbedtls_aes_crypt_cbc(&aes->dec,MBEDTLS_AES_DECRYPT,
+			slen-rem-16,aes->iv,s,d)))return -1;
 		s+=slen-rem-16;
 		d+=slen-rem-16;
 	}
 	memcpy(aes->tmp+16,s,16);
-	if(mbedtls_aes_crypt_ecb(&aes->dec,MBEDTLS_AES_DECRYPT,s,aes->tmp))
+	if(U(mbedtls_aes_crypt_ecb(&aes->dec,MBEDTLS_AES_DECRYPT,s,aes->tmp)))
 		return -1;
 	memcpy(aes->tmp,s+16,rem);
-	if(mbedtls_aes_crypt_cbc(&aes->dec,MBEDTLS_AES_DECRYPT,32,
-		aes->iv,aes->tmp,aes->tmp))return -1;
+	if(U(mbedtls_aes_crypt_cbc(&aes->dec,MBEDTLS_AES_DECRYPT,32,
+		aes->iv,aes->tmp,aes->tmp)))return -1;
 	memcpy(d,aes->tmp,rem+16);
 	return 0;
 }
@@ -1208,13 +1209,14 @@ static void *mbed_aes_cts_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct mbed_aes_cts *aes;
 
-	if(!(aes=malloc(sizeof(struct mbed_aes_cts))))goto err1;
+	if(U(!(aes=malloc(sizeof(struct mbed_aes_cts)))))goto err1;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	mbedtls_aes_init(&aes->enc);
 	mbedtls_aes_init(&aes->dec);
-	if(mbedtls_aes_setkey_enc(&aes->enc,key,klen))goto err2;
-	if(mbedtls_aes_setkey_dec(&aes->dec,key,klen))goto err2;
-	memcpy(aes->iv,iv,16);
+	if(U(mbedtls_aes_setkey_enc(&aes->enc,key,klen)))goto err2;
+	if(U(mbedtls_aes_setkey_dec(&aes->dec,key,klen)))goto err2;
+	if(iv)memcpy(aes->iv,iv,16);
+	else memset(aes->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
 
@@ -1244,17 +1246,17 @@ static void mbed_aes_cts_exit(void *ctx)
 
 static int mbed_aes_cfb_encrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(mbedtls_aes_crypt_cfb128(&((struct mbed_aes_cfb *)ctx)->enc,
+	if(U(mbedtls_aes_crypt_cfb128(&((struct mbed_aes_cfb *)ctx)->enc,
 		MBEDTLS_AES_ENCRYPT,slen,&((struct mbed_aes_cfb *)ctx)->off,
-		((struct mbed_aes_cfb *)ctx)->iv,src,dst))return -1;
+		((struct mbed_aes_cfb *)ctx)->iv,src,dst)))return -1;
 	return 0;
 }
 
 static int mbed_aes_cfb_decrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(mbedtls_aes_crypt_cfb128(&((struct mbed_aes_cfb *)ctx)->enc,
+	if(U(mbedtls_aes_crypt_cfb128(&((struct mbed_aes_cfb *)ctx)->enc,
 		MBEDTLS_AES_DECRYPT,slen,&((struct mbed_aes_cfb *)ctx)->off,
-		((struct mbed_aes_cfb *)ctx)->iv,src,dst))return -1;
+		((struct mbed_aes_cfb *)ctx)->iv,src,dst)))return -1;
 	return 0;
 }
 
@@ -1262,11 +1264,12 @@ static void *mbed_aes_cfb_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct mbed_aes_cfb *aes;
 
-	if(!(aes=malloc(sizeof(struct mbed_aes_cfb))))goto err1;
+	if(U(!(aes=malloc(sizeof(struct mbed_aes_cfb)))))goto err1;
 	mbedtls_aes_init(&aes->enc);
 	aes->off=0;
-	if(mbedtls_aes_setkey_enc(&aes->enc,key,klen))goto err2;
-	memcpy(aes->iv,iv,16);
+	if(U(mbedtls_aes_setkey_enc(&aes->enc,key,klen)))goto err2;
+	if(iv)memcpy(aes->iv,iv,16);
+	else memset(aes->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
 
@@ -1293,17 +1296,17 @@ static void mbed_aes_cfb_exit(void *ctx)
 
 static int mbed_aes_cfb8_encrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(mbedtls_aes_crypt_cfb8(&((struct mbed_aes_cfb8 *)ctx)->enc,
+	if(U(mbedtls_aes_crypt_cfb8(&((struct mbed_aes_cfb8 *)ctx)->enc,
 		MBEDTLS_AES_ENCRYPT,slen,
-		((struct mbed_aes_cfb8 *)ctx)->iv,src,dst))return -1;
+		((struct mbed_aes_cfb8 *)ctx)->iv,src,dst)))return -1;
 	return 0;
 }
 
 static int mbed_aes_cfb8_decrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(mbedtls_aes_crypt_cfb8(&((struct mbed_aes_cfb8 *)ctx)->enc,
+	if(U(mbedtls_aes_crypt_cfb8(&((struct mbed_aes_cfb8 *)ctx)->enc,
 		MBEDTLS_AES_DECRYPT,slen,
-		((struct mbed_aes_cfb8 *)ctx)->iv,src,dst))return -1;
+		((struct mbed_aes_cfb8 *)ctx)->iv,src,dst)))return -1;
 	return 0;
 }
 
@@ -1311,11 +1314,12 @@ static void *mbed_aes_cfb8_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct mbed_aes_cfb8 *aes;
 
-	if(!(aes=malloc(sizeof(struct mbed_aes_cfb8))))goto err1;
+	if(U(!(aes=malloc(sizeof(struct mbed_aes_cfb8)))))goto err1;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	mbedtls_aes_init(&aes->enc);
-	if(mbedtls_aes_setkey_enc(&aes->enc,key,klen))goto err2;
-	memcpy(aes->iv,iv,16);
+	if(U(mbedtls_aes_setkey_enc(&aes->enc,key,klen)))goto err2;
+	if(iv)memcpy(aes->iv,iv,16);
+	else memset(aes->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
 
@@ -1349,17 +1353,17 @@ static int mbed_aes_ofb_crypt(void *ctx,void *src,int slen,void *dst)
 
 	if(!s)while(slen--)
 	{
-		if(!aes->n)if(mbedtls_aes_crypt_cbc(&aes->enc,
+		if(!aes->n)if(U(mbedtls_aes_crypt_cbc(&aes->enc,
 			MBEDTLS_AES_ENCRYPT,16,aes->iv,
-			aes->zero,aes->iv))return -1;
+			aes->zero,aes->iv)))return -1;
 		*d++=aes->iv[aes->n];
 		aes->n=(aes->n+1)&0xf;
 	}
 	else while(slen--)
 	{
-		if(!aes->n)if(mbedtls_aes_crypt_cbc(&aes->enc,
+		if(!aes->n)if(U(mbedtls_aes_crypt_cbc(&aes->enc,
 			MBEDTLS_AES_ENCRYPT,16,aes->iv,
-			aes->zero,aes->iv))return -1;
+			aes->zero,aes->iv)))return -1;
 		*d++=*s++^aes->iv[aes->n];
 		aes->n=(aes->n+1)&0xf;
 	}
@@ -1370,13 +1374,14 @@ static void *mbed_aes_ofb_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct mbed_aes_ofb *aes;
 
-	if(!(aes=malloc(sizeof(struct mbed_aes_ofb))))goto err1;
+	if(U(!(aes=malloc(sizeof(struct mbed_aes_ofb)))))goto err1;
 	mbedtls_aes_init(&aes->enc);
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	aes->n=0;
 	memset(aes->zero,0,16);
-	if(mbedtls_aes_setkey_enc(&aes->enc,key,klen))goto err2;
-	memcpy(aes->iv,iv,16);
+	if(U(mbedtls_aes_setkey_enc(&aes->enc,key,klen)))goto err2;
+	if(iv)memcpy(aes->iv,iv,16);
+	else memset(aes->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
 
@@ -1410,13 +1415,13 @@ static int mbed_aes_ctr_crypt(void *ctx,void *src,int slen,void *dst)
 	if(!src)
 	{
 		for(;slen>16;slen-=16,dst+=16)
-			if(mbedtls_aes_crypt_ctr(&aes->enc,16,&aes->off,
-				aes->iv,aes->bfr,aes->zero,dst))return -1;
-		if(mbedtls_aes_crypt_ctr(&aes->enc,slen,&aes->off,
-			aes->iv,aes->bfr,aes->zero,dst))return -1;
+			if(U(mbedtls_aes_crypt_ctr(&aes->enc,16,&aes->off,
+				aes->iv,aes->bfr,aes->zero,dst)))return -1;
+		if(U(mbedtls_aes_crypt_ctr(&aes->enc,slen,&aes->off,
+			aes->iv,aes->bfr,aes->zero,dst)))return -1;
 	}
-	else if(mbedtls_aes_crypt_ctr(&aes->enc,slen,&aes->off,
-		aes->iv,aes->bfr,src,dst))return -1;
+	else if(U(mbedtls_aes_crypt_ctr(&aes->enc,slen,&aes->off,
+		aes->iv,aes->bfr,src,dst)))return -1;
 	return 0;
 }
 
@@ -1424,13 +1429,14 @@ static void *mbed_aes_ctr_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct mbed_aes_ctr *aes;
 
-	if(!(aes=malloc(sizeof(struct mbed_aes_ctr))))goto err1;
+	if(U(!(aes=malloc(sizeof(struct mbed_aes_ctr)))))goto err1;
 	mbedtls_aes_init(&aes->enc);
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	aes->off=0;
 	memset(aes->zero,0,16);
-	if(mbedtls_aes_setkey_enc(&aes->enc,key,klen))goto err2;
-	memcpy(aes->iv,iv,16);
+	if(U(mbedtls_aes_setkey_enc(&aes->enc,key,klen)))goto err2;
+	if(iv)memcpy(aes->iv,iv,16);
+	else memset(aes->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
 
@@ -1465,16 +1471,16 @@ static int mbed_aes_xts_encrypt(void *ctx,void *iv,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<16)return -1;
+	if(U(slen<16))return -1;
 
-	if(mbedtls_aes_crypt_ecb(&aes->twe,MBEDTLS_AES_ENCRYPT,iv,aes->twk))
+	if(U(mbedtls_aes_crypt_ecb(&aes->twe,MBEDTLS_AES_ENCRYPT,iv,aes->twk)))
 		return -1;
 
 	for(;slen>=16;slen-=16,s+=16,d+=16)
 	{
 		for(i=0;i<16;i++)aes->wrk[i]=s[i]^aes->twk[i];
-		if(mbedtls_aes_crypt_ecb(&aes->enc,MBEDTLS_AES_ENCRYPT,
-			aes->wrk,d))return -1;
+		if(U(mbedtls_aes_crypt_ecb(&aes->enc,MBEDTLS_AES_ENCRYPT,
+			aes->wrk,d)))return -1;
 		for(n=0,i=0;i<16;i++,n>>=8)
 		{
 			d[i]^=aes->twk[i];
@@ -1490,8 +1496,8 @@ static int mbed_aes_xts_encrypt(void *ctx,void *iv,void *src,int slen,void *dst)
 		memcpy(aes->wrk,s,slen);
 		memcpy(aes->wrk+slen,d+slen,16-slen);
 		for(i=0;i<16;i++)aes->wrk[i]^=aes->twk[i];
-		if(mbedtls_aes_crypt_ecb(&aes->enc,MBEDTLS_AES_ENCRYPT,
-			aes->wrk,d))return -1;
+		if(U(mbedtls_aes_crypt_ecb(&aes->enc,MBEDTLS_AES_ENCRYPT,
+			aes->wrk,d)))return -1;
 		for(i=0;i<16;i++)d[i]^=aes->twk[i];
 	}
 
@@ -1506,16 +1512,16 @@ static int mbed_aes_xts_decrypt(void *ctx,void *iv,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<16)return -1;
+	if(U(slen<16))return -1;
 
-	if(mbedtls_aes_crypt_ecb(&aes->twe,MBEDTLS_AES_ENCRYPT,iv,aes->twk))
+	if(U(mbedtls_aes_crypt_ecb(&aes->twe,MBEDTLS_AES_ENCRYPT,iv,aes->twk)))
 		return -1;
 
 	for(slen-=(slen&0xf)?16:0;slen>=16;slen-=16,s+=16,d+=16)
 	{
 		for(i=0;i<16;i++)aes->wrk[i]=s[i]^aes->twk[i];
-		if(mbedtls_aes_crypt_ecb(&aes->dec,MBEDTLS_AES_DECRYPT,
-			aes->wrk,d))return -1;
+		if(U(mbedtls_aes_crypt_ecb(&aes->dec,MBEDTLS_AES_DECRYPT,
+			aes->wrk,d)))return -1;
 		for(n=0,i=0;i<16;i++,n>>=8)
 		{
 			d[i]^=aes->twk[i];
@@ -1531,15 +1537,15 @@ static int mbed_aes_xts_decrypt(void *ctx,void *iv,void *src,int slen,void *dst)
 			aes->twk[i]=(unsigned char)(n|=(aes->twk[i]<<1));
 		if(n)aes->twk[0]^=0x87;
 		for(i=0;i<16;i++)aes->wrk[i]=s[i]^aes->twk[i];
-		if(mbedtls_aes_crypt_ecb(&aes->dec,MBEDTLS_AES_DECRYPT,
-			aes->wrk,d))return -1;
+		if(U(mbedtls_aes_crypt_ecb(&aes->dec,MBEDTLS_AES_DECRYPT,
+			aes->wrk,d)))return -1;
 		for(i=0;i<16;i++)d[i]^=aes->twk[i];
 		memcpy(d+16,d,slen);
 		memcpy(aes->wrk,s+16,slen);
 		memcpy(aes->wrk+slen,d+slen,16-slen);
 		for(i=0;i<16;i++)aes->wrk[i]^=aes->mem[i];
-		if(mbedtls_aes_crypt_ecb(&aes->dec,MBEDTLS_AES_DECRYPT,
-			aes->wrk,d))return -1;
+		if(U(mbedtls_aes_crypt_ecb(&aes->dec,MBEDTLS_AES_DECRYPT,
+			aes->wrk,d)))return -1;
 		for(i=0;i<16;i++)d[i]^=aes->mem[i];
 	}
 
@@ -1551,14 +1557,14 @@ static void *mbed_aes_xts_init(void *ctx,void *key,int klen)
 	struct mbed_aes_xts *aes;
 
 	if(klen!=256&&klen!=512)goto err1;
-	if(!(aes=malloc(sizeof(struct mbed_aes_xts))))goto err1;
+	if(U(!(aes=malloc(sizeof(struct mbed_aes_xts)))))goto err1;
 	mbedtls_aes_init(&aes->enc);
 	mbedtls_aes_init(&aes->dec);
 	mbedtls_aes_init(&aes->twe);
 	aes->global=((struct usicrypt_thread *)ctx)->global;
-	if(mbedtls_aes_setkey_enc(&aes->enc,key,klen>>1))goto err2;
-	if(mbedtls_aes_setkey_dec(&aes->dec,key,klen>>1))goto err2;
-	if(mbedtls_aes_setkey_enc(&aes->twe,key+(klen>>4),klen>>1))goto err2;
+	if(U(mbedtls_aes_setkey_enc(&aes->enc,key,klen>>1)))goto err2;
+	if(U(mbedtls_aes_setkey_dec(&aes->dec,key,klen>>1)))goto err2;
+	if(U(mbedtls_aes_setkey_enc(&aes->twe,key+(klen>>4),klen>>1)))goto err2;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
 
@@ -1592,11 +1598,11 @@ static int mbed_aes_essiv_encrypt(void *ctx,void *iv,void *src,int slen,
 {
 	struct mbed_aes_essiv *aes=ctx;
 
-	if(slen&0xf)return -1;
-	if(mbedtls_aes_crypt_ecb(&aes->aux,MBEDTLS_AES_ENCRYPT,iv,aes->iv))
+	if(U(slen&0xf))return -1;
+	if(U(mbedtls_aes_crypt_ecb(&aes->aux,MBEDTLS_AES_ENCRYPT,iv,aes->iv)))
 		return -1;
-	if(mbedtls_aes_crypt_cbc(&aes->enc,MBEDTLS_AES_ENCRYPT,slen,aes->iv,
-		src,dst))return -1;
+	if(U(mbedtls_aes_crypt_cbc(&aes->enc,MBEDTLS_AES_ENCRYPT,slen,aes->iv,
+		src,dst)))return -1;
 	return 0;
 }
 
@@ -1605,11 +1611,11 @@ static int mbed_aes_essiv_decrypt(void *ctx,void *iv,void *src,int slen,
 {
 	struct mbed_aes_essiv *aes=ctx;
 
-	if(slen&0xf)return -1;
-	if(mbedtls_aes_crypt_ecb(&aes->aux,MBEDTLS_AES_ENCRYPT,iv,aes->iv))
+	if(U(slen&0xf))return -1;
+	if(U(mbedtls_aes_crypt_ecb(&aes->aux,MBEDTLS_AES_ENCRYPT,iv,aes->iv)))
 		return -1;
-	if(mbedtls_aes_crypt_cbc(&aes->dec,MBEDTLS_AES_DECRYPT,slen,aes->iv,
-		src,dst))return -1;
+	if(U(mbedtls_aes_crypt_cbc(&aes->dec,MBEDTLS_AES_DECRYPT,slen,aes->iv,
+		src,dst)))return -1;
 	return 0;
 }
 
@@ -1618,16 +1624,16 @@ static void *mbed_aes_essiv_init(void *ctx,void *key,int klen)
 	struct mbed_aes_essiv *aes;
 	unsigned char tmp[32];
 
-	if(!(aes=malloc(sizeof(struct mbed_aes_essiv))))goto err1;
+	if(U(!(aes=malloc(sizeof(struct mbed_aes_essiv)))))goto err1;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	mbedtls_aes_init(&aes->enc);
 	mbedtls_aes_init(&aes->dec);
 	mbedtls_aes_init(&aes->aux);
-	if(mbedtls_aes_setkey_enc(&aes->enc,key,klen))goto err2;
-	if(mbedtls_aes_setkey_dec(&aes->dec,key,klen))goto err2;
-	if(mbedtls_md(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256),key,klen>>3,
-		tmp))goto err2;
-	if(mbedtls_aes_setkey_enc(&aes->aux,tmp,256))goto err3;
+	if(U(mbedtls_aes_setkey_enc(&aes->enc,key,klen)))goto err2;
+	if(U(mbedtls_aes_setkey_dec(&aes->dec,key,klen)))goto err2;
+	if(U(mbedtls_md(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256),key,
+		klen>>3,tmp)))goto err2;
+	if(U(mbedtls_aes_setkey_enc(&aes->aux,tmp,256)))goto err3;
 	((struct usicrypt_thread *)ctx)->global->memclear(tmp,sizeof(tmp));
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
@@ -1657,9 +1663,9 @@ static void mbed_aes_essiv_exit(void *ctx)
 static int mbed_aes_gcm_encrypt(void *ctx,void *iv,void *src,int slen,
 	void *aad,int alen,void *dst,void *tag)
 {
-	if(mbedtls_gcm_crypt_and_tag(&((struct mbed_aes_gcm *)ctx)->ctx,
+	if(U(mbedtls_gcm_crypt_and_tag(&((struct mbed_aes_gcm *)ctx)->ctx,
 		MBEDTLS_GCM_ENCRYPT,slen,iv,((struct mbed_aes_gcm *)ctx)->ilen,
-		aad,alen,src,dst,((struct mbed_aes_gcm *)ctx)->tlen,tag))
+		aad,alen,src,dst,((struct mbed_aes_gcm *)ctx)->tlen,tag)))
 		return -1;
 	return 0;
 }
@@ -1683,9 +1689,9 @@ static int mbed_aes_gcm_encrypt_iov(void *ctx,void *iv,void *src,int slen,
 			alen+=iov[i].length;
 		}
 	}
-	if(mbedtls_gcm_crypt_and_tag(&((struct mbed_aes_gcm *)ctx)->ctx,
+	if(U(mbedtls_gcm_crypt_and_tag(&((struct mbed_aes_gcm *)ctx)->ctx,
 		MBEDTLS_GCM_ENCRYPT,slen,iv,((struct mbed_aes_gcm *)ctx)->ilen,
-		aad,alen,src,dst,((struct mbed_aes_gcm *)ctx)->tlen,tag))
+		aad,alen,src,dst,((struct mbed_aes_gcm *)ctx)->tlen,tag)))
 		goto err2;
 	if(aad)
 	{
@@ -1707,9 +1713,9 @@ err1:	return -1;
 static int mbed_aes_gcm_decrypt(void *ctx,void *iv,void *src,int slen,
 	void *aad,int alen,void *dst,void *tag)
 {
-	if(mbedtls_gcm_crypt_and_tag(&((struct mbed_aes_gcm *)ctx)->ctx,
+	if(U(mbedtls_gcm_crypt_and_tag(&((struct mbed_aes_gcm *)ctx)->ctx,
 		MBEDTLS_GCM_DECRYPT,slen,iv,((struct mbed_aes_gcm *)ctx)->ilen,
-		aad,alen,src,dst,((struct mbed_aes_gcm *)ctx)->tlen,tag))
+		aad,alen,src,dst,((struct mbed_aes_gcm *)ctx)->tlen,tag)))
 		return -1;
 	return 0;
 }
@@ -1733,9 +1739,9 @@ static int mbed_aes_gcm_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 			alen+=iov[i].length;
 		}
 	}
-	if(mbedtls_gcm_crypt_and_tag(&((struct mbed_aes_gcm *)ctx)->ctx,
+	if(U(mbedtls_gcm_crypt_and_tag(&((struct mbed_aes_gcm *)ctx)->ctx,
 		MBEDTLS_GCM_DECRYPT,slen,iv,((struct mbed_aes_gcm *)ctx)->ilen,
-		aad,alen,src,dst,((struct mbed_aes_gcm *)ctx)->tlen,tag))
+		aad,alen,src,dst,((struct mbed_aes_gcm *)ctx)->tlen,tag)))
 		goto err2;
 	if(aad)
 	{
@@ -1758,10 +1764,10 @@ static void *mbed_aes_gcm_init(void *ctx,void *key,int klen,int ilen,int tlen)
 {
 	struct mbed_aes_gcm *gcm;
 
-	if(!(gcm=malloc(sizeof(struct mbed_aes_gcm))))goto err1;
+	if(U(!(gcm=malloc(sizeof(struct mbed_aes_gcm)))))goto err1;
 	gcm->global=((struct usicrypt_thread *)ctx)->global;
 	mbedtls_gcm_init(&gcm->ctx);
-	if(mbedtls_gcm_setkey(&gcm->ctx,MBEDTLS_CIPHER_ID_AES,key,klen))
+	if(U(mbedtls_gcm_setkey(&gcm->ctx,MBEDTLS_CIPHER_ID_AES,key,klen)))
 		goto err2;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	gcm->ilen=ilen;
@@ -1786,10 +1792,10 @@ static void mbed_aes_gcm_exit(void *ctx)
 static int mbed_aes_ccm_encrypt(void *ctx,void *iv,void *src,int slen,
 	void *aad,int alen,void *dst,void *tag)
 {
-	if(mbedtls_ccm_encrypt_and_tag(
+	if(U(mbedtls_ccm_encrypt_and_tag(
 		&((struct mbed_aes_ccm *)ctx)->ctx,slen,iv,
 		((struct mbed_aes_ccm *)ctx)->ilen,aad,alen,src,dst,tag,
-		((struct mbed_aes_ccm *)ctx)->tlen))return -1;
+		((struct mbed_aes_ccm *)ctx)->tlen)))return -1;
 	return 0;
 }
 
@@ -1805,17 +1811,17 @@ static int mbed_aes_ccm_encrypt_iov(void *ctx,void *iv,void *src,int slen,
 	for(i=0,alen=0;i<niov;i++)alen+=iov[i].length;
 	if(alen)
 	{
-		if(!(aad=malloc(alen)))goto err1;
+		if(U(!(aad=malloc(alen))))goto err1;
 		for(i=0,alen=0;i<niov;i++)
 		{
 			memcpy(aad+alen,iov[i].data,iov[i].length);
 			alen+=iov[i].length;
 		}
 	}
-	if(mbedtls_ccm_encrypt_and_tag(
+	if(U(mbedtls_ccm_encrypt_and_tag(
 		&((struct mbed_aes_ccm *)ctx)->ctx,slen,iv,
 		((struct mbed_aes_ccm *)ctx)->ilen,aad,alen,src,dst,tag,
-		((struct mbed_aes_ccm *)ctx)->tlen))goto err2;
+		((struct mbed_aes_ccm *)ctx)->tlen)))goto err2;
 	if(aad)
 	{
 		((struct mbed_aes_ccm *)ctx)->global->memclear(aad,alen);
@@ -1836,9 +1842,9 @@ err1:	return -1;
 static int mbed_aes_ccm_decrypt(void *ctx,void *iv,void *src,int slen,
 	void *aad,int alen,void *dst,void *tag)
 {
-	if(mbedtls_ccm_auth_decrypt(&((struct mbed_aes_ccm *)ctx)->ctx,slen,iv,
-		((struct mbed_aes_ccm *)ctx)->ilen,aad,alen,src,dst,tag,
-		((struct mbed_aes_ccm *)ctx)->tlen))return -1;
+	if(U(mbedtls_ccm_auth_decrypt(&((struct mbed_aes_ccm *)ctx)->ctx,slen,
+		iv,((struct mbed_aes_ccm *)ctx)->ilen,aad,alen,src,dst,tag,
+		((struct mbed_aes_ccm *)ctx)->tlen)))return -1;
 	return 0;
 }
 
@@ -1854,16 +1860,16 @@ static int mbed_aes_ccm_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 	for(i=0,alen=0;i<niov;i++)alen+=iov[i].length;
 	if(alen)
 	{
-		if(!(aad=malloc(alen)))goto err1;
+		if(U(!(aad=malloc(alen))))goto err1;
 		for(i=0,alen=0;i<niov;i++)
 		{
 			memcpy(aad+alen,iov[i].data,iov[i].length);
 			alen+=iov[i].length;
 		}
 	}
-	if(mbedtls_ccm_auth_decrypt(&((struct mbed_aes_ccm *)ctx)->ctx,slen,iv,
-		((struct mbed_aes_ccm *)ctx)->ilen,aad,alen,src,dst,tag,
-		((struct mbed_aes_ccm *)ctx)->tlen))goto err2;
+	if(U(mbedtls_ccm_auth_decrypt(&((struct mbed_aes_ccm *)ctx)->ctx,slen,
+		iv,((struct mbed_aes_ccm *)ctx)->ilen,aad,alen,src,dst,tag,
+		((struct mbed_aes_ccm *)ctx)->tlen)))goto err2;
 	if(aad)
 	{
 		((struct mbed_aes_ccm *)ctx)->global->memclear(aad,alen);
@@ -1885,10 +1891,10 @@ static void *mbed_aes_ccm_init(void *ctx,void *key,int klen,int ilen,int tlen)
 {
 	struct mbed_aes_ccm *ccm;
 
-	if(!(ccm=malloc(sizeof(struct mbed_aes_ccm))))goto err1;
+	if(U(!(ccm=malloc(sizeof(struct mbed_aes_ccm)))))goto err1;
 	ccm->global=((struct usicrypt_thread *)ctx)->global;
 	mbedtls_ccm_init(&ccm->ctx);
-	if(mbedtls_ccm_setkey(&ccm->ctx,MBEDTLS_CIPHER_ID_AES,key,klen))
+	if(U(mbedtls_ccm_setkey(&ccm->ctx,MBEDTLS_CIPHER_ID_AES,key,klen)))
 		goto err2;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	ccm->ilen=ilen;
@@ -1982,12 +1988,12 @@ static int mbed_camellia_cmac(void *ctx,void *key,int klen,void *src,int slen,
 	mbedtls_camellia_context enc;
 	unsigned char wrk[4][16];
 
-	if(klen&7)goto err1;
+	if(U(klen&7))goto err1;
 	mbedtls_camellia_init(&enc);
-	if(mbedtls_camellia_setkey_enc(&enc,key,klen))goto err2;
+	if(U(mbedtls_camellia_setkey_enc(&enc,key,klen)))goto err2;
 	memset(wrk,0,sizeof(wrk));
-	if(mbedtls_camellia_crypt_ecb(&enc,MBEDTLS_CAMELLIA_ENCRYPT,
-		wrk[1],wrk[1]))goto err3;
+	if(U(mbedtls_camellia_crypt_ecb(&enc,MBEDTLS_CAMELLIA_ENCRYPT,
+		wrk[1],wrk[1])))goto err3;
 	for(n=0,i=15;i>=0;i--,n>>=8)
 		wrk[2][i]=(unsigned char)(n|=(wrk[1][i]<<1));
 	if(n)wrk[2][15]^=0x87;
@@ -1997,8 +2003,8 @@ static int mbed_camellia_cmac(void *ctx,void *key,int klen,void *src,int slen,
 	for(;slen>16;slen-=16,s+=16)
 	{
 		for(i=0;i<16;i++)wrk[0][i]^=s[i];
-		if(mbedtls_camellia_crypt_ecb(&enc,MBEDTLS_CAMELLIA_ENCRYPT,
-			wrk[0],wrk[0]))goto err3;
+		if(U(mbedtls_camellia_crypt_ecb(&enc,MBEDTLS_CAMELLIA_ENCRYPT,
+			wrk[0],wrk[0])))goto err3;
 	}
 	if(slen<16)for(i=0;i<16;i++)
 	{
@@ -2009,8 +2015,8 @@ static int mbed_camellia_cmac(void *ctx,void *key,int klen,void *src,int slen,
 	}
 	else for(i=0;i<16;i++)wrk[1][i]=s[i]^wrk[2][i];
 	for(i=0;i<16;i++)wrk[0][i]^=wrk[1][i];
-	if(mbedtls_camellia_crypt_ecb(&enc,MBEDTLS_CAMELLIA_ENCRYPT,
-		wrk[0],dst))goto err3;
+	if(U(mbedtls_camellia_crypt_ecb(&enc,MBEDTLS_CAMELLIA_ENCRYPT,
+		wrk[0],dst)))goto err3;
 	r=0;
 err3:	((struct usicrypt_thread *)ctx)->global->memclear(wrk,sizeof(wrk));
 err2:	mbedtls_camellia_free(&enc);
@@ -2036,12 +2042,12 @@ static int mbed_camellia_cmac_iov(void *ctx,void *key,int klen,
 	mbedtls_camellia_context enc;
 	unsigned char wrk[6][16];
 
-	if(klen&7)goto err1;
+	if(U(klen&7))goto err1;
 	mbedtls_camellia_init(&enc);
-	if(mbedtls_camellia_setkey_enc(&enc,key,klen))goto err2;
+	if(U(mbedtls_camellia_setkey_enc(&enc,key,klen)))goto err2;
 	memset(wrk,0,sizeof(wrk));
-	if(mbedtls_camellia_crypt_ecb(&enc,MBEDTLS_CAMELLIA_ENCRYPT,
-		wrk[1],wrk[1]))goto err3;
+	if(U(mbedtls_camellia_crypt_ecb(&enc,MBEDTLS_CAMELLIA_ENCRYPT,
+		wrk[1],wrk[1])))goto err3;
 	for(n=0,i=15;i>=0;i--,n>>=8)
 		wrk[2][i]=(unsigned char)(n|=(wrk[1][i]<<1));
 	if(n)wrk[2][15]^=0x87;
@@ -2066,9 +2072,9 @@ static int mbed_camellia_cmac_iov(void *ctx,void *key,int klen,
 			if(r2==16)
 			{
 				for(i=0;i<16;i++)wrk[0][i]^=p1[i];
-				if(mbedtls_camellia_crypt_ecb(&enc,
-					MBEDTLS_CAMELLIA_ENCRYPT,wrk[0],wrk[0]))
-					goto err3;
+				if(U(mbedtls_camellia_crypt_ecb(&enc,
+					MBEDTLS_CAMELLIA_ENCRYPT,wrk[0],
+					wrk[0])))goto err3;
 				s=p1;
 				p1=p2;
 				p2=s;
@@ -2079,8 +2085,8 @@ static int mbed_camellia_cmac_iov(void *ctx,void *key,int klen,
 	if(r2)
 	{
 		for(i=0;i<16;i++)wrk[0][i]^=p1[i];
-		if(mbedtls_camellia_crypt_ecb(&enc,MBEDTLS_CAMELLIA_ENCRYPT,
-			wrk[0],wrk[0]))goto err3;
+		if(U(mbedtls_camellia_crypt_ecb(&enc,MBEDTLS_CAMELLIA_ENCRYPT,
+			wrk[0],wrk[0])))goto err3;
 		s=p1;
 		p1=p2;
 		p2=s;
@@ -2095,8 +2101,8 @@ static int mbed_camellia_cmac_iov(void *ctx,void *key,int klen,
 	}
 	else for(i=0;i<16;i++)wrk[1][i]=p1[i]^wrk[2][i];
 	for(i=0;i<16;i++)wrk[0][i]^=wrk[1][i];
-	if(mbedtls_camellia_crypt_ecb(&enc,MBEDTLS_CAMELLIA_ENCRYPT,
-		wrk[0],dst))goto err3;
+	if(U(mbedtls_camellia_crypt_ecb(&enc,MBEDTLS_CAMELLIA_ENCRYPT,
+		wrk[0],dst)))goto err3;
 	r=0;
 err3:	((struct usicrypt_thread *)ctx)->global->memclear(wrk,sizeof(wrk));
 err2:	mbedtls_camellia_free(&enc);
@@ -2112,10 +2118,10 @@ static int mbed_camellia_ecb_encrypt(void *ctx,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen&0xf)return -1;
-	for(;slen;s+=16,d+=16,slen-=16)if(mbedtls_camellia_crypt_ecb(
+	if(U(slen&0xf))return -1;
+	for(;slen;s+=16,d+=16,slen-=16)if(U(mbedtls_camellia_crypt_ecb(
 		&((struct mbed_camellia_ecb *)ctx)->enc,
-		MBEDTLS_CAMELLIA_ENCRYPT,s,d))return -1;
+		MBEDTLS_CAMELLIA_ENCRYPT,s,d)))return -1;
 	return 0;
 }
 
@@ -2124,10 +2130,10 @@ static int mbed_camellia_ecb_decrypt(void *ctx,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen&0xf)return -1;
-	for(;slen;s+=16,d+=16,slen-=16)if(mbedtls_camellia_crypt_ecb(
+	if(U(slen&0xf))return -1;
+	for(;slen;s+=16,d+=16,slen-=16)if(U(mbedtls_camellia_crypt_ecb(
 		&((struct mbed_camellia_ecb *)ctx)->dec,
-		MBEDTLS_CAMELLIA_DECRYPT,s,d))return -1;
+		MBEDTLS_CAMELLIA_DECRYPT,s,d)))return -1;
 	return 0;
 }
 
@@ -2135,11 +2141,11 @@ static void *mbed_camellia_ecb_init(void *ctx,void *key,int klen)
 {
 	struct mbed_camellia_ecb *camellia;
 
-	if(!(camellia=malloc(sizeof(struct mbed_camellia_ecb))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct mbed_camellia_ecb)))))goto err1;
 	mbedtls_camellia_init(&camellia->enc);
 	mbedtls_camellia_init(&camellia->dec);
-	if(mbedtls_camellia_setkey_enc(&camellia->enc,key,klen))goto err2;
-	if(mbedtls_camellia_setkey_dec(&camellia->dec,key,klen))goto err2;
+	if(U(mbedtls_camellia_setkey_enc(&camellia->enc,key,klen)))goto err2;
+	if(U(mbedtls_camellia_setkey_dec(&camellia->dec,key,klen)))goto err2;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
 
@@ -2162,19 +2168,19 @@ static void mbed_camellia_ecb_exit(void *ctx)
 
 static int mbed_camellia_cbc_encrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen&0xf)return -1;
-	if(mbedtls_camellia_crypt_cbc(&((struct mbed_camellia_cbc *)ctx)->enc,
+	if(U(slen&0xf))return -1;
+	if(U(mbedtls_camellia_crypt_cbc(&((struct mbed_camellia_cbc *)ctx)->enc,
 		MBEDTLS_CAMELLIA_ENCRYPT,slen,
-		((struct mbed_camellia_cbc *)ctx)->iv,src,dst))return -1;
+		((struct mbed_camellia_cbc *)ctx)->iv,src,dst)))return -1;
 	return 0;
 }
 
 static int mbed_camellia_cbc_decrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen&0xf)return -1;
-	if(mbedtls_camellia_crypt_cbc(&((struct mbed_camellia_cbc *)ctx)->dec,
+	if(U(slen&0xf))return -1;
+	if(U(mbedtls_camellia_crypt_cbc(&((struct mbed_camellia_cbc *)ctx)->dec,
 		MBEDTLS_CAMELLIA_DECRYPT,slen,
-		((struct mbed_camellia_cbc *)ctx)->iv,src,dst))return -1;
+		((struct mbed_camellia_cbc *)ctx)->iv,src,dst)))return -1;
 	return 0;
 }
 
@@ -2182,12 +2188,13 @@ static void *mbed_camellia_cbc_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct mbed_camellia_cbc *camellia;
 
-	if(!(camellia=malloc(sizeof(struct mbed_camellia_cbc))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct mbed_camellia_cbc)))))goto err1;
 	mbedtls_camellia_init(&camellia->enc);
 	mbedtls_camellia_init(&camellia->dec);
-	if(mbedtls_camellia_setkey_enc(&camellia->enc,key,klen))goto err2;
-	if(mbedtls_camellia_setkey_dec(&camellia->dec,key,klen))goto err2;
-	memcpy(camellia->iv,iv,16);
+	if(U(mbedtls_camellia_setkey_enc(&camellia->enc,key,klen)))goto err2;
+	if(U(mbedtls_camellia_setkey_dec(&camellia->dec,key,klen)))goto err2;
+	if(iv)memcpy(camellia->iv,iv,16);
+	else memset(camellia->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
 
@@ -2223,15 +2230,15 @@ static int mbed_camellia_cts_encrypt(void *ctx,void *src,int slen,void *dst)
 	if(slen<=16)return -1;
 	rem=slen&0xf;
 	if(!rem)rem=16;
-	if(mbedtls_camellia_crypt_cbc(&camellia->enc,MBEDTLS_CAMELLIA_ENCRYPT,
-		slen-rem,camellia->iv,s,d))return -1;
+	if(U(mbedtls_camellia_crypt_cbc(&camellia->enc,MBEDTLS_CAMELLIA_ENCRYPT,
+		slen-rem,camellia->iv,s,d)))return -1;
 	s+=slen-rem;
 	d+=slen-rem;
 	memcpy(camellia->tmp,s,rem);
 	if(rem<16)memset(camellia->tmp+rem,0,16-rem);
 	memcpy(d,d-16,rem);
-	if(mbedtls_camellia_crypt_cbc(&camellia->enc,MBEDTLS_CAMELLIA_ENCRYPT,
-		16,camellia->iv,camellia->tmp,d-16))return -1;
+	if(U(mbedtls_camellia_crypt_cbc(&camellia->enc,MBEDTLS_CAMELLIA_ENCRYPT,
+		16,camellia->iv,camellia->tmp,d-16)))return -1;
 	return 0;
 }
 
@@ -2247,18 +2254,18 @@ static int mbed_camellia_cts_decrypt(void *ctx,void *src,int slen,void *dst)
 	if(!rem)rem=16;
 	if(slen-rem-16)
 	{
-		if(mbedtls_camellia_crypt_cbc(&camellia->dec,
-			MBEDTLS_CAMELLIA_DECRYPT,slen-rem-16,camellia->iv,s,d))
+		if(U(mbedtls_camellia_crypt_cbc(&camellia->dec,
+			MBEDTLS_CAMELLIA_DECRYPT,slen-rem-16,camellia->iv,s,d)))
 			return -1;
 		s+=slen-rem-16;
 		d+=slen-rem-16;
 	}
 	memcpy(camellia->tmp+16,s,16);
-	if(mbedtls_camellia_crypt_ecb(&camellia->dec,MBEDTLS_CAMELLIA_DECRYPT,
-		s,camellia->tmp))return -1;
+	if(U(mbedtls_camellia_crypt_ecb(&camellia->dec,MBEDTLS_CAMELLIA_DECRYPT,
+		s,camellia->tmp)))return -1;
 	memcpy(camellia->tmp,s+16,rem);
-	if(mbedtls_camellia_crypt_cbc(&camellia->dec,MBEDTLS_CAMELLIA_DECRYPT,
-		32,camellia->iv,camellia->tmp,camellia->tmp))return -1;
+	if(U(mbedtls_camellia_crypt_cbc(&camellia->dec,MBEDTLS_CAMELLIA_DECRYPT,
+		32,camellia->iv,camellia->tmp,camellia->tmp)))return -1;
 	memcpy(d,camellia->tmp,rem+16);
 	return 0;
 }
@@ -2267,13 +2274,14 @@ static void *mbed_camellia_cts_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct mbed_camellia_cts *camellia;
 
-	if(!(camellia=malloc(sizeof(struct mbed_camellia_cts))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct mbed_camellia_cts)))))goto err1;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
 	mbedtls_camellia_init(&camellia->enc);
 	mbedtls_camellia_init(&camellia->dec);
-	if(mbedtls_camellia_setkey_enc(&camellia->enc,key,klen))goto err2;
-	if(mbedtls_camellia_setkey_dec(&camellia->dec,key,klen))goto err2;
-	memcpy(camellia->iv,iv,16);
+	if(U(mbedtls_camellia_setkey_enc(&camellia->enc,key,klen)))goto err2;
+	if(U(mbedtls_camellia_setkey_dec(&camellia->dec,key,klen)))goto err2;
+	if(iv)memcpy(camellia->iv,iv,16);
+	else memset(camellia->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
 
@@ -2303,21 +2311,21 @@ static void mbed_camellia_cts_exit(void *ctx)
 
 static int mbed_camellia_cfb_encrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(mbedtls_camellia_crypt_cfb128(
+	if(U(mbedtls_camellia_crypt_cfb128(
 		&((struct mbed_camellia_cfb *)ctx)->enc,
 		MBEDTLS_CAMELLIA_ENCRYPT,slen,
 		&((struct mbed_camellia_cfb *)ctx)->off,
-		((struct mbed_camellia_cfb *)ctx)->iv,src,dst))return -1;
+		((struct mbed_camellia_cfb *)ctx)->iv,src,dst)))return -1;
 	return 0;
 }
 
 static int mbed_camellia_cfb_decrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(mbedtls_camellia_crypt_cfb128(
+	if(U(mbedtls_camellia_crypt_cfb128(
 		&((struct mbed_camellia_cfb *)ctx)->enc,
 		MBEDTLS_CAMELLIA_DECRYPT,slen,
 		&((struct mbed_camellia_cfb *)ctx)->off,
-		((struct mbed_camellia_cfb *)ctx)->iv,src,dst))return -1;
+		((struct mbed_camellia_cfb *)ctx)->iv,src,dst)))return -1;
 	return 0;
 }
 
@@ -2325,11 +2333,12 @@ static void *mbed_camellia_cfb_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct mbed_camellia_cfb *camellia;
 
-	if(!(camellia=malloc(sizeof(struct mbed_camellia_cfb))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct mbed_camellia_cfb)))))goto err1;
 	mbedtls_camellia_init(&camellia->enc);
 	camellia->off=0;
-	if(mbedtls_camellia_setkey_enc(&camellia->enc,key,klen))goto err2;
-	memcpy(camellia->iv,iv,16);
+	if(U(mbedtls_camellia_setkey_enc(&camellia->enc,key,klen)))goto err2;
+	if(iv)memcpy(camellia->iv,iv,16);
+	else memset(camellia->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
 
@@ -2362,8 +2371,8 @@ static int mbed_camellia_cfb8_encrypt(void *ctx,void *src,int slen,void *dst)
 
 	while(slen--)
 	{
-		if(mbedtls_camellia_crypt_ecb(&camellia->enc,
-			MBEDTLS_CAMELLIA_ENCRYPT,camellia->iv,camellia->mem))
+		if(U(mbedtls_camellia_crypt_ecb(&camellia->enc,
+			MBEDTLS_CAMELLIA_ENCRYPT,camellia->iv,camellia->mem)))
 			return -1;
 		memmove(camellia->iv,camellia->iv+1,15);
 		*d++=camellia->iv[15]=*s++^camellia->mem[0];
@@ -2379,8 +2388,8 @@ static int mbed_camellia_cfb8_decrypt(void *ctx,void *src,int slen,void *dst)
 
 	while(slen--)
 	{
-		if(mbedtls_camellia_crypt_ecb(&camellia->enc,
-			MBEDTLS_CAMELLIA_ENCRYPT,camellia->iv,camellia->mem))
+		if(U(mbedtls_camellia_crypt_ecb(&camellia->enc,
+			MBEDTLS_CAMELLIA_ENCRYPT,camellia->iv,camellia->mem)))
 			return -1;
 		memmove(camellia->iv,camellia->iv+1,15);
 		camellia->iv[15]=*s;
@@ -2393,11 +2402,12 @@ static void *mbed_camellia_cfb8_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct mbed_camellia_cfb8 *camellia;
 
-	if(!(camellia=malloc(sizeof(struct mbed_camellia_cfb8))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct mbed_camellia_cfb8)))))goto err1;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
 	mbedtls_camellia_init(&camellia->enc);
-	if(mbedtls_camellia_setkey_enc(&camellia->enc,key,klen))goto err2;
-	memcpy(camellia->iv,iv,16);
+	if(U(mbedtls_camellia_setkey_enc(&camellia->enc,key,klen)))goto err2;
+	if(iv)memcpy(camellia->iv,iv,16);
+	else memset(camellia->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
 
@@ -2433,17 +2443,17 @@ static int mbed_camellia_ofb_crypt(void *ctx,void *src,int slen,void *dst)
 
 	if(!s)while(slen--)
 	{
-		if(!camellia->n)if(mbedtls_camellia_crypt_cbc(&camellia->enc,
+		if(!camellia->n)if(U(mbedtls_camellia_crypt_cbc(&camellia->enc,
 			MBEDTLS_CAMELLIA_ENCRYPT,16,camellia->iv,
-			camellia->zero,camellia->iv))return -1;
+			camellia->zero,camellia->iv)))return -1;
 		*d++=camellia->iv[camellia->n];
 		camellia->n=(camellia->n+1)&0xf;
 	}
 	else while(slen--)
 	{
-		if(!camellia->n)if(mbedtls_camellia_crypt_cbc(&camellia->enc,
+		if(!camellia->n)if(U(mbedtls_camellia_crypt_cbc(&camellia->enc,
 			MBEDTLS_CAMELLIA_ENCRYPT,16,camellia->iv,
-			camellia->zero,camellia->iv))return -1;
+			camellia->zero,camellia->iv)))return -1;
 		*d++=*s++^camellia->iv[camellia->n];
 		camellia->n=(camellia->n+1)&0xf;
 	}
@@ -2454,13 +2464,14 @@ static void *mbed_camellia_ofb_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct mbed_camellia_ofb *camellia;
 
-	if(!(camellia=malloc(sizeof(struct mbed_camellia_ofb))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct mbed_camellia_ofb)))))goto err1;
 	mbedtls_camellia_init(&camellia->enc);
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
 	camellia->n=0;
 	memset(camellia->zero,0,16);
-	if(mbedtls_camellia_setkey_enc(&camellia->enc,key,klen))goto err2;
-	memcpy(camellia->iv,iv,16);
+	if(U(mbedtls_camellia_setkey_enc(&camellia->enc,key,klen)))goto err2;
+	if(iv)memcpy(camellia->iv,iv,16);
+	else memset(camellia->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
 
@@ -2494,15 +2505,15 @@ static int mbed_camellia_ctr_crypt(void *ctx,void *src,int slen,void *dst)
 	if(!src)
 	{
 		for(;slen>16;slen-=16,dst+=16)
-			if(mbedtls_camellia_crypt_ctr(
+			if(U(mbedtls_camellia_crypt_ctr(
 				&camellia->enc,16,&camellia->off,camellia->iv,
-				camellia->bfr,camellia->zero,dst))return -1;
-		if(mbedtls_camellia_crypt_ctr(&camellia->enc,slen,
+				camellia->bfr,camellia->zero,dst)))return -1;
+		if(U(mbedtls_camellia_crypt_ctr(&camellia->enc,slen,
 			&camellia->off,camellia->iv,camellia->bfr,
-			camellia->zero,dst))return -1;
+			camellia->zero,dst)))return -1;
 	}
-	else if(mbedtls_camellia_crypt_ctr(&camellia->enc,slen,&camellia->off,
-		camellia->iv,camellia->bfr,src,dst))return -1;
+	else if(U(mbedtls_camellia_crypt_ctr(&camellia->enc,slen,&camellia->off,
+		camellia->iv,camellia->bfr,src,dst)))return -1;
 	return 0;
 }
 
@@ -2510,13 +2521,14 @@ static void *mbed_camellia_ctr_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct mbed_camellia_ctr *camellia;
 
-	if(!(camellia=malloc(sizeof(struct mbed_camellia_ctr))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct mbed_camellia_ctr)))))goto err1;
 	mbedtls_camellia_init(&camellia->enc);
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
 	camellia->off=0;
 	memset(camellia->zero,0,16);
-	if(mbedtls_camellia_setkey_enc(&camellia->enc,key,klen))goto err2;
-	memcpy(camellia->iv,iv,16);
+	if(U(mbedtls_camellia_setkey_enc(&camellia->enc,key,klen)))goto err2;
+	if(iv)memcpy(camellia->iv,iv,16);
+	else memset(camellia->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
 
@@ -2552,16 +2564,16 @@ static int mbed_camellia_xts_encrypt(void *ctx,void *iv,void *src,int slen,
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<16)return -1;
+	if(U(slen<16))return -1;
 
-	if(mbedtls_camellia_crypt_ecb(&camellia->twe,MBEDTLS_CAMELLIA_ENCRYPT,
-		iv,camellia->twk))return -1;
+	if(U(mbedtls_camellia_crypt_ecb(&camellia->twe,MBEDTLS_CAMELLIA_ENCRYPT,
+		iv,camellia->twk)))return -1;
 
 	for(;slen>=16;slen-=16,s+=16,d+=16)
 	{
 		for(i=0;i<16;i++)camellia->wrk[i]=s[i]^camellia->twk[i];
-		if(mbedtls_camellia_crypt_ecb(&camellia->enc,
-			MBEDTLS_CAMELLIA_ENCRYPT,camellia->wrk,d))return -1;
+		if(U(mbedtls_camellia_crypt_ecb(&camellia->enc,
+			MBEDTLS_CAMELLIA_ENCRYPT,camellia->wrk,d)))return -1;
 		for(n=0,i=0;i<16;i++,n>>=8)
 		{
 			d[i]^=camellia->twk[i];
@@ -2578,8 +2590,8 @@ static int mbed_camellia_xts_encrypt(void *ctx,void *iv,void *src,int slen,
 		memcpy(camellia->wrk,s,slen);
 		memcpy(camellia->wrk+slen,d+slen,16-slen);
 		for(i=0;i<16;i++)camellia->wrk[i]^=camellia->twk[i];
-		if(mbedtls_camellia_crypt_ecb(&camellia->enc,
-			MBEDTLS_CAMELLIA_ENCRYPT,camellia->wrk,d))return -1;
+		if(U(mbedtls_camellia_crypt_ecb(&camellia->enc,
+			MBEDTLS_CAMELLIA_ENCRYPT,camellia->wrk,d)))return -1;
 		for(i=0;i<16;i++)d[i]^=camellia->twk[i];
 	}
 
@@ -2595,16 +2607,16 @@ static int mbed_camellia_xts_decrypt(void *ctx,void *iv,void *src,int slen,
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<16)return -1;
+	if(U(slen<16))return -1;
 
-	if(mbedtls_camellia_crypt_ecb(&camellia->twe,MBEDTLS_CAMELLIA_ENCRYPT,
-		iv,camellia->twk))return -1;
+	if(U(mbedtls_camellia_crypt_ecb(&camellia->twe,MBEDTLS_CAMELLIA_ENCRYPT,
+		iv,camellia->twk)))return -1;
 
 	for(slen-=(slen&0xf)?16:0;slen>=16;slen-=16,s+=16,d+=16)
 	{
 		for(i=0;i<16;i++)camellia->wrk[i]=s[i]^camellia->twk[i];
-		if(mbedtls_camellia_crypt_ecb(&camellia->dec,
-			MBEDTLS_CAMELLIA_DECRYPT,camellia->wrk,d))return -1;
+		if(U(mbedtls_camellia_crypt_ecb(&camellia->dec,
+			MBEDTLS_CAMELLIA_DECRYPT,camellia->wrk,d)))return -1;
 		for(n=0,i=0;i<16;i++,n>>=8)
 		{
 			d[i]^=camellia->twk[i];
@@ -2621,15 +2633,15 @@ static int mbed_camellia_xts_decrypt(void *ctx,void *iv,void *src,int slen,
 			(unsigned char)(n|=(camellia->twk[i]<<1));
 		if(n)camellia->twk[0]^=0x87;
 		for(i=0;i<16;i++)camellia->wrk[i]=s[i]^camellia->twk[i];
-		if(mbedtls_camellia_crypt_ecb(&camellia->dec,
-			MBEDTLS_CAMELLIA_DECRYPT,camellia->wrk,d))return -1;
+		if(U(mbedtls_camellia_crypt_ecb(&camellia->dec,
+			MBEDTLS_CAMELLIA_DECRYPT,camellia->wrk,d)))return -1;
 		for(i=0;i<16;i++)d[i]^=camellia->twk[i];
 		memcpy(d+16,d,slen);
 		memcpy(camellia->wrk,s+16,slen);
 		memcpy(camellia->wrk+slen,d+slen,16-slen);
 		for(i=0;i<16;i++)camellia->wrk[i]^=camellia->mem[i];
-		if(mbedtls_camellia_crypt_ecb(&camellia->dec,
-			MBEDTLS_CAMELLIA_DECRYPT,camellia->wrk,d))return -1;
+		if(U(mbedtls_camellia_crypt_ecb(&camellia->dec,
+			MBEDTLS_CAMELLIA_DECRYPT,camellia->wrk,d)))return -1;
 		for(i=0;i<16;i++)d[i]^=camellia->mem[i];
 	}
 
@@ -2641,14 +2653,14 @@ static void *mbed_camellia_xts_init(void *ctx,void *key,int klen)
 	struct mbed_camellia_xts *camellia;
 
 	if(klen!=256&&klen!=512)goto err1;
-	if(!(camellia=malloc(sizeof(struct mbed_camellia_xts))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct mbed_camellia_xts)))))goto err1;
 	mbedtls_camellia_init(&camellia->enc);
 	mbedtls_camellia_init(&camellia->dec);
 	mbedtls_camellia_init(&camellia->twe);
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
-	if(mbedtls_camellia_setkey_enc(&camellia->enc,key,klen>>1))goto err2;
-	if(mbedtls_camellia_setkey_dec(&camellia->dec,key,klen>>1))goto err2;
-	if(mbedtls_camellia_setkey_enc(&camellia->twe,key+(klen>>4),klen>>1))
+	if(U(mbedtls_camellia_setkey_enc(&camellia->enc,key,klen>>1)))goto err2;
+	if(U(mbedtls_camellia_setkey_dec(&camellia->dec,key,klen>>1)))goto err2;
+	if(U(mbedtls_camellia_setkey_enc(&camellia->twe,key+(klen>>4),klen>>1)))
 			goto err2;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
@@ -2683,11 +2695,11 @@ static int mbed_camellia_essiv_encrypt(void *ctx,void *iv,void *src,int slen,
 {
 	struct mbed_camellia_essiv *camellia=ctx;
 
-	if(slen&0xf)return -1;
-	if(mbedtls_camellia_crypt_ecb(&camellia->aux,MBEDTLS_CAMELLIA_ENCRYPT,
-		iv,camellia->iv))return -1;
-	if(mbedtls_camellia_crypt_cbc(&camellia->enc,MBEDTLS_CAMELLIA_ENCRYPT,
-		slen,camellia->iv,src,dst))return -1;
+	if(U(slen&0xf))return -1;
+	if(U(mbedtls_camellia_crypt_ecb(&camellia->aux,MBEDTLS_CAMELLIA_ENCRYPT,
+		iv,camellia->iv)))return -1;
+	if(U(mbedtls_camellia_crypt_cbc(&camellia->enc,MBEDTLS_CAMELLIA_ENCRYPT,
+		slen,camellia->iv,src,dst)))return -1;
 	return 0;
 }
 
@@ -2696,11 +2708,11 @@ static int mbed_camellia_essiv_decrypt(void *ctx,void *iv,void *src,int slen,
 {
 	struct mbed_camellia_essiv *camellia=ctx;
 
-	if(slen&0xf)return -1;
-	if(mbedtls_camellia_crypt_ecb(&camellia->aux,MBEDTLS_CAMELLIA_ENCRYPT,
-		iv,camellia->iv))return -1;
-	if(mbedtls_camellia_crypt_cbc(&camellia->dec,MBEDTLS_CAMELLIA_DECRYPT,
-		slen,camellia->iv,src,dst))return -1;
+	if(U(slen&0xf))return -1;
+	if(U(mbedtls_camellia_crypt_ecb(&camellia->aux,MBEDTLS_CAMELLIA_ENCRYPT,
+		iv,camellia->iv)))return -1;
+	if(U(mbedtls_camellia_crypt_cbc(&camellia->dec,MBEDTLS_CAMELLIA_DECRYPT,
+		slen,camellia->iv,src,dst)))return -1;
 	return 0;
 }
 
@@ -2709,16 +2721,16 @@ static void *mbed_camellia_essiv_init(void *ctx,void *key,int klen)
 	struct mbed_camellia_essiv *camellia;
 	unsigned char tmp[32];
 
-	if(!(camellia=malloc(sizeof(struct mbed_camellia_essiv))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct mbed_camellia_essiv)))))goto err1;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
 	mbedtls_camellia_init(&camellia->enc);
 	mbedtls_camellia_init(&camellia->dec);
 	mbedtls_camellia_init(&camellia->aux);
-	if(mbedtls_camellia_setkey_enc(&camellia->enc,key,klen))goto err2;
-	if(mbedtls_camellia_setkey_dec(&camellia->dec,key,klen))goto err2;
-	if(mbedtls_md(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256),key,klen>>3,
-		tmp))goto err2;
-	if(mbedtls_camellia_setkey_enc(&camellia->aux,tmp,256))goto err3;
+	if(U(mbedtls_camellia_setkey_enc(&camellia->enc,key,klen)))goto err2;
+	if(U(mbedtls_camellia_setkey_dec(&camellia->dec,key,klen)))goto err2;
+	if(U(mbedtls_md(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256),key,
+		klen>>3,tmp)))goto err2;
+	if(U(mbedtls_camellia_setkey_enc(&camellia->aux,tmp,256)))goto err3;
 	((struct usicrypt_thread *)ctx)->global->memclear(tmp,sizeof(tmp));
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
@@ -2747,8 +2759,8 @@ static void mbed_camellia_essiv_exit(void *ctx)
 
 int USICRYPT(random)(void *ctx,void *data,int len)
 {
-	if(mbedtls_hmac_drbg_random(&((struct usicrypt_thread *)ctx)->rng,
-		data,len))return -1;
+	if(U(mbedtls_hmac_drbg_random(&((struct usicrypt_thread *)ctx)->rng,
+		data,len)))return -1;
 	return 0;
 }
 
@@ -2789,23 +2801,26 @@ int USICRYPT(digest)(void *ctx,int md,void *in,int len,void *out)
 #ifndef USICRYPT_NO_DIGEST
 #ifndef USICRYPT_NO_SHA1
 	case USICRYPT_SHA1:
-		return mbedtls_md(mbedtls_md_info_from_type(MBEDTLS_MD_SHA1),
-			in,len,out)?-1:0;
+		return U(mbedtls_md(mbedtls_md_info_from_type(MBEDTLS_MD_SHA1),
+				in,len,out))?-1:0;
 #endif
 #ifndef USICRYPT_NO_SHA256
 	case USICRYPT_SHA256:
-		return mbedtls_md(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256),
-			in,len,out)?-1:0;
+		return U(mbedtls_md(
+				mbedtls_md_info_from_type(MBEDTLS_MD_SHA256),
+				in,len,out))?-1:0;
 #endif
 #ifndef USICRYPT_NO_SHA384
 	case USICRYPT_SHA384:
-		return mbedtls_md(mbedtls_md_info_from_type(MBEDTLS_MD_SHA384),
-			in,len,out)?-1:0;
+		return U(mbedtls_md(
+				mbedtls_md_info_from_type(MBEDTLS_MD_SHA384),
+				in,len,out))?-1:0;
 #endif
 #ifndef USICRYPT_NO_SHA512
 	case USICRYPT_SHA512:
-		return mbedtls_md(mbedtls_md_info_from_type(MBEDTLS_MD_SHA512),
-			in,len,out)?-1:0;
+		return U(mbedtls_md(
+				mbedtls_md_info_from_type(MBEDTLS_MD_SHA512),
+				in,len,out))?-1:0;
 #endif
 #endif
 	default:return -1;
@@ -2848,11 +2863,12 @@ int USICRYPT(digest_iov)(void *ctx,int md,struct usicrypt_iov *iov,int niov,
 	}
 
 	mbedtls_md_init(&c);
-	if(mbedtls_md_setup(&c,mbedtls_md_info_from_type(digest),0))goto err1;
-	if(mbedtls_md_starts(&c))goto err1;
-	for(i=0;i<niov;i++)if(mbedtls_md_update(&c,iov[i].data,iov[i].length))
+	if(U(mbedtls_md_setup(&c,mbedtls_md_info_from_type(digest),0)))
 		goto err1;
-	if(mbedtls_md_finish(&c,out))goto err1;
+	if(U(mbedtls_md_starts(&c)))goto err1;
+	for(i=0;i<niov;i++)
+		if(U(mbedtls_md_update(&c,iov[i].data,iov[i].length)))goto err1;
+	if(U(mbedtls_md_finish(&c,out)))goto err1;
 	r=0;
 err1:	mbedtls_md_free(&c);
 	return r;
@@ -2866,23 +2882,23 @@ int USICRYPT(hmac)(void *ctx,int md,void *data,int dlen,void *key,int klen,
 #ifndef USICRYPT_NO_HMAC
 #ifndef USICRYPT_NO_SHA1
 	case USICRYPT_SHA1:
-		return mbedtls_md_hmac(mbedtls_md_info_from_type(
-			MBEDTLS_MD_SHA1),key,klen,data,dlen,out)?-1:0;
+		return U(mbedtls_md_hmac(mbedtls_md_info_from_type(
+			MBEDTLS_MD_SHA1),key,klen,data,dlen,out))?-1:0;
 #endif
 #ifndef USICRYPT_NO_SHA256
 	case USICRYPT_SHA256:
-		return mbedtls_md_hmac(mbedtls_md_info_from_type(
-			MBEDTLS_MD_SHA256),key,klen,data,dlen,out)?-1:0;
+		return U(mbedtls_md_hmac(mbedtls_md_info_from_type(
+			MBEDTLS_MD_SHA256),key,klen,data,dlen,out))?-1:0;
 #endif
 #ifndef USICRYPT_NO_SHA384
 	case USICRYPT_SHA384:
-		return mbedtls_md_hmac(mbedtls_md_info_from_type(
-			MBEDTLS_MD_SHA384),key,klen,data,dlen,out)?-1:0;
+		return U(mbedtls_md_hmac(mbedtls_md_info_from_type(
+			MBEDTLS_MD_SHA384),key,klen,data,dlen,out))?-1:0;
 #endif
 #ifndef USICRYPT_NO_SHA512
 	case USICRYPT_SHA512:
-		return mbedtls_md_hmac(mbedtls_md_info_from_type(
-			MBEDTLS_MD_SHA512),key,klen,data,dlen,out)?-1:0;
+		return U(mbedtls_md_hmac(mbedtls_md_info_from_type(
+			MBEDTLS_MD_SHA512),key,klen,data,dlen,out))?-1:0;
 #endif
 #endif
 	default:return -1;
@@ -2925,11 +2941,12 @@ int USICRYPT(hmac_iov)(void *ctx,int md,struct usicrypt_iov *iov,int niov,
 	}
 
 	mbedtls_md_init(&c);
-	if(mbedtls_md_setup(&c,mbedtls_md_info_from_type(digest),1))goto err1;
-	if(mbedtls_md_hmac_starts(&c,key,klen))goto err1;
-	for(i=0;i<niov;i++)if(mbedtls_md_hmac_update(&c,iov[i].data,
-		iov[i].length))goto err1;
-	if(mbedtls_md_hmac_finish(&c,out))goto err1;
+	if(U(mbedtls_md_setup(&c,mbedtls_md_info_from_type(digest),1)))
+		goto err1;
+	if(U(mbedtls_md_hmac_starts(&c,key,klen)))goto err1;
+	for(i=0;i<niov;i++)if(U(mbedtls_md_hmac_update(&c,iov[i].data,
+		iov[i].length)))goto err1;
+	if(U(mbedtls_md_hmac_finish(&c,out)))goto err1;
 	r=0;
 err1:	mbedtls_md_free(&c);
 	return r;
@@ -2969,9 +2986,9 @@ int USICRYPT(pbkdf2)(void *ctx,int md,void *key,int klen,void *salt,int slen,
 	}
 
 	mbedtls_md_init(&c);
-	if(mbedtls_md_setup(&c,mbedtls_md_info_from_type(type),1))goto err2;
-	if(mbedtls_pkcs5_pbkdf2_hmac(&c,key,klen,salt,slen,iter,
-		mbedtls_md_get_size(mbedtls_md_info_from_type(type)),out))
+	if(U(mbedtls_md_setup(&c,mbedtls_md_info_from_type(type),1)))goto err2;
+	if(U(mbedtls_pkcs5_pbkdf2_hmac(&c,key,klen,salt,slen,iter,
+		mbedtls_md_get_size(mbedtls_md_info_from_type(type)),out)))
 		goto err2;
 	r=0;
 err2:	mbedtls_md_free(&c);
@@ -3016,21 +3033,21 @@ int USICRYPT(hkdf)(void *ctx,int md,void *key,int klen,void *salt,int slen,
 	}
 
 	mbedtls_md_init(&c);
-	if(mbedtls_md_setup(&c,mbedtls_md_info_from_type(type),1))goto err2;
+	if(U(mbedtls_md_setup(&c,mbedtls_md_info_from_type(type),1)))goto err2;
 	if(!salt||!slen)
 	{
 		slen=mbedtls_md_get_size(mbedtls_md_info_from_type(type));
 		salt=s;
 		memset(s,0,slen);
 	}
-	if(mbedtls_md_hmac(mbedtls_md_info_from_type(type),salt,slen,key,klen,
-		out))goto err2;
-	if(mbedtls_md_hmac_starts(&c,out,mbedtls_md_get_size(
-		mbedtls_md_info_from_type(type))))goto err2;
-	if(mbedtls_md_hmac_update(&c,info,ilen))goto err2;
+	if(U(mbedtls_md_hmac(mbedtls_md_info_from_type(type),salt,slen,key,klen,
+		out)))goto err2;
+	if(U(mbedtls_md_hmac_starts(&c,out,mbedtls_md_get_size(
+		mbedtls_md_info_from_type(type)))))goto err2;
+	if(U(mbedtls_md_hmac_update(&c,info,ilen)))goto err2;
 	s[0]=1;
-	if(mbedtls_md_hmac_update(&c,s,1))goto err2;
-	if(mbedtls_md_hmac_finish(&c,out))goto err2;
+	if(U(mbedtls_md_hmac_update(&c,s,1)))goto err2;
+	if(U(mbedtls_md_hmac_finish(&c,out)))goto err2;
 	mbedtls_md_free(&c);
 	return 0;
 
@@ -3047,10 +3064,10 @@ void *USICRYPT(base64_encode)(void *ctx,void *in,int ilen,int *olen)
 	size_t len;
 	unsigned char *out;
 
-	if(mbedtls_base64_encode(NULL,0,&len,in,ilen)
-		!=MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL)goto err1;
-	if(!(out=malloc(len)))goto err1;
-	if(mbedtls_base64_encode(out,len,&len,in,ilen))goto err2;
+	if(U(mbedtls_base64_encode(NULL,0,&len,in,ilen)
+		!=MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL))goto err1;
+	if(U(!(out=malloc(len))))goto err1;
+	if(U(mbedtls_base64_encode(out,len,&len,in,ilen)))goto err2;
 	*olen=len;
 	return out;
 
@@ -3068,10 +3085,10 @@ void *USICRYPT(base64_decode)(void *ctx,void *in,int ilen,int *olen)
 	size_t len;
 	unsigned char *out;
 
-	if(mbedtls_base64_decode(NULL,0,&len,in,ilen)
-		!=MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL)goto err1;
-	if(!(out=malloc(len)))goto err1;
-	if(mbedtls_base64_decode(out,len,&len,in,ilen))goto err2;
+	if(U(mbedtls_base64_decode(NULL,0,&len,in,ilen)
+		!=MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL))goto err1;
+	if(U(!(out=malloc(len))))goto err1;
+	if(U(mbedtls_base64_decode(out,len,&len,in,ilen)))goto err2;
 	*olen=len;
 	return out;
 
@@ -3088,18 +3105,18 @@ void *USICRYPT(rsa_generate)(void *ctx,int bits)
 #ifndef USICRYPT_NO_RSA
 	mbedtls_pk_context *key;
 
-	if(bits<USICRYPT_RSA_BITS_MIN||bits>USICRYPT_RSA_BITS_MAX||(bits&7))
-		goto err1;
-	if(mbed_reseed(ctx))goto err1;
-	if(!(key=malloc(sizeof(mbedtls_pk_context))))goto err1;
+	if(U(bits<USICRYPT_RSA_BITS_MIN)||U(bits>USICRYPT_RSA_BITS_MAX)||
+		U(bits&7))goto err1;
+	if(U(mbed_reseed(ctx)))goto err1;
+	if(U(!(key=malloc(sizeof(mbedtls_pk_context)))))goto err1;
 	mbedtls_pk_init(key);
-	if(mbedtls_pk_setup(key,mbedtls_pk_info_from_type(MBEDTLS_PK_RSA)))
+	if(U(mbedtls_pk_setup(key,mbedtls_pk_info_from_type(MBEDTLS_PK_RSA))))
 		goto err2;
 	mbedtls_rsa_set_padding(mbedtls_pk_rsa(*key),MBEDTLS_RSA_PKCS_V21,
 		MBEDTLS_MD_SHA256);
-	if(mbedtls_rsa_gen_key(mbedtls_pk_rsa(*key),
+	if(U(mbedtls_rsa_gen_key(mbedtls_pk_rsa(*key),
 		mbedtls_hmac_drbg_random,&((struct usicrypt_thread *)ctx)->rng,
-		bits,USICRYPT_RSA_EXPONENT))goto err2;
+		bits,USICRYPT_RSA_EXPONENT)))goto err2;
 	return key;
 
 err2:	mbedtls_pk_free(key);
@@ -3115,7 +3132,7 @@ int USICRYPT(rsa_size)(void *ctx,void *key)
 #ifndef USICRYPT_NO_RSA
 	size_t n;
 
-	if((n=mbedtls_pk_get_bitlen((mbedtls_pk_context *)key))<=0)return -1;
+	if(U((n=mbedtls_pk_get_bitlen((mbedtls_pk_context *)key))<=0))return -1;
 	return n;
 #else
 	return -1;
@@ -3129,9 +3146,9 @@ void *USICRYPT(rsa_get_pub)(void *ctx,void *k,int *len)
 	unsigned char *key;
 	unsigned char bfr[8192];
 
-	if((l=mbedtls_pk_write_pubkey_der((mbedtls_pk_context *)k,bfr,
-		sizeof(bfr)))<=0)goto err1;
-	if(!(key=malloc(l)))goto err2;
+	if(U((l=mbedtls_pk_write_pubkey_der((mbedtls_pk_context *)k,bfr,
+		sizeof(bfr)))<=0))goto err1;
+	if(U(!(key=malloc(l))))goto err2;
 	memcpy(key,bfr+sizeof(bfr)-l,l);
 	((struct usicrypt_thread *)ctx)->global->memclear(bfr+sizeof(bfr)-l,l);
 	*len=l;
@@ -3150,12 +3167,12 @@ void *USICRYPT(rsa_set_pub)(void *ctx,void *key,int len)
 	size_t n;
 	mbedtls_pk_context *k;
 
-	if(!(k=malloc(sizeof(mbedtls_pk_context))))goto err1;
+	if(U(!(k=malloc(sizeof(mbedtls_pk_context)))))goto err1;
 	mbedtls_pk_init(k);
-	if(mbedtls_pk_parse_public_key(k,key,len))goto err2;
-	if(mbedtls_pk_get_type(k)!=MBEDTLS_PK_RSA)goto err2;
-	if((n=mbedtls_pk_get_bitlen(k))<USICRYPT_RSA_BITS_MIN||
-		n>USICRYPT_RSA_BITS_MAX)goto err2;
+	if(U(mbedtls_pk_parse_public_key(k,key,len)))goto err2;
+	if(U(mbedtls_pk_get_type(k)!=MBEDTLS_PK_RSA))goto err2;
+	if(U((n=mbedtls_pk_get_bitlen(k))<USICRYPT_RSA_BITS_MIN)||
+		U(n>USICRYPT_RSA_BITS_MAX))goto err2;
 	mbedtls_rsa_set_padding(mbedtls_pk_rsa(*k),MBEDTLS_RSA_PKCS_V21,
 		MBEDTLS_MD_SHA256);
 	return k;
@@ -3175,9 +3192,9 @@ void *USICRYPT(rsa_get_key)(void *ctx,void *k,int *len)
 	unsigned char *key=NULL;
 	unsigned char bfr[8192];
 
-	if((l=mbedtls_pk_write_key_der((mbedtls_pk_context *)k,bfr,
-		sizeof(bfr)))<=0)goto err1;
-	if(!(key=malloc(l)))goto err2;
+	if(U((l=mbedtls_pk_write_key_der((mbedtls_pk_context *)k,bfr,
+		sizeof(bfr)))<=0))goto err1;
+	if(U(!(key=malloc(l))))goto err2;
 	memcpy(key,bfr+sizeof(bfr)-l,l);
 	*len=l;
 err2:	((struct usicrypt_thread *)ctx)->global->memclear(bfr+sizeof(bfr)-l,l);
@@ -3193,12 +3210,12 @@ void *USICRYPT(rsa_set_key)(void *ctx,void *key,int len)
 	size_t n;
 	mbedtls_pk_context *k;
 
-	if(!(k=malloc(sizeof(mbedtls_pk_context))))goto err1;
+	if(U(!(k=malloc(sizeof(mbedtls_pk_context)))))goto err1;
 	mbedtls_pk_init(k);
-	if(mbedtls_pk_parse_key(k,key,len,NULL,0))goto err2;
-	if(mbedtls_pk_get_type(k)!=MBEDTLS_PK_RSA)goto err2;
-	if((n=mbedtls_pk_get_bitlen(k))<USICRYPT_RSA_BITS_MIN||
-		n>USICRYPT_RSA_BITS_MAX)goto err2;
+	if(U(mbedtls_pk_parse_key(k,key,len,NULL,0)))goto err2;
+	if(U(mbedtls_pk_get_type(k)!=MBEDTLS_PK_RSA))goto err2;
+	if(U((n=mbedtls_pk_get_bitlen(k))<USICRYPT_RSA_BITS_MIN)||
+		U(n>USICRYPT_RSA_BITS_MAX))goto err2;
 	mbedtls_rsa_set_padding(mbedtls_pk_rsa(*k),MBEDTLS_RSA_PKCS_V21,
 		MBEDTLS_MD_SHA256);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,len);
@@ -3299,16 +3316,16 @@ void *USICRYPT(rsa_encrypt_v15)(void *ctx,void *key,void *data,int dlen,
 #ifndef USICRYPT_NO_RSA
 	unsigned char *out;
 
-	if(mbed_reseed(ctx))goto err1;
+	if(U(mbed_reseed(ctx)))goto err1;
 	*olen=mbedtls_pk_get_len(key);
-	if(dlen>*olen-11)goto err1;
-	if(!(out=malloc(*olen)))goto err1;
+	if(U(dlen>*olen-11))goto err1;
+	if(U(!(out=malloc(*olen))))goto err1;
 	mbedtls_rsa_set_padding(mbedtls_pk_rsa(*((mbedtls_pk_context *)key)),
 		MBEDTLS_RSA_PKCS_V15,MBEDTLS_MD_NONE);
-	if(mbedtls_rsa_rsaes_pkcs1_v15_encrypt(
+	if(U(mbedtls_rsa_rsaes_pkcs1_v15_encrypt(
 		mbedtls_pk_rsa(*((mbedtls_pk_context *)key)),
 		mbedtls_hmac_drbg_random,&((struct usicrypt_thread *)ctx)->rng,
-		MBEDTLS_RSA_PUBLIC,dlen,data,out))goto err2;
+		MBEDTLS_RSA_PUBLIC,dlen,data,out)))goto err2;
 	mbedtls_rsa_set_padding(mbedtls_pk_rsa(*((mbedtls_pk_context *)key)),
 		MBEDTLS_RSA_PKCS_V21,MBEDTLS_MD_SHA256);
 	return out;
@@ -3331,16 +3348,16 @@ void *USICRYPT(rsa_decrypt_v15)(void *ctx,void *key,void *data,int dlen,
 	size_t len;
 	unsigned char *out;
 
-	if(mbed_reseed(ctx))goto err1;
+	if(U(mbed_reseed(ctx)))goto err1;
 	len=mbedtls_pk_get_len(key);
-	if(dlen!=len)goto err1;
-	if(!(out=malloc(len)))goto err1;
+	if(U(dlen!=len))goto err1;
+	if(U(!(out=malloc(len))))goto err1;
 	mbedtls_rsa_set_padding(mbedtls_pk_rsa(*((mbedtls_pk_context *)key)),
 		MBEDTLS_RSA_PKCS_V15,MBEDTLS_MD_NONE);
-	if(mbedtls_rsa_rsaes_pkcs1_v15_decrypt(
+	if(U(mbedtls_rsa_rsaes_pkcs1_v15_decrypt(
 		mbedtls_pk_rsa(*((mbedtls_pk_context *)key)),
 		mbedtls_hmac_drbg_random,&((struct usicrypt_thread *)ctx)->rng,
-		MBEDTLS_RSA_PRIVATE,&l,data,out,len))goto err2;
+		MBEDTLS_RSA_PRIVATE,&l,data,out,len)))goto err2;
 	out=USICRYPT(do_realloc)(ctx,out,len,l);
 	*olen=l;
 	mbedtls_rsa_set_padding(mbedtls_pk_rsa(*((mbedtls_pk_context *)key)),
@@ -3389,17 +3406,17 @@ void *USICRYPT(rsa_encrypt_oaep)(void *ctx,int md,void *key,void *data,int dlen,
 	default:goto err1;
 	}
 
-	if(mbed_reseed(ctx))goto err1;
+	if(U(mbed_reseed(ctx)))goto err1;
 	mbedtls_rsa_set_padding(mbedtls_pk_rsa(*((mbedtls_pk_context *)key)),
 		MBEDTLS_RSA_PKCS_V21,type);
 	*olen=mbedtls_pk_get_len(key);
-	if(dlen>*olen-2*mbedtls_md_get_size(
-		mbedtls_md_info_from_type(type))-2)goto err1;
-	if(!(out=malloc(*olen)))goto err1;
-	if(mbedtls_rsa_rsaes_oaep_encrypt(
+	if(U(dlen>*olen-2*mbedtls_md_get_size(
+		mbedtls_md_info_from_type(type))-2))goto err1;
+	if(U(!(out=malloc(*olen))))goto err1;
+	if(U(mbedtls_rsa_rsaes_oaep_encrypt(
 		mbedtls_pk_rsa(*((mbedtls_pk_context *)key)),
 		mbedtls_hmac_drbg_random,&((struct usicrypt_thread *)ctx)->rng,
-		MBEDTLS_RSA_PUBLIC,NULL,0,dlen,data,out))goto err2;
+		MBEDTLS_RSA_PUBLIC,NULL,0,dlen,data,out)))goto err2;
 	mbedtls_rsa_set_padding(mbedtls_pk_rsa(*((mbedtls_pk_context *)key)),
 		MBEDTLS_RSA_PKCS_V21,MBEDTLS_MD_SHA256);
 	return out;
@@ -3446,16 +3463,16 @@ void *USICRYPT(rsa_decrypt_oaep)(void *ctx,int md,void *key,void *data,int dlen,
 	default:goto err1;
 	}
 
-	if(mbed_reseed(ctx))goto err1;
+	if(U(mbed_reseed(ctx)))goto err1;
 	mbedtls_rsa_set_padding(mbedtls_pk_rsa(*((mbedtls_pk_context *)key)),
 		MBEDTLS_RSA_PKCS_V21,type);
 	len=mbedtls_pk_get_len(key);
-	if(dlen!=len)goto err1;
-	if(!(out=malloc(len)))goto err1;
-	if(mbedtls_rsa_rsaes_oaep_decrypt(
+	if(U(dlen!=len))goto err1;
+	if(U(!(out=malloc(len))))goto err1;
+	if(U(mbedtls_rsa_rsaes_oaep_decrypt(
 		mbedtls_pk_rsa(*((mbedtls_pk_context *)key)),
 		mbedtls_hmac_drbg_random,&((struct usicrypt_thread *)ctx)->rng,
-		MBEDTLS_RSA_PRIVATE,NULL,0,&l,data,out,len))goto err2;
+		MBEDTLS_RSA_PRIVATE,NULL,0,&l,data,out,len)))goto err2;
 	mbedtls_rsa_set_padding(mbedtls_pk_rsa(*((mbedtls_pk_context *)key)),
 		MBEDTLS_RSA_PKCS_V21,MBEDTLS_MD_SHA256);
 	out=USICRYPT(do_realloc)(ctx,out,len,l);
@@ -3489,33 +3506,33 @@ void *USICRYPT(dh_generate)(void *ctx,int bits,int generator,int *len)
 	unsigned char *data;
 	unsigned char *ptr;
 
-	if(bits<USICRYPT_DH_BITS_MIN||bits>USICRYPT_DH_BITS_MAX||
-		(bits&7)||(generator!=2&&generator!=5))goto err1;
-	if(mbed_reseed(ctx))goto err1;
+	if(U(bits<USICRYPT_DH_BITS_MIN)||U(bits>USICRYPT_DH_BITS_MAX)||
+		U(bits&7)||U(generator!=2&&generator!=5))goto err1;
+	if(U(mbed_reseed(ctx)))goto err1;
 	mbedtls_mpi_init(&p);
 	while(1)
 	{
-		if(mbedtls_mpi_gen_prime(&p,bits,1,mbedtls_hmac_drbg_random,
-			&((struct usicrypt_thread *)ctx)->rng))goto err2;
+		if(U(mbedtls_mpi_gen_prime(&p,bits,1,mbedtls_hmac_drbg_random,
+			&((struct usicrypt_thread *)ctx)->rng)))goto err2;
 		switch(generator)
 		{
-		case 2:	if(mbedtls_mpi_mod_int(&r,&p,24))goto err2;
+		case 2:	if(U(mbedtls_mpi_mod_int(&r,&p,24)))goto err2;
 			if(r!=11)continue;
 			break;
 
-		case 3:	if(mbedtls_mpi_mod_int(&r,&p,12))goto err2;
+		case 3:	if(U(mbedtls_mpi_mod_int(&r,&p,12)))goto err2;
 			if(r!=5)continue;
 			break;
 
-		case 5:	if(mbedtls_mpi_mod_int(&r,&p,10))goto err2;
+		case 5:	if(U(mbedtls_mpi_mod_int(&r,&p,10)))goto err2;
 			if(r!=3&&r!=7)continue;
 			break;
 		}
 		break;
 	}
 	l=mbedtls_mpi_size(&p);
-	if(!(bfr=malloc(l)))goto err2;
-	if(mbedtls_mpi_write_binary(&p,bfr,l))goto err3;
+	if(U(!(bfr=malloc(l))))goto err2;
+	if(U(mbedtls_mpi_write_binary(&p,bfr,l)))goto err3;
 
 	n=l+((*bfr&0x80)?1:0);
 	if(n>=0x100)n+=7;
@@ -3525,7 +3542,7 @@ void *USICRYPT(dh_generate)(void *ctx,int bits,int generator,int *len)
 	else if(n>=0x80)n+=3;
 	else n+=2;
 	*len=n;
-	if(!(ptr=data=malloc(n)))goto err3;
+	if(U(!(ptr=data=malloc(n))))goto err3;
 
 	*ptr++=0x30;
 	n=l+((*bfr&0x80)?1:0);
@@ -3577,10 +3594,10 @@ void *USICRYPT(dh_init)(void *ctx,void *params,int len)
 #ifndef USICRYPT_NO_DH
 	mbedtls_dhm_context *dh;
 
-	if(!(dh=malloc(sizeof(mbedtls_dhm_context))))goto err1;
+	if(U(!(dh=malloc(sizeof(mbedtls_dhm_context)))))goto err1;
 	mbedtls_dhm_init(dh);
-	if(mbedtls_dhm_parse_dhm(dh,params,len))goto err2;
-	if(dh->len<USICRYPT_DH_BYTES_MIN||dh->len>USICRYPT_DH_BYTES_MAX)
+	if(U(mbedtls_dhm_parse_dhm(dh,params,len)))goto err2;
+	if(U(dh->len<USICRYPT_DH_BYTES_MIN)||U(dh->len>USICRYPT_DH_BYTES_MAX))
 		goto err2;
 	return dh;
 
@@ -3598,11 +3615,11 @@ void *USICRYPT(dh_genex)(void *ctx,void *dh,int *len)
 	int l;
 	unsigned char *pub;
 
-	if(mbed_reseed(ctx))goto err1;
+	if(U(mbed_reseed(ctx)))goto err1;
 	*len=((mbedtls_dhm_context *)dh)->len;
-	if(!(pub=malloc(*len)))goto err1;
-	if(mbedtls_dhm_make_public(dh,*len,pub,*len,mbedtls_hmac_drbg_random,
-		&((struct usicrypt_thread *)ctx)->rng))goto err2;
+	if(U(!(pub=malloc(*len))))goto err1;
+	if(U(mbedtls_dhm_make_public(dh,*len,pub,*len,mbedtls_hmac_drbg_random,
+		&((struct usicrypt_thread *)ctx)->rng)))goto err2;
 	for(l=0;l<*len;l++)if(pub[l])break;
 	if(l)
 	{
@@ -3626,11 +3643,11 @@ void *USICRYPT(dh_derive)(void *ctx,void *dh,void *pub,int plen,int *slen)
 	size_t len;
 	unsigned char *sec;
 
-	if(mbedtls_dhm_read_public(dh,pub,plen))goto err1;
+	if(U(mbedtls_dhm_read_public(dh,pub,plen)))goto err1;
 	len=((mbedtls_dhm_context *)dh)->len;
-	if(!(sec=malloc(len)))goto err1;
-	if(mbedtls_dhm_calc_secret(dh,sec,len,&len,mbedtls_hmac_drbg_random,
-		&((struct usicrypt_thread *)ctx)->rng))goto err2;
+	if(U(!(sec=malloc(len))))goto err1;
+	if(U(mbedtls_dhm_calc_secret(dh,sec,len,&len,mbedtls_hmac_drbg_random,
+		&((struct usicrypt_thread *)ctx)->rng)))goto err2;
 	*slen=len;
 	return sec;
 
@@ -3667,14 +3684,14 @@ void *USICRYPT(ec_generate)(void *ctx,int curve)
 	default:goto err1;
 	}
 	curve=mbed_ec_map[curve];
-	if(mbed_reseed(ctx))goto err1;
-	if(!(key=malloc(sizeof(mbedtls_pk_context))))goto err1;
+	if(U(mbed_reseed(ctx)))goto err1;
+	if(U(!(key=malloc(sizeof(mbedtls_pk_context)))))goto err1;
 	mbedtls_pk_init(key);
-	if(mbedtls_pk_setup(key,mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY)))
+	if(U(mbedtls_pk_setup(key,mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY))))
 		goto err2;
-	if(mbedtls_ecp_gen_key(curve,mbedtls_pk_ec(*key),
+	if(U(mbedtls_ecp_gen_key(curve,mbedtls_pk_ec(*key),
 		mbedtls_hmac_drbg_random,
-		&((struct usicrypt_thread *)ctx)->rng))goto err2;
+		&((struct usicrypt_thread *)ctx)->rng)))goto err2;
 	return key;
 
 err2:	mbedtls_pk_free(key);
@@ -3718,16 +3735,16 @@ void *USICRYPT(ec_derive)(void *ctx,void *key,void *pub,int *klen)
 	unsigned char bfr[1024];
 
 	mbedtls_ecdh_init(&ecdh);
-	if(mbedtls_ecdh_get_params(&ecdh,
+	if(U(mbedtls_ecdh_get_params(&ecdh,
 		mbedtls_pk_ec(*((mbedtls_pk_context *)key)),
-		MBEDTLS_ECDH_OURS))goto err1;
-	if(mbedtls_ecdh_get_params(&ecdh,
+		MBEDTLS_ECDH_OURS)))goto err1;
+	if(U(mbedtls_ecdh_get_params(&ecdh,
 		mbedtls_pk_ec(*((mbedtls_pk_context *)pub)),
-		MBEDTLS_ECDH_THEIRS))goto err1;
-	if(mbedtls_ecdh_calc_secret(&ecdh,&len,bfr,sizeof(bfr),NULL,NULL))
+		MBEDTLS_ECDH_THEIRS)))goto err1;
+	if(U(mbedtls_ecdh_calc_secret(&ecdh,&len,bfr,sizeof(bfr),NULL,NULL)))
 		goto err1;
 	*klen=len;
-	if(!(sec=malloc(*klen)))goto err2;
+	if(U(!(sec=malloc(*klen))))goto err2;
 	memcpy(sec,bfr,len);
 	((struct usicrypt_thread *)ctx)->global->memclear(bfr,len);
 	mbedtls_ecdh_free(&ecdh);
@@ -3746,9 +3763,9 @@ void *USICRYPT(ec_get_pub)(void *ctx,void *k,int *len)
 	unsigned char *key;
 	unsigned char bfr[1024];
 
-	if((l=mbedtls_pk_write_pubkey_der((mbedtls_pk_context *)k,bfr,
-		sizeof(bfr)))<=0)goto err1;
-	if(!(key=malloc(l)))goto err2;
+	if(U((l=mbedtls_pk_write_pubkey_der((mbedtls_pk_context *)k,bfr,
+		sizeof(bfr)))<=0))goto err1;
+	if(U(!(key=malloc(l))))goto err2;
 	memcpy(key,bfr+sizeof(bfr)-l,l);
 	*len=l;
 	((struct usicrypt_thread *)ctx)->global->memclear(bfr+sizeof(bfr)-l,l);
@@ -3766,10 +3783,10 @@ void *USICRYPT(ec_set_pub)(void *ctx,void *key,int len)
 #ifndef USICRYPT_NO_EC
 	mbedtls_pk_context *k;
 
-	if(!(k=malloc(sizeof(mbedtls_pk_context))))goto err1;
+	if(U(!(k=malloc(sizeof(mbedtls_pk_context)))))goto err1;
 	mbedtls_pk_init(k);
-	if(mbedtls_pk_parse_public_key(k,key,len))goto err2;
-	if(mbedtls_pk_get_type(k)!=MBEDTLS_PK_ECKEY)goto err2;
+	if(U(mbedtls_pk_parse_public_key(k,key,len)))goto err2;
+	if(U(mbedtls_pk_get_type(k)!=MBEDTLS_PK_ECKEY))goto err2;
 	return k;
 
 err2:	mbedtls_pk_free(k);
@@ -3787,9 +3804,9 @@ void *USICRYPT(ec_get_key)(void *ctx,void *k,int *len)
 	unsigned char *key=NULL;
 	unsigned char bfr[1024];
 
-	if((l=mbedtls_pk_write_key_der((mbedtls_pk_context *)k,bfr,
-		sizeof(bfr)))<=0)goto err1;
-	if(!(key=malloc(l)))goto err2;
+	if(U((l=mbedtls_pk_write_key_der((mbedtls_pk_context *)k,bfr,
+		sizeof(bfr)))<=0))goto err1;
+	if(U(!(key=malloc(l))))goto err2;
 	memcpy(key,bfr+sizeof(bfr)-l,l);
 	*len=l;
 err2:	((struct usicrypt_thread *)ctx)->global->memclear(bfr+sizeof(bfr)-l,l);
@@ -3804,10 +3821,10 @@ void *USICRYPT(ec_set_key)(void *ctx,void *key,int len)
 #ifndef USICRYPT_NO_EC
 	mbedtls_pk_context *k;
 
-	if(!(k=malloc(sizeof(mbedtls_pk_context))))goto err1;
+	if(U(!(k=malloc(sizeof(mbedtls_pk_context)))))goto err1;
 	mbedtls_pk_init(k);
-	if(mbedtls_pk_parse_key(k,key,len,NULL,0))goto err2;
-	if(mbedtls_pk_get_type(k)!=MBEDTLS_PK_ECKEY)goto err2;
+	if(U(mbedtls_pk_parse_key(k,key,len,NULL,0)))goto err2;
+	if(U(mbedtls_pk_get_type(k)!=MBEDTLS_PK_ECKEY))goto err2;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,len);
 	return k;
 
@@ -3871,14 +3888,14 @@ void *USICRYPT(x25519_generate)(void *ctx)
 #if !defined(USICRYPT_NO_X25519) && MBEDTLS_VERSION_NUMBER >= 0x02050000
 	mbedtls_pk_context *key;
 
-	if(mbed_reseed(ctx))goto err1;
-	if(!(key=malloc(sizeof(mbedtls_pk_context))))goto err1;
+	if(U(mbed_reseed(ctx)))goto err1;
+	if(U(!(key=malloc(sizeof(mbedtls_pk_context)))))goto err1;
 	mbedtls_pk_init(key);
-	if(mbedtls_pk_setup(key,mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY)))
+	if(U(mbedtls_pk_setup(key,mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY))))
 		goto err2;
-	if(mbedtls_ecp_gen_key(MBEDTLS_ECP_DP_CURVE25519,mbedtls_pk_ec(*key),
+	if(U(mbedtls_ecp_gen_key(MBEDTLS_ECP_DP_CURVE25519,mbedtls_pk_ec(*key),
 		mbedtls_hmac_drbg_random,
-		&((struct usicrypt_thread *)ctx)->rng))goto err2;
+		&((struct usicrypt_thread *)ctx)->rng)))goto err2;
 	return key;
 
 err2:	mbedtls_pk_free(key);
@@ -3899,16 +3916,16 @@ void *USICRYPT(x25519_derive)(void *ctx,void *key,void *pub,int *klen)
 	unsigned char bfr[1024];
 
 	mbedtls_ecdh_init(&ecdh);
-	if(mbedtls_ecdh_get_params(&ecdh,
+	if(U(mbedtls_ecdh_get_params(&ecdh,
 		mbedtls_pk_ec(*((mbedtls_pk_context *)key)),
-		MBEDTLS_ECDH_OURS))goto err1;
-	if(mbedtls_ecdh_get_params(&ecdh,
+		MBEDTLS_ECDH_OURS)))goto err1;
+	if(U(mbedtls_ecdh_get_params(&ecdh,
 		mbedtls_pk_ec(*((mbedtls_pk_context *)pub)),
-		MBEDTLS_ECDH_THEIRS))goto err1;
-	if(mbedtls_ecdh_calc_secret(&ecdh,&len,bfr,sizeof(bfr),NULL,NULL))
+		MBEDTLS_ECDH_THEIRS)))goto err1;
+	if(U(mbedtls_ecdh_calc_secret(&ecdh,&len,bfr,sizeof(bfr),NULL,NULL)))
 		goto err1;
 	*klen=len;
-	if(!(sec=malloc(*klen)))goto err2;
+	if(U(!(sec=malloc(*klen))))goto err2;
 	for(i=0;i<len;i++)sec[len-i-1]=bfr[i];
 	((struct usicrypt_thread *)ctx)->global->memclear(bfr,len);
 	mbedtls_ecdh_free(&ecdh);
@@ -3929,9 +3946,9 @@ void *USICRYPT(x25519_get_pub)(void *ctx,void *k,int *len)
 	unsigned char bfr[32];
 
 	*len=sizeof(mbed_x25519_asn1_pub)+32;
-	if(!(key=malloc(*len)))goto err1;
-	if(mbedtls_mpi_write_binary(
-		&(mbedtls_pk_ec(*((mbedtls_pk_context *)k))->Q.X),bfr,32))
+	if(U(!(key=malloc(*len))))goto err1;
+	if(U(mbedtls_mpi_write_binary(
+		&(mbedtls_pk_ec(*((mbedtls_pk_context *)k))->Q.X),bfr,32)))
 			goto err2;
 	memcpy(key,mbed_x25519_asn1_pub,sizeof(mbed_x25519_asn1_pub));
 	ptr=key+sizeof(mbed_x25519_asn1_pub);
@@ -3955,20 +3972,20 @@ void *USICRYPT(x25519_set_pub)(void *ctx,void *key,int len)
 	unsigned char *ptr;
 	unsigned char bfr[32];
 
-	if(len<sizeof(mbed_x25519_asn1_pub)+32||
-		memcmp(key,mbed_x25519_asn1_pub,sizeof(mbed_x25519_asn1_pub)))
-			goto err1;
-	if(!(k=malloc(sizeof(mbedtls_pk_context))))goto err1;
+	if(U(len<sizeof(mbed_x25519_asn1_pub)+32)||
+	    U(memcmp(key,mbed_x25519_asn1_pub,sizeof(mbed_x25519_asn1_pub))))
+		goto err1;
+	if(U(!(k=malloc(sizeof(mbedtls_pk_context)))))goto err1;
 	mbedtls_pk_init(k);
-	if(mbedtls_pk_setup(k,mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY)))
+	if(U(mbedtls_pk_setup(k,mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY))))
 		goto err2;
 	ec=mbedtls_pk_ec(*((mbedtls_pk_context *)k));
-	if(mbedtls_ecp_group_load(&ec->grp,MBEDTLS_ECP_DP_CURVE25519))
+	if(U(mbedtls_ecp_group_load(&ec->grp,MBEDTLS_ECP_DP_CURVE25519)))
 		goto err3;
 	ptr=((unsigned char *)key)+sizeof(mbed_x25519_asn1_pub);
 	for(i=0;i<32;i++)bfr[31-i]=ptr[i];
-	if(mbedtls_mpi_read_binary(&ec->Q.X,bfr,32))goto err4;
-	if(mbedtls_mpi_lset(&ec->Q.Z,1))goto err4;
+	if(U(mbedtls_mpi_read_binary(&ec->Q.X,bfr,32)))goto err4;
+	if(U(mbedtls_mpi_lset(&ec->Q.Z,1)))goto err4;
 	((struct usicrypt_thread *)ctx)->global->memclear(bfr,sizeof(bfr));
 	return k;
 
@@ -3990,9 +4007,9 @@ void *USICRYPT(x25519_get_key)(void *ctx,void *k,int *len)
 	unsigned char bfr[32];
 
 	*len=sizeof(mbed_x25519_asn1_key)+32;
-	if(!(key=malloc(*len)))goto err1;
-	if(mbedtls_mpi_write_binary(
-		&(mbedtls_pk_ec(*((mbedtls_pk_context *)k))->d),bfr,32))
+	if(U(!(key=malloc(*len))))goto err1;
+	if(U(mbedtls_mpi_write_binary(
+		&(mbedtls_pk_ec(*((mbedtls_pk_context *)k))->d),bfr,32)))
 			goto err2;
 	memcpy(key,mbed_x25519_asn1_key,sizeof(mbed_x25519_asn1_key));
 	ptr=key+sizeof(mbed_x25519_asn1_key);
@@ -4016,22 +4033,22 @@ void *USICRYPT(x25519_set_key)(void *ctx,void *key,int len)
 	unsigned char *ptr;
 	unsigned char bfr[32];
 
-	if(len<sizeof(mbed_x25519_asn1_key)+32||
-		memcmp(key,mbed_x25519_asn1_key,sizeof(mbed_x25519_asn1_key)))
-			goto err1;
-	if(!(k=malloc(sizeof(mbedtls_pk_context))))goto err1;
+	if(U(len<sizeof(mbed_x25519_asn1_key)+32)||
+	    U(memcmp(key,mbed_x25519_asn1_key,sizeof(mbed_x25519_asn1_key))))
+		goto err1;
+	if(U(!(k=malloc(sizeof(mbedtls_pk_context)))))goto err1;
 	mbedtls_pk_init(k);
-	if(mbedtls_pk_setup(k,mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY)))
+	if(U(mbedtls_pk_setup(k,mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY))))
 		goto err2;
 	ec=mbedtls_pk_ec(*((mbedtls_pk_context *)k));
-	if(mbedtls_ecp_group_load(&ec->grp,MBEDTLS_ECP_DP_CURVE25519))
+	if(U(mbedtls_ecp_group_load(&ec->grp,MBEDTLS_ECP_DP_CURVE25519)))
 		goto err3;
 	ptr=((unsigned char *)key)+sizeof(mbed_x25519_asn1_key);
 	for(i=0;i<32;i++)bfr[31-i]=ptr[i];
-	if(mbedtls_mpi_read_binary(&ec->d,bfr,32))goto err4;
-	if(mbedtls_ecp_mul(&ec->grp,&ec->Q,&ec->d,&ec->grp.G,
+	if(U(mbedtls_mpi_read_binary(&ec->d,bfr,32)))goto err4;
+	if(U(mbedtls_ecp_mul(&ec->grp,&ec->Q,&ec->d,&ec->grp.G,
 		mbedtls_hmac_drbg_random,
-		&((struct usicrypt_thread *)ctx)->rng))goto err4;
+		&((struct usicrypt_thread *)ctx)->rng)))goto err4;
 	((struct usicrypt_thread *)ctx)->global->memclear(bfr,sizeof(bfr));
 	((struct usicrypt_thread *)ctx)->global->memclear(key,len);
 	return k;
@@ -4072,29 +4089,31 @@ void *USICRYPT(encrypt_p8)(void *ctx,void *key,int klen,void *data,int dlen,
 	unsigned char iv[16];
 	unsigned char salt[8];
 
-	if(dlen>0x3fff||iter<=0||(digest==USICRYPT_SHA1&&bits!=128))goto err1;
+	if(U(dlen>0x3fff)||U(iter<=0)||U(digest==USICRYPT_SHA1&&bits!=128))
+		goto err1;
 
-	if(mbed_asn_next(data,dlen,0x30,&cidx,&didx))goto err1;
-	if(cidx+didx!=dlen)goto err1;
+	if(U(mbed_asn_next(data,dlen,0x30,&cidx,&didx)))goto err1;
+	if(U(cidx+didx!=dlen))goto err1;
 
-	for(didx=0;didx<4;didx++)if(mbed_digest_asn[didx].oidlen&&
-		mbed_digest_asn[didx].digest==digest)break;
-	if(didx==4)goto err1;
+	for(didx=0;didx<4;didx++)if(U(mbed_digest_asn[didx].oidlen&&
+		mbed_digest_asn[didx].digest==digest))break;
+	if(U(didx==4))goto err1;
 
-	for(cidx=0;cidx<24;cidx++)if(mbed_cipher_asn[cidx].oidlen&&
+	for(cidx=0;cidx<24;cidx++)if(U(mbed_cipher_asn[cidx].oidlen&&
 		mbed_cipher_asn[cidx].cipher==cipher&&
 		mbed_cipher_asn[cidx].mode==mode&&
-		mbed_cipher_asn[cidx].bits==bits)break;
-	if(cidx==24)goto err1;
+		mbed_cipher_asn[cidx].bits==bits))break;
+	if(U(cidx==24))goto err1;
 
-	if(USICRYPT(random)(ctx,salt,8))goto err1;
-	if(USICRYPT(pbkdf2)(ctx,digest,key,klen,salt,8,iter,bfr))goto err2;
+	if(U(USICRYPT(random)(ctx,salt,8)))goto err1;
+	if(U(USICRYPT(pbkdf2)(ctx,digest,key,klen,salt,8,iter,bfr)))goto err2;
 
 	if(mbed_cipher_asn[cidx].ivlen)
-		if(USICRYPT(random)(ctx,iv,mbed_cipher_asn[cidx].ivlen))
+		if(U(USICRYPT(random)(ctx,iv,mbed_cipher_asn[cidx].ivlen)))
 			goto err3;
 
-	if(!(c=USICRYPT(blkcipher_init)(ctx,cipher,mode,bfr,bits,iv)))goto err4;
+	if(U(!(c=USICRYPT(blkcipher_init)(ctx,cipher,mode,bfr,bits,iv))))
+		goto err4;
 
 	if(iter>=0x800000)ilen=4;
 	else if(iter>=0x8000)ilen=3;
@@ -4111,7 +4130,7 @@ void *USICRYPT(encrypt_p8)(void *ctx,void *key,int klen,void *data,int dlen,
 	*rlen=mbed_asn_length(NULL,len1+len2+len3+dlen+plen)+
 		len1+len2+len3+dlen+plen+1;
 
-	if(!(ptr=out=malloc(*rlen)))goto err5;
+	if(U(!(ptr=out=malloc(*rlen))))goto err5;
 
 	*ptr++=0x30;
 	ptr+=mbed_asn_length(ptr,len1+len2+len3+dlen+plen);
@@ -4176,7 +4195,7 @@ void *USICRYPT(encrypt_p8)(void *ctx,void *key,int klen,void *data,int dlen,
 	memcpy(ptr,data,dlen);
 	if(mbed_cipher_asn[cidx].pad)usicrypt_cipher_padding_add(ctx,ptr,dlen);
 
-	if(USICRYPT(blkcipher_encrypt)(c,ptr,dlen+plen,ptr))goto err6;
+	if(U(USICRYPT(blkcipher_encrypt)(c,ptr,dlen+plen,ptr)))goto err6;
 	USICRYPT(blkcipher_exit)(c);
 
 	((struct usicrypt_thread *)ctx)->global->memclear(salt,sizeof(salt));
@@ -4218,137 +4237,139 @@ void *USICRYPT(decrypt_p8)(void *ctx,void *key,int klen,void *data,int dlen,
 	unsigned char *iv;
 	unsigned char bfr[64];
 
-	if(dlen>0x3fff)goto err1;
+	if(U(dlen>0x3fff))goto err1;
 
-	if(mbed_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(mbed_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	data+=h;
 	dlen-=h;
 
-	if(mbed_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(mbed_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	eptr=data+h+l;
 	elen=dlen-h-l;
 	data+=h;
 	dlen=l;
 
-	if(mbed_asn_next(data,dlen,0x06,&h,&l))goto err1;
-	if(l!=sizeof(mbed_pbes2_oid)||memcmp(data+h,mbed_pbes2_oid,l))goto err1;
+	if(U(mbed_asn_next(data,dlen,0x06,&h,&l)))goto err1;
+	if(U(l!=sizeof(mbed_pbes2_oid))||
+		U(memcmp(data+h,mbed_pbes2_oid,l)))goto err1;
 	data+=h+l;
 	dlen-=h+l;
 
-	if(mbed_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(mbed_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	data+=h;
 	dlen-=h;
 
-	if(mbed_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(mbed_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	data+=h;
 	dlen-=h;
 
-	if(mbed_asn_next(data,dlen,0x06,&h,&l))goto err1;
-	if(l!=sizeof(mbed_pbkdf2_oid)||memcmp(data+h,mbed_pbkdf2_oid,l))
+	if(U(mbed_asn_next(data,dlen,0x06,&h,&l)))goto err1;
+	if(U(l!=sizeof(mbed_pbkdf2_oid)||memcmp(data+h,mbed_pbkdf2_oid,l)))
 		goto err1;
 	data+=h+l;
 	dlen-=h+l;
 
-	if(mbed_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(mbed_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	data+=h;
 	dlen-=h;
 	mlen=l;
 
-	if(mbed_asn_next(data,dlen,0x04,&h,&l))goto err1;
+	if(U(mbed_asn_next(data,dlen,0x04,&h,&l)))goto err1;
 	salt=data+h;
 	slen=l;
 	data+=h+l;
 	dlen-=h+l;
 	mlen-=h+l;
 
-	if(mbed_asn_next(data,dlen,0x02,&h,&l))goto err1;
-	if(!l||l>sizeof(int))goto err1;
+	if(U(mbed_asn_next(data,dlen,0x02,&h,&l)))goto err1;
+	if(U(!l)||U(l>sizeof(int)))goto err1;
 	iter=data+h;
 	ilen=l;
 	data+=h+l;
 	dlen-=h+l;
 	mlen-=h+l;
 
-	if(mlen<0)goto err1;
+	if(U(mlen<0))goto err1;
 	else if(mlen)
 	{
-		if(mbed_asn_next(data,dlen,0x30,&h,&l))goto err1;
+		if(U(mbed_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 		data+=h;
 		dlen-=h;
 
-		if(mbed_asn_next(data,dlen,0x06,&h,&l))goto err1;
+		if(U(mbed_asn_next(data,dlen,0x06,&h,&l)))goto err1;
 		md=data+h;
 		mlen=l;
 		data+=h+l;
 		dlen-=h+l;
 
-		if(mbed_asn_next(data,dlen,0x05,&h,&l))goto err1;
-		if(l)goto err1;
+		if(U(mbed_asn_next(data,dlen,0x05,&h,&l)))goto err1;
+		if(U(l))goto err1;
 		data+=h;
 		dlen-=h;
 	}
 
-	if(mbed_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(mbed_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	data+=h;
 	dlen-=h;
 
-	if(mbed_asn_next(data,dlen,0x06,&h,&l))goto err1;
+	if(U(mbed_asn_next(data,dlen,0x06,&h,&l)))goto err1;
 	cipher=data+h;
 	clen=l;
 	data+=h+l;
 	dlen-=h+l;
 
-	if(mbed_asn_next(data,dlen,0x04,&h,&l))goto err1;
+	if(U(mbed_asn_next(data,dlen,0x04,&h,&l)))goto err1;
 	iv=data+h;
 	ivlen=l;
 	data+=h+l;
 	dlen-=h+l;
 	if(data!=eptr)goto err1;
 
-	if(mbed_asn_next(eptr,elen,0x04,&h,&l))goto err1;
+	if(U(mbed_asn_next(eptr,elen,0x04,&h,&l)))goto err1;
 	eptr+=h;
 	elen=l;
 
 	for(l=0,h=0;h<ilen;h++)l=(l<<8)|iter[h];
-	if(!l)goto err1;
+	if(U(!l))goto err1;
 
 	if(mlen)
 	{
 		for(h=0;h<4;h++)if(mbed_digest_asn[h].oidlen&&
 			mlen==mbed_digest_asn[h].oidlen&&
 			!memcmp(md,mbed_digest_asn[h].oid,mlen))break;
-		if(h==4)goto err1;
+		if(U(h==4))goto err1;
 		else digest=mbed_digest_asn[h].digest;
 	}
 
 	for(h=0;h<24;h++)if(mbed_cipher_asn[h].oidlen&&
 		clen==mbed_cipher_asn[h].oidlen&&
 		!memcmp(cipher,mbed_cipher_asn[h].oid,clen))break;
-	if(h==24||mbed_cipher_asn[h].ivlen!=ivlen||
-		(mbed_cipher_asn[h].bits!=128&&digest==USICRYPT_SHA1))goto err1;
+	if(U(h==24)||U(mbed_cipher_asn[h].ivlen!=ivlen)||
+		U(mbed_cipher_asn[h].bits!=128&&digest==USICRYPT_SHA1))
+		goto err1;
 
-	if(mbed_cipher_asn[h].pad)if(elen&0x0f)goto err1;
+	if(mbed_cipher_asn[h].pad)if(U(elen&0x0f))goto err1;
 
-	if(USICRYPT(pbkdf2)(ctx,digest,key,klen,salt,slen,l,bfr))goto err1;
+	if(U(USICRYPT(pbkdf2)(ctx,digest,key,klen,salt,slen,l,bfr)))goto err1;
 
-	if(!(out=malloc(elen)))goto err2;
+	if(U(!(out=malloc(elen))))goto err2;
 
-	if(!(c=USICRYPT(blkcipher_init)(ctx,mbed_cipher_asn[h].cipher,
-		mbed_cipher_asn[h].mode,bfr,mbed_cipher_asn[h].bits,iv)))
+	if(U(!(c=USICRYPT(blkcipher_init)(ctx,mbed_cipher_asn[h].cipher,
+		mbed_cipher_asn[h].mode,bfr,mbed_cipher_asn[h].bits,iv))))
 		goto err3;
-	if(USICRYPT(blkcipher_decrypt)(c,eptr,elen,out))goto err5;
+	if(U(USICRYPT(blkcipher_decrypt)(c,eptr,elen,out)))goto err5;
 	USICRYPT(blkcipher_exit)(c);
 
 	if(mbed_cipher_asn[h].pad)
 	{
-		if((*rlen=usicrypt_cipher_padding_get(ctx,out,elen))==-1)
+		if(U((*rlen=usicrypt_cipher_padding_get(ctx,out,elen))==-1))
 			goto err4;
 		else *rlen=elen-*rlen;
 	}
 	else *rlen=elen;
 
-	if(mbed_asn_next(out,*rlen,0x30,&h,&l))goto err4;
-	if(h+l!=*rlen)goto err4;
+	if(U(mbed_asn_next(out,*rlen,0x30,&h,&l)))goto err4;
+	if(U(h+l!=*rlen))goto err4;
 
 	((struct usicrypt_thread *)ctx)->global->memclear(bfr,sizeof(bfr));
 	return USICRYPT(do_realloc)(ctx,out,elen,*rlen);
@@ -4414,17 +4435,16 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #ifndef USICRYPT_NO_AES
 #ifndef USICRYPT_NO_ECB
 	case USICRYPT_AES|USICRYPT_ECB:
-		if(!(c=mbed_aes_ecb_init(ctx,key,klen)))break;
+		if(U(!(c=mbed_aes_ecb_init(ctx,key,klen))))break;
 		c->encrypt=mbed_aes_ecb_encrypt;
 		c->decrypt=mbed_aes_ecb_decrypt;
 		c->reset=NULL;
 		c->exit=mbed_aes_ecb_exit;
 		break;
-		return c;
 #endif
 #ifndef USICRYPT_NO_CBC
 	case USICRYPT_AES|USICRYPT_CBC:
-		if(!(c=mbed_aes_cbc_init(ctx,key,klen,iv)))break;
+		if(U(!(c=mbed_aes_cbc_init(ctx,key,klen,iv))))break;
 		c->encrypt=mbed_aes_cbc_encrypt;
 		c->decrypt=mbed_aes_cbc_decrypt;
 		c->reset=mbed_aes_cbc_reset;
@@ -4433,7 +4453,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CTS
 	case USICRYPT_AES|USICRYPT_CTS:
-		if(!(c=mbed_aes_cts_init(ctx,key,klen,iv)))break;
+		if(U(!(c=mbed_aes_cts_init(ctx,key,klen,iv))))break;
 		c->encrypt=mbed_aes_cts_encrypt;
 		c->decrypt=mbed_aes_cts_decrypt;
 		c->reset=mbed_aes_cts_reset;
@@ -4442,7 +4462,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CFB
 	case USICRYPT_AES|USICRYPT_CFB:
-		if(!(c=mbed_aes_cfb_init(ctx,key,klen,iv)))break;
+		if(U(!(c=mbed_aes_cfb_init(ctx,key,klen,iv))))break;
 		c->encrypt=mbed_aes_cfb_encrypt;
 		c->decrypt=mbed_aes_cfb_decrypt;
 		c->reset=mbed_aes_cfb_reset;
@@ -4451,7 +4471,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CFB8
 	case USICRYPT_AES|USICRYPT_CFB8:
-		if(!(c=mbed_aes_cfb8_init(ctx,key,klen,iv)))break;
+		if(U(!(c=mbed_aes_cfb8_init(ctx,key,klen,iv))))break;
 		c->encrypt=mbed_aes_cfb8_encrypt;
 		c->decrypt=mbed_aes_cfb8_decrypt;
 		c->reset=mbed_aes_cfb8_reset;
@@ -4460,7 +4480,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_OFB
 	case USICRYPT_AES|USICRYPT_OFB:
-		if(!(c=mbed_aes_ofb_init(ctx,key,klen,iv)))break;
+		if(U(!(c=mbed_aes_ofb_init(ctx,key,klen,iv))))break;
 		c->encrypt=mbed_aes_ofb_crypt;
 		c->decrypt=mbed_aes_ofb_crypt;
 		c->reset=mbed_aes_ofb_reset;
@@ -4469,7 +4489,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CTR
 	case USICRYPT_AES|USICRYPT_CTR:
-		if(!(c=mbed_aes_ctr_init(ctx,key,klen,iv)))break;
+		if(U(!(c=mbed_aes_ctr_init(ctx,key,klen,iv))))break;
 		c->encrypt=mbed_aes_ctr_crypt;
 		c->decrypt=mbed_aes_ctr_crypt;
 		c->reset=mbed_aes_ctr_reset;
@@ -4480,17 +4500,16 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #ifndef USICRYPT_NO_CAMELLIA
 #ifndef USICRYPT_NO_ECB
 	case USICRYPT_CAMELLIA|USICRYPT_ECB:
-		if(!(c=mbed_camellia_ecb_init(ctx,key,klen)))break;
+		if(U(!(c=mbed_camellia_ecb_init(ctx,key,klen))))break;
 		c->encrypt=mbed_camellia_ecb_encrypt;
 		c->decrypt=mbed_camellia_ecb_decrypt;
 		c->reset=NULL;
 		c->exit=mbed_camellia_ecb_exit;
 		break;
-		return c;
 #endif
 #ifndef USICRYPT_NO_CBC
 	case USICRYPT_CAMELLIA|USICRYPT_CBC:
-		if(!(c=mbed_camellia_cbc_init(ctx,key,klen,iv)))break;
+		if(U(!(c=mbed_camellia_cbc_init(ctx,key,klen,iv))))break;
 		c->encrypt=mbed_camellia_cbc_encrypt;
 		c->decrypt=mbed_camellia_cbc_decrypt;
 		c->reset=mbed_camellia_cbc_reset;
@@ -4499,7 +4518,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CTS
 	case USICRYPT_CAMELLIA|USICRYPT_CTS:
-		if(!(c=mbed_camellia_cts_init(ctx,key,klen,iv)))break;
+		if(U(!(c=mbed_camellia_cts_init(ctx,key,klen,iv))))break;
 		c->encrypt=mbed_camellia_cts_encrypt;
 		c->decrypt=mbed_camellia_cts_decrypt;
 		c->reset=mbed_camellia_cts_reset;
@@ -4508,7 +4527,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CFB
 	case USICRYPT_CAMELLIA|USICRYPT_CFB:
-		if(!(c=mbed_camellia_cfb_init(ctx,key,klen,iv)))break;
+		if(U(!(c=mbed_camellia_cfb_init(ctx,key,klen,iv))))break;
 		c->encrypt=mbed_camellia_cfb_encrypt;
 		c->decrypt=mbed_camellia_cfb_decrypt;
 		c->reset=mbed_camellia_cfb_reset;
@@ -4517,7 +4536,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CFB8
 	case USICRYPT_CAMELLIA|USICRYPT_CFB8:
-		if(!(c=mbed_camellia_cfb8_init(ctx,key,klen,iv)))break;
+		if(U(!(c=mbed_camellia_cfb8_init(ctx,key,klen,iv))))break;
 		c->encrypt=mbed_camellia_cfb8_encrypt;
 		c->decrypt=mbed_camellia_cfb8_decrypt;
 		c->reset=mbed_camellia_cfb8_reset;
@@ -4526,7 +4545,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_OFB
 	case USICRYPT_CAMELLIA|USICRYPT_OFB:
-		if(!(c=mbed_camellia_ofb_init(ctx,key,klen,iv)))break;
+		if(U(!(c=mbed_camellia_ofb_init(ctx,key,klen,iv))))break;
 		c->encrypt=mbed_camellia_ofb_crypt;
 		c->decrypt=mbed_camellia_ofb_crypt;
 		c->reset=mbed_camellia_ofb_reset;
@@ -4535,7 +4554,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CTR
 	case USICRYPT_CAMELLIA|USICRYPT_CTR:
-		if(!(c=mbed_camellia_ctr_init(ctx,key,klen,iv)))break;
+		if(U(!(c=mbed_camellia_ctr_init(ctx,key,klen,iv))))break;
 		c->encrypt=mbed_camellia_ctr_crypt;
 		c->decrypt=mbed_camellia_ctr_crypt;
 		c->reset=mbed_camellia_ctr_reset;
@@ -4546,7 +4565,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #ifndef USICRYPT_NO_CHACHA
 #ifndef USICRYPT_NO_STREAM
 	case USICRYPT_CHACHA20|USICRYPT_STREAM:
-		if(!(c=mbed_chacha_init(ctx,key,klen,iv)))break;
+		if(U(!(c=mbed_chacha_init(ctx,key,klen,iv))))break;
 		c->encrypt=mbed_chacha_crypt;
 		c->decrypt=mbed_chacha_crypt;
 		c->reset=mbed_chacha_reset;
@@ -4590,7 +4609,7 @@ void *USICRYPT(dskcipher_init)(void *ctx,int cipher,int mode,void *key,int klen)
 #ifndef USICRYPT_NO_AES
 #ifndef USICRYPT_NO_XTS
 	case USICRYPT_AES|USICRYPT_XTS:
-		if(!(c=mbed_aes_xts_init(ctx,key,klen)))break;
+		if(U(!(c=mbed_aes_xts_init(ctx,key,klen))))break;
 		c->encrypt=mbed_aes_xts_encrypt;
 		c->decrypt=mbed_aes_xts_decrypt;
 		c->exit=mbed_aes_xts_exit;
@@ -4598,7 +4617,7 @@ void *USICRYPT(dskcipher_init)(void *ctx,int cipher,int mode,void *key,int klen)
 #endif
 #ifndef USICRYPT_NO_ESSIV
 	case USICRYPT_AES|USICRYPT_ESSIV:
-		if(!(c=mbed_aes_essiv_init(ctx,key,klen)))break;
+		if(U(!(c=mbed_aes_essiv_init(ctx,key,klen))))break;
 		c->encrypt=mbed_aes_essiv_encrypt;
 		c->decrypt=mbed_aes_essiv_decrypt;
 		c->exit=mbed_aes_essiv_exit;
@@ -4608,7 +4627,7 @@ void *USICRYPT(dskcipher_init)(void *ctx,int cipher,int mode,void *key,int klen)
 #ifndef USICRYPT_NO_CAMELLIA
 #ifndef USICRYPT_NO_XTS
 	case USICRYPT_CAMELLIA|USICRYPT_XTS:
-		if(!(c=mbed_camellia_xts_init(ctx,key,klen)))break;
+		if(U(!(c=mbed_camellia_xts_init(ctx,key,klen))))break;
 		c->encrypt=mbed_camellia_xts_encrypt;
 		c->decrypt=mbed_camellia_xts_decrypt;
 		c->exit=mbed_camellia_xts_exit;
@@ -4616,7 +4635,7 @@ void *USICRYPT(dskcipher_init)(void *ctx,int cipher,int mode,void *key,int klen)
 #endif
 #ifndef USICRYPT_NO_ESSIV
 	case USICRYPT_CAMELLIA|USICRYPT_ESSIV:
-		if(!(c=mbed_camellia_essiv_init(ctx,key,klen)))break;
+		if(U(!(c=mbed_camellia_essiv_init(ctx,key,klen))))break;
 		c->encrypt=mbed_camellia_essiv_encrypt;
 		c->decrypt=mbed_camellia_essiv_decrypt;
 		c->exit=mbed_camellia_essiv_exit;
@@ -4654,7 +4673,7 @@ void *USICRYPT(aeadcipher_init)(void *ctx,int cipher,void *key,int klen,
 #ifndef USICRYPT_NO_AES
 #ifndef USICRYPT_NO_GCM
 	case USICRYPT_AES_GCM:
-		if(!(c=mbed_aes_gcm_init(ctx,key,klen,ilen,tlen)))break;
+		if(U(!(c=mbed_aes_gcm_init(ctx,key,klen,ilen,tlen))))break;
 		c->encrypt=mbed_aes_gcm_encrypt;
 		c->decrypt=mbed_aes_gcm_decrypt;
 #ifndef USICRYPT_NO_IOV
@@ -4666,7 +4685,7 @@ void *USICRYPT(aeadcipher_init)(void *ctx,int cipher,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CCM
 	case USICRYPT_AES_CCM:
-		if(!(c=mbed_aes_ccm_init(ctx,key,klen,ilen,tlen)))break;
+		if(U(!(c=mbed_aes_ccm_init(ctx,key,klen,ilen,tlen))))break;
 		c->encrypt=mbed_aes_ccm_encrypt;
 		c->decrypt=mbed_aes_ccm_decrypt;
 #ifndef USICRYPT_NO_IOV
@@ -4680,7 +4699,7 @@ void *USICRYPT(aeadcipher_init)(void *ctx,int cipher,void *key,int klen,
 #ifndef USICRYPT_NO_CHACHA
 #ifndef USICRYPT_NO_POLY
 	case USICRYPT_CHACHA20_POLY1305:
-		if(!(c=mbed_chacha_poly_init(ctx,key,klen,ilen,tlen)))break;
+		if(U(!(c=mbed_chacha_poly_init(ctx,key,klen,ilen,tlen))))break;
 		c->encrypt=mbed_chacha_poly_encrypt;
 		c->decrypt=mbed_chacha_poly_decrypt;
 #ifndef USICRYPT_NO_IOV
@@ -4781,13 +4800,13 @@ void *USICRYPT(thread_init)(void *global)
 	struct usicrypt_thread *ctx;
 	unsigned char bfr[32];
 
-	if(!(ctx=malloc(sizeof(struct usicrypt_thread))))goto err1;
+	if(U(!(ctx=malloc(sizeof(struct usicrypt_thread)))))goto err1;
 	ctx->global=global;
 	mbedtls_hmac_drbg_init(&ctx->rng);
-	if(mbedtls_hmac_drbg_seed(&ctx->rng,
+	if(U(mbedtls_hmac_drbg_seed(&ctx->rng,
 		mbedtls_md_info_from_type(MBEDTLS_MD_MD5),
-		mbed_seed,global,NULL,0))goto err2;
-	if(ctx->global->rng_seed(bfr,sizeof(bfr)))goto err2;
+		mbed_seed,global,NULL,0)))goto err2;
+	if(U(ctx->global->rng_seed(bfr,sizeof(bfr))))goto err2;
 	mbedtls_hmac_drbg_update(&((struct usicrypt_thread *)ctx)->rng,
 		bfr,sizeof(bfr));
 	ctx->global->memclear(bfr,sizeof(bfr));
@@ -4810,7 +4829,7 @@ void *USICRYPT(global_init)(int (*rng_seed)(void *data,int len),
 	struct usicrypt_global *ctx;
 
 	USICRYPT(do_realloc)(NULL,NULL,0,0);
-	if(!(ctx=malloc(sizeof(struct usicrypt_global))))return NULL;
+	if(U(!(ctx=malloc(sizeof(struct usicrypt_global)))))return NULL;
 	ctx->rng_seed=(rng_seed?rng_seed:USICRYPT(get_random));
 	ctx->memclear=(memclear?memclear:USICRYPT(do_memclear));
 	return ctx;

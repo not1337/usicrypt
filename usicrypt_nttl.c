@@ -866,8 +866,8 @@ static int nttl_reseed(void *ctx)
 	int r=-1;
 	unsigned char bfr[32];
 
-	if(((struct usicrypt_thread *)ctx)->global->
-		rng_seed(bfr,sizeof(bfr)))goto err1;
+	if(U(((struct usicrypt_thread *)ctx)->global->
+		rng_seed(bfr,sizeof(bfr))))goto err1;
 	yarrow256_update(&((struct usicrypt_thread *)ctx)->rng,
 		0,0,sizeof(bfr),bfr);
 	if(((struct usicrypt_thread *)ctx)->global->
@@ -888,13 +888,13 @@ static int nttl_asn_next(unsigned char *prm,int len,unsigned char id,
 	int n;
 
 	*hlen=2;
-	if(len<=1)goto err1;
-	if(prm[0]!=id)goto err1;
+	if(U(len<=1))goto err1;
+	if(U(prm[0]!=id))goto err1;
 	if(prm[1]&0x80)
 	{
 		*hlen=prm[1]&0x7f;
-		if(*hlen<1||*hlen>3)goto err1;
-		if(len<*hlen+2)goto err1;
+		if(U(*hlen<1)||U(*hlen>3))goto err1;
+		if(U(len<*hlen+2))goto err1;
 		*dlen=0;
 		n=2;
 		switch(*hlen)
@@ -908,7 +908,7 @@ static int nttl_asn_next(unsigned char *prm,int len,unsigned char id,
 		*hlen+=2;
 	}
 	else *dlen=prm[1];
-	if(*hlen+*dlen>len)goto err1;
+	if(U(*hlen+*dlen>len))goto err1;
 	return 0;
 
 err1:	return -1;
@@ -967,27 +967,27 @@ static int nttl_rsa_mpz_check(struct nttl_rsa *rsa)
 	mpz_init(q1);
 	mpz_init(tmp1);
 	mpz_init(tmp2);
-	if(!mpz_cmp_ui(rsa->key.d,0)||!mpz_cmp_ui(rsa->key.p,0)||
-		!mpz_cmp_ui(rsa->key.q,0))goto err1;
-	if(!mpz_invert(tmp1,rsa->key.q,rsa->key.p))goto err1;
-	if(mpz_cmp(tmp1,rsa->key.c))goto err1;
+	if(U(!mpz_cmp_ui(rsa->key.d,0))||U(!mpz_cmp_ui(rsa->key.p,0))||
+		U(!mpz_cmp_ui(rsa->key.q,0)))goto err1;
+	if(U(!mpz_invert(tmp1,rsa->key.q,rsa->key.p)))goto err1;
+	if(U(mpz_cmp(tmp1,rsa->key.c)))goto err1;
 	mpz_mul(tmp1,rsa->key.p,rsa->key.q);
-	if(mpz_cmp(tmp1,rsa->pub.n))goto err1;
+	if(U(mpz_cmp(tmp1,rsa->pub.n)))goto err1;
 	mpz_sub_ui(p1,rsa->key.p,1);
 	mpz_mod(tmp1,rsa->key.d,p1);
-	if(mpz_cmp(tmp1,rsa->key.a))goto err1;
+	if(U(mpz_cmp(tmp1,rsa->key.a)))goto err1;
 	mpz_sub_ui(q1,rsa->key.q,1);
 	mpz_mod(tmp1,rsa->key.d,q1);
-	if(mpz_cmp(tmp1,rsa->key.b))goto err1;
+	if(U(mpz_cmp(tmp1,rsa->key.b)))goto err1;
 	mpz_mul(tmp2,p1,q1);
 	mpz_gcd(tmp1,rsa->pub.e,tmp2);
-	if(mpz_cmp_ui(tmp1,1))goto err1;
+	if(U(mpz_cmp_ui(tmp1,1)))goto err1;
 	mpz_gcd(tmp1,p1,q1);
 	mpz_tdiv_qr(tmp1,tmp2,tmp2,tmp1);
-	if(mpz_cmp_ui(tmp2,0))goto err1;
+	if(U(mpz_cmp_ui(tmp2,0)))goto err1;
 	mpz_mul(tmp2,rsa->key.d,rsa->pub.e);
 	mpz_mod(tmp2,tmp2,tmp1);
-	if(mpz_cmp_ui(tmp2,1))goto err1;
+	if(U(mpz_cmp_ui(tmp2,1)))goto err1;
 	r=0;
 
 err1:	mpz_clear(tmp2);
@@ -1062,12 +1062,12 @@ static int nttl_rsa_mpz_public(unsigned char *in,int ilen,unsigned char *out,
 	mpz_t oval;
 
 	nettle_mpz_init_set_str_256_u(ival,ilen,in);
-	if(mpz_cmp(ival,rsa->pub.n)>=0)goto err1;
+	if(U(mpz_cmp(ival,rsa->pub.n)>=0))goto err1;
 	*olen=nettle_mpz_sizeinbase_256_u(rsa->pub.n);
 	mpz_init(oval);
 	mpz_powm(oval,ival,rsa->pub.e,rsa->pub.n);
 	len=nettle_mpz_sizeinbase_256_u(oval);
-	if(len>*olen)goto err2;
+	if(U(len>*olen))goto err2;
 	if(len<*olen)memset(out,0,*olen-len);
 	if(len)nettle_mpz_get_str_256(len,out+*olen-len,oval);
 	r=0;
@@ -1086,13 +1086,13 @@ static int nttl_rsa_mpz_private(void *ctx,unsigned char *in,int ilen,
 	mpz_t oval;
 
 	nettle_mpz_init_set_str_256_u(ival,ilen,in);
-	if(mpz_cmp(ival,rsa->pub.n)>=0)goto err1;
+	if(U(mpz_cmp(ival,rsa->pub.n)>=0))goto err1;
 	*olen=nettle_mpz_sizeinbase_256_u(rsa->pub.n);
 	mpz_init(oval);
-	if(!rsa_compute_root_tr(&rsa->pub,&rsa->key,ctx,nttl_cb_random,
-		oval,ival))goto err2;
+	if(U(!rsa_compute_root_tr(&rsa->pub,&rsa->key,ctx,nttl_cb_random,
+		oval,ival)))goto err2;
 	len=nettle_mpz_sizeinbase_256_u(oval);
-	if(len>*olen)goto err2;
+	if(U(len>*olen))goto err2;
 	if(len<*olen)memset(out,0,*olen-len);
 	if(len)nettle_mpz_get_str_256(len,out+*olen-len,oval);
 	r=0;
@@ -1143,7 +1143,7 @@ static int nttl_add_oaep_mgf1(void *ctx,unsigned char *dst,int dlen,
 	unsigned char sm[64];
 
 	mdlen=nttl_md[md->idx].size;
-	if(dlen-1<2*mdlen+1)goto err1;
+	if(U(dlen-1<2*mdlen+1))goto err1;
 	dst[0]=0x00;
 	yarrow256_random(&((struct usicrypt_thread *)ctx)->rng,mdlen,dst+1);
 	nttl_md[md->idx].init(&md->ctx);
@@ -1152,7 +1152,7 @@ static int nttl_add_oaep_mgf1(void *ctx,unsigned char *dst,int dlen,
 	memset(dst+2*mdlen+1,0,dlen-slen-2*mdlen-2);
 	dst[dlen-slen-1]=0x01;
 	memcpy(dst+dlen-slen,src,slen);
-	if(!(dm=malloc(dlen-mdlen-1)))goto err1;
+	if(U(!(dm=malloc(dlen-mdlen-1))))goto err1;
 	nttl_mgf1(dm,dlen-mdlen-1,dst+1,mdlen,md);
 	for(i=0;i<dlen-mdlen-1;i++)dst[i+mdlen+1]^=dm[i];
 	nttl_mgf1(sm,mdlen,dst+mdlen+1,dlen-mdlen-1,md);
@@ -1176,8 +1176,8 @@ static int nttl_check_oaep_mgf1(void *ctx,unsigned char *dst,int dlen,
 	unsigned char wrk[64];
 
 	mdlen=nttl_md[md->idx].size;
-	if(n<2*mdlen+2||n-1<slen)goto err1;
-	if(!(mem=malloc(2*n-mdlen-2)))goto err1;
+	if(U(n<2*mdlen+2)||U(n-1<slen))goto err1;
+	if(U(!(mem=malloc(2*n-mdlen-2))))goto err1;
 	memset(mem+n-mdlen-1,0,n-slen-1);
 	memcpy(mem+2*n-slen-mdlen-2,src,slen);
 	nttl_mgf1(wrk,mdlen,mem+n-1,n-mdlen-1,md);
@@ -1187,10 +1187,10 @@ static int nttl_check_oaep_mgf1(void *ctx,unsigned char *dst,int dlen,
 	nttl_md[md->idx].init(&md->ctx);
 	nttl_md[md->idx].update(&md->ctx,plen,p);
 	nttl_md[md->idx].digest(&md->ctx,mdlen,wrk);
-	if(memcmp(mem,wrk,mdlen))goto err2;
+	if(U(memcmp(mem,wrk,mdlen)))goto err2;
 	for(i=mdlen;i<n-mdlen-1;i++)if(mem[i])break;
-	if(i==n-mdlen-1||mem[i]!=0x01)goto err2;
-	if(dlen<(l=n-i-mdlen-2))goto err2;
+	if(U(i==n-mdlen-1)||U(mem[i]!=0x01))goto err2;
+	if(U(dlen<(l=n-i-mdlen-2)))goto err2;
 	memcpy(dst,mem+i+1,l);
 	((struct usicrypt_thread *)ctx)->global->memclear(wrk,sizeof(wrk));
 	((struct usicrypt_thread *)ctx)->global->memclear(mem,2*n-mdlen-2);
@@ -1220,7 +1220,7 @@ static int nttl_rsa_mpz_add_pss(void *ctx,struct nttl_rsa *rsa,
 	bits=(mpz_sizeinbase(rsa->pub.n,2)-1)&0x7;
 	bytes=(mpz_sizeinbase(rsa->pub.n,2)+7)>>3;
 	slen=bytes-mdlen-2-(bits?0:1);
-	if(slen-mdlen<0)goto err1;
+	if(U(slen-mdlen<0))goto err1;
 	if(!bits)
 	{
 		*out++=0x00;
@@ -1228,7 +1228,7 @@ static int nttl_rsa_mpz_add_pss(void *ctx,struct nttl_rsa *rsa,
 	}
 	if(slen)
 	{
-		if(!(salt=malloc(slen)))goto err1;
+		if(U(!(salt=malloc(slen))))goto err1;
 		yarrow256_random(&((struct usicrypt_thread *)ctx)->rng,
 			slen,salt);
 	}
@@ -1269,27 +1269,27 @@ static int nttl_rsa_mpz_check_pss(void *ctx,struct nttl_rsa *rsa,
 	mdlen=nttl_md[md->idx].size;
 	bits=(mpz_sizeinbase(rsa->pub.n,2)-1)&0x7;
 	bytes=(mpz_sizeinbase(rsa->pub.n,2)+7)>>3;
-	if(bytes-2*mdlen-2-(bits?0:1)<0)goto err1;
-	if(*sig&(0xff<<bits))goto err1;
+	if(U(bytes-2*mdlen-2-(bits?0:1)<0))goto err1;
+	if(U(*sig&(0xff<<bits)))goto err1;
 	if(!bits)
 	{
 		sig++;
 		bytes--;
 	}
-	if(bytes<mdlen)goto err1;
-	if(sig[bytes-1]!=0xbc)goto err1;
-	if(!(wrk=malloc(bytes-mdlen-1)))goto err1;
+	if(U(bytes<mdlen))goto err1;
+	if(U(sig[bytes-1]!=0xbc))goto err1;
+	if(U(!(wrk=malloc(bytes-mdlen-1))))goto err1;
 	nttl_mgf1(wrk,bytes-mdlen-1,sig+bytes-mdlen-1,mdlen,md);
 	for(i=0;i<bytes-mdlen-1;i++)wrk[i]^=sig[i];
 	if(bits)wrk[0]&=0xff>>(8-bits);
 	for(i=0;!wrk[i]&&i<bytes-mdlen-2;i++);
-	if(wrk[i++]!=0x01)goto err2;
+	if(U(wrk[i++]!=0x01))goto err2;
 	nttl_md[md->idx].init(&md->ctx);
 	nttl_md[md->idx].update(&md->ctx,sizeof(zero),(void *)&zero);
 	nttl_md[md->idx].update(&md->ctx,mdlen,hash);
 	nttl_md[md->idx].update(&md->ctx,bytes-mdlen-i-1,wrk+i);
 	nttl_md[md->idx].digest(&md->ctx,mdlen,hash);
-	if(!memcmp(hash,sig+bytes-mdlen-1,mdlen))r=0;
+	if(L(!memcmp(hash,sig+bytes-mdlen-1,mdlen)))r=0;
 	((struct usicrypt_thread *)ctx)->global->memclear(hash,mdlen);
 err2:	((struct usicrypt_thread *)ctx)->global->memclear(wrk,bytes-mdlen-1);
 	free(wrk);
@@ -1339,11 +1339,11 @@ static void *nttl_rsa_do_sign_v15(void *ctx,int md,void *key,void *data,
 	nttl_md[c.idx].digest(&c.ctx,nttl_md[c.idx].size,hash);
 	((struct usicrypt_thread *)ctx)->global->memclear(&c.ctx,sizeof(c.ctx));
 	mpz_init(s);
-	if(rsa_pkcs1_sign_tr(&rsa->pub,&rsa->key,ctx,nttl_cb_random,
-		nttl_md[c.idx].size,hash,s)!=1)goto err2;
+	if(U(rsa_pkcs1_sign_tr(&rsa->pub,&rsa->key,ctx,nttl_cb_random,
+		nttl_md[c.idx].size,hash,s)!=1))goto err2;
 	*slen=nettle_mpz_sizeinbase_256_u(rsa->pub.n);
 	n=nettle_mpz_sizeinbase_256_u(s);
-	if(!(sig=malloc(*slen)))goto err2;
+	if(U(!(sig=malloc(*slen))))goto err2;
 	if(n<*slen)memset(sig,0,*slen-n);
 	nettle_mpz_get_str_256(n,sig+*slen-n,s);
 err2:	((struct usicrypt_thread *)ctx)->global->memclear(hash,sizeof(hash));
@@ -1396,7 +1396,7 @@ static int nttl_rsa_do_verify_v15(void *ctx,int md,void *key,void *data,
 	r=rsa_pkcs1_verify(&rsa->pub,nttl_md[c.idx].size,hash,s);
 	((struct usicrypt_thread *)ctx)->global->memclear(hash,sizeof(hash));
 	mpz_clear(s);
-	return r==1?0:-1;
+	return L(r==1)?0:-1;
 }
 
 static void *nttl_rsa_do_sign_pss(void *ctx,int md,void *key,void *data,
@@ -1435,17 +1435,18 @@ static void *nttl_rsa_do_sign_pss(void *ctx,int md,void *key,void *data,
 	default:goto err1;
 	}
 
-	if(nttl_reseed(ctx))goto err1;
+	if(U(nttl_reseed(ctx)))goto err1;
 	nttl_md[c.idx].init(&c.ctx);
 	if(!mode)nttl_md[c.idx].update(&c.ctx,dlen,data);
 	else for(l=0;l<dlen;l++)
 		nttl_md[c.idx].update(&c.ctx,iov[l].length,iov[l].data);
 	nttl_md[c.idx].digest(&c.ctx,nttl_md[c.idx].size,hash);
 	*slen=(mpz_sizeinbase(rsa->pub.n,2)+7)>>3;
-	if(!(tmp=malloc(*slen)))goto err2;
-	if(!(sig=malloc(*slen)))goto err3;
-	if(nttl_rsa_mpz_add_pss(ctx,rsa,tmp,hash,&c))goto err5;
-	if(!nttl_rsa_mpz_private(ctx,tmp,*slen,sig,&l,rsa)&&l==*slen)goto err4;
+	if(U(!(tmp=malloc(*slen))))goto err2;
+	if(U(!(sig=malloc(*slen))))goto err3;
+	if(U(nttl_rsa_mpz_add_pss(ctx,rsa,tmp,hash,&c)))goto err5;
+	if(L(!nttl_rsa_mpz_private(ctx,tmp,*slen,sig,&l,rsa))&&L(l==*slen))
+		goto err4;
 
 	((struct usicrypt_thread *)ctx)->global->memclear(sig,*slen);
 err5:	free(sig);
@@ -1498,10 +1499,10 @@ static int nttl_rsa_do_verify_pss(void *ctx,int md,void *key,void *data,
 	else for(l=0;l<dlen;l++)
 		nttl_md[c.idx].update(&c.ctx,iov[l].length,iov[l].data);
 	nttl_md[c.idx].digest(&c.ctx,nttl_md[c.idx].size,hash);
-	if(slen!=((mpz_sizeinbase(rsa->pub.n,2)+7)>>3))goto err2;
+	if(U(slen!=((mpz_sizeinbase(rsa->pub.n,2)+7)>>3)))goto err2;
 	if(!(tmp=malloc(slen)))goto err2;
-	if(nttl_rsa_mpz_public(sig,slen,tmp,&l,rsa)||l!=slen)goto err3;
-	if(nttl_rsa_mpz_check_pss(ctx,rsa,hash,tmp,&c))goto err3;
+	if(U(nttl_rsa_mpz_public(sig,slen,tmp,&l,rsa))||U(l!=slen))goto err3;
+	if(U(nttl_rsa_mpz_check_pss(ctx,rsa,hash,tmp,&c)))goto err3;
 	r=0;
 
 err3:	((struct usicrypt_thread *)ctx)->global->memclear(tmp,slen);
@@ -1561,7 +1562,7 @@ static int nttl_dh_mpz_miller_rabin(void *ctx,mpz_t *prime)
 	{
 		do
 		{
-			if(!c--)goto err1;
+			if(U(!c--))goto err1;
 			nettle_mpz_random_size(a,ctx,nttl_cb_random,bits);
 			n=mpz_sizeinbase(a,2)-mpz_sizeinbase(w,2);
 			if(n>0)mpz_tdiv_q_2exp(a,a,n);
@@ -1654,7 +1655,7 @@ static int nttl_aes_cmac(void *ctx,void *key,int klen,void *src,int slen,
 	struct aes_ctx enc;
 	unsigned char wrk[4][16];
 
-	if(klen&7)return -1;
+	if(U(klen&7))return -1;
 	aes_set_encrypt_key(&enc,klen>>3,key);
 	memset(wrk,0,sizeof(wrk));
 	aes_encrypt(&enc,16,wrk[1],wrk[1]);
@@ -1702,7 +1703,7 @@ static int nttl_aes_cmac_iov(void *ctx,void *key,int klen,
 	struct aes_ctx enc;
 	unsigned char wrk[6][16];
 
-	if(klen&7)return -1;
+	if(U(klen&7))return -1;
 	aes_set_encrypt_key(&enc,klen>>3,key);
 	memset(wrk,0,sizeof(wrk));
 	aes_encrypt(&enc,16,wrk[1],wrk[1]);
@@ -1768,14 +1769,14 @@ static int nttl_aes_cmac_iov(void *ctx,void *key,int klen,
 
 static int nttl_aes_ecb_encrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	aes_encrypt(&((struct nttl_aes_ecb *)ctx)->enc,slen,dst,src);
 	return 0;
 }
 
 static int nttl_aes_ecb_decrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	aes_decrypt(&((struct nttl_aes_ecb *)ctx)->dec,slen,dst,src);
 	return 0;
 }
@@ -1784,8 +1785,8 @@ static void *nttl_aes_ecb_init(void *ctx,void *key,int klen)
 {
 	struct nttl_aes_ecb *aes;
 
-	if(klen&7)goto err1;
-	if(!(aes=malloc(sizeof(struct nttl_aes_ecb))))goto err1;
+	if(U(klen&7))goto err1;
+	if(U(!(aes=malloc(sizeof(struct nttl_aes_ecb)))))goto err1;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	aes_set_encrypt_key(&aes->enc,klen>>3,key);
 	aes_set_decrypt_key(&aes->dec,klen>>3,key);
@@ -1810,7 +1811,7 @@ static void nttl_aes_ecb_exit(void *ctx)
 
 static int nttl_aes_cbc_encrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	cbc_encrypt(&((struct nttl_aes_cbc *)ctx)->enc,(void *)aes_encrypt,
 		16,((struct nttl_aes_cbc *)ctx)->iv,slen,dst,src);
 	return 0;
@@ -1818,7 +1819,7 @@ static int nttl_aes_cbc_encrypt(void *ctx,void *src,int slen,void *dst)
 
 static int nttl_aes_cbc_decrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	cbc_decrypt(&((struct nttl_aes_cbc *)ctx)->dec,(void *)aes_decrypt,
 		16,((struct nttl_aes_cbc *)ctx)->iv,slen,dst,src);
 	return 0;
@@ -1828,12 +1829,13 @@ static void *nttl_aes_cbc_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct nttl_aes_cbc *aes;
 
-	if(klen&7)goto err1;
-	if(!(aes=malloc(sizeof(struct nttl_aes_cbc))))goto err1;
+	if(U(klen&7))goto err1;
+	if(U(!(aes=malloc(sizeof(struct nttl_aes_cbc)))))goto err1;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	aes_set_encrypt_key(&aes->enc,klen>>3,key);
 	aes_set_decrypt_key(&aes->dec,klen>>3,key);
-	memcpy(aes->iv,iv,16);
+	if(iv)memcpy(aes->iv,iv,16);
+	else memset(aes->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
 
@@ -1865,7 +1867,7 @@ static int nttl_aes_cts_encrypt(void *ctx,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<=16)return -1;
+	if(U(slen<=16))return -1;
 	if(!(rem=slen&0xf))rem=0x10;
 	cbc_encrypt(&aes->enc,(void *)aes_encrypt,16,aes->iv,slen-rem,d,s);
 	s+=slen-rem;
@@ -1884,7 +1886,7 @@ static int nttl_aes_cts_decrypt(void *ctx,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<=16)return -1;
+	if(U(slen<=16))return -1;
 	if(!(rem=slen&0xf))rem=0x10;
 	if(slen-rem-16)
 	{
@@ -1906,12 +1908,13 @@ static void *nttl_aes_cts_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct nttl_aes_cts *aes;
 
-	if(klen&7)goto err1;
-	if(!(aes=malloc(sizeof(struct nttl_aes_cts))))goto err1;
+	if(U(klen&7))goto err1;
+	if(U(!(aes=malloc(sizeof(struct nttl_aes_cts)))))goto err1;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	aes_set_encrypt_key(&aes->enc,klen>>3,key);
 	aes_set_decrypt_key(&aes->dec,klen>>3,key);
-	memcpy(aes->iv,iv,16);
+	if(iv)memcpy(aes->iv,iv,16);
+	else memset(aes->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
 
@@ -1973,12 +1976,13 @@ static void *nttl_aes_cfb_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct nttl_aes_xfb *aes;
 
-	if(klen&7)goto err1;
-	if(!(aes=malloc(sizeof(struct nttl_aes_xfb))))goto err1;
+	if(U(klen&7))goto err1;
+	if(U(!(aes=malloc(sizeof(struct nttl_aes_xfb)))))goto err1;
 	aes_set_encrypt_key(&aes->enc,klen>>3,key);
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	aes->n=0;
-	memcpy(aes->iv,iv,16);
+	if(iv)memcpy(aes->iv,iv,16);
+	else memset(aes->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
 
@@ -2040,11 +2044,12 @@ static void *nttl_aes_cfb8_init(void *ctx,void *key,int klen,void *iv)
 {
         struct nttl_aes_cfb8 *aes;
 
-        if(klen&7)goto err1;
-        if(!(aes=malloc(sizeof(struct nttl_aes_cfb8))))goto err1;
+        if(U(klen&7))goto err1;
+        if(U(!(aes=malloc(sizeof(struct nttl_aes_cfb8)))))goto err1;
         aes->global=((struct usicrypt_thread *)ctx)->global;
 	aes_set_encrypt_key(&aes->enc,klen>>3,key);
-        memcpy(aes->iv,iv,16);
+	if(iv)memcpy(aes->iv,iv,16);
+	else memset(aes->iv,0,16);
         ((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
         return aes;
 
@@ -2099,12 +2104,13 @@ static void *nttl_aes_ofb_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct nttl_aes_xfb *aes;
 
-	if(klen&7)goto err1;
-	if(!(aes=malloc(sizeof(struct nttl_aes_xfb))))goto err1;
+	if(U(klen&7))goto err1;
+	if(U(!(aes=malloc(sizeof(struct nttl_aes_xfb)))))goto err1;
 	aes_set_encrypt_key(&aes->enc,klen>>3,key);
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	aes->n=0;
-	memcpy(aes->iv,iv,16);
+	if(iv)memcpy(aes->iv,iv,16);
+	else memset(aes->iv,0,16);
 	memset(aes->zero,0,sizeof(aes->zero));
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
@@ -2168,12 +2174,13 @@ static void *nttl_aes_ctr_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct nttl_aes_ctr *aes;
 
-	if(klen&7)goto err1;
-	if(!(aes=malloc(sizeof(struct nttl_aes_ctr))))goto err1;
+	if(U(klen&7))goto err1;
+	if(U(!(aes=malloc(sizeof(struct nttl_aes_ctr)))))goto err1;
 	aes_set_encrypt_key(&aes->enc,klen>>3,key);
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	aes->n=0;
-	memcpy(aes->ctr,iv,16);
+	if(iv)memcpy(aes->ctr,iv,16);
+	else memset(aes->ctr,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
 
@@ -2208,7 +2215,7 @@ static int nttl_aes_xts_encrypt(void *ctx,void *iv,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<16)return -1;
+	if(U(slen<16))return -1;
 
 	aes_encrypt(&aes->twe,16,aes->twk,iv);
 
@@ -2246,7 +2253,7 @@ static int nttl_aes_xts_decrypt(void *ctx,void *iv,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<16)return -1;
+	if(U(slen<16))return -1;
 
 	aes_encrypt(&aes->twe,16,aes->twk,iv);
 
@@ -2286,8 +2293,8 @@ static void *nttl_aes_xts_init(void *ctx,void *key,int klen)
 {
 	struct nttl_aes_xts *aes;
 
-	if(klen!=256&&klen!=512)goto err1;
-	if(!(aes=malloc(sizeof(struct nttl_aes_xts))))goto err1;
+	if(U(klen!=256&&klen!=512))goto err1;
+	if(U(!(aes=malloc(sizeof(struct nttl_aes_xts)))))goto err1;
 	aes_set_encrypt_key(&aes->enc,klen>>4,key);
 	aes_set_decrypt_key(&aes->dec,klen>>4,key);
 	aes_set_encrypt_key(&aes->twe,klen>>4,key+(klen>>4));
@@ -2315,7 +2322,7 @@ static int nttl_aes_essiv_encrypt(void *ctx,void *iv,void *src,int slen,
 {
 	struct nttl_aes_essiv *aes=ctx;
 
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	aes_encrypt(&aes->aux,16,aes->iv,iv);
 	cbc_encrypt(&aes->enc,(void *)aes_encrypt,16,aes->iv,slen,dst,src);
 	return 0;
@@ -2326,7 +2333,7 @@ static int nttl_aes_essiv_decrypt(void *ctx,void *iv,void *src,int slen,
 {
 	struct nttl_aes_essiv *aes=ctx;
 
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	aes_encrypt(&aes->aux,16,aes->iv,iv);
 	cbc_decrypt(&aes->dec,(void *)aes_decrypt,16,aes->iv,slen,dst,src);
 	return 0;
@@ -2338,8 +2345,8 @@ static void *nttl_aes_essiv_init(void *ctx,void *key,int klen)
 	struct sha256_ctx h;
 	unsigned char tmp[SHA256_DIGEST_SIZE];
 
-	if(klen&7)goto err1;
-	if(!(aes=malloc(sizeof(struct nttl_aes_essiv))))goto err1;
+	if(U(klen&7))goto err1;
+	if(U(!(aes=malloc(sizeof(struct nttl_aes_essiv)))))goto err1;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	aes_set_encrypt_key(&aes->enc,klen>>3,key);
 	aes_set_decrypt_key(&aes->dec,klen>>3,key);
@@ -2472,7 +2479,7 @@ static int nttl_aes_gcm_decrypt(void *ctx,void *iv,void *src,int slen,
 		aes->tlen,cmp);
 	r=memcmp(cmp,tag,aes->tlen);
 	((struct nttl_aes_gcm *)ctx)->global->memclear(cmp,aes->tlen);
-	return r?-1:0;
+	return U(r)?-1:0;
 }
 
 #ifndef USICRYPT_NO_IOV
@@ -2521,7 +2528,7 @@ static int nttl_aes_gcm_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 		aes->tlen,cmp);
 	r=memcmp(cmp,tag,aes->tlen);
 	((struct nttl_aes_gcm *)ctx)->global->memclear(cmp,aes->tlen);
-	return r?-1:0;
+	return U(r)?-1:0;
 }
 
 #endif
@@ -2530,8 +2537,8 @@ static void *nttl_aes_gcm_init(void *ctx,void *key,int klen,int ilen,int tlen)
 {
 	struct nttl_aes_gcm *aes;
 
-	if(klen&7)goto err1;
-	if(!(aes=malloc(sizeof(struct nttl_aes_gcm))))goto err1;
+	if(U(klen&7))goto err1;
+	if(U(!(aes=malloc(sizeof(struct nttl_aes_gcm)))))goto err1;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	aes->ilen=ilen;
 	aes->tlen=tlen;
@@ -2610,7 +2617,7 @@ static int nttl_aes_ccm_decrypt(void *ctx,void *iv,void *src,int slen,
 	ccm_digest(&aes->ctx,&aes->enc,(void *)aes_encrypt,aes->tlen,cmp);
 	r=memcmp(cmp,tag,aes->tlen);
 	((struct nttl_aes_ccm *)ctx)->global->memclear(cmp,aes->tlen);
-	return r?-1:0;
+	return U(r)?-1:0;
 }
 
 #ifndef USICRYPT_NO_IOV
@@ -2633,7 +2640,7 @@ static int nttl_aes_ccm_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 	ccm_digest(&aes->ctx,&aes->enc,(void *)aes_encrypt,aes->tlen,cmp);
 	r=memcmp(cmp,tag,aes->tlen);
 	((struct nttl_aes_ccm *)ctx)->global->memclear(cmp,aes->tlen);
-	return r?-1:0;
+	return U(r)?-1:0;
 }
 
 #endif
@@ -2642,8 +2649,8 @@ static void *nttl_aes_ccm_init(void *ctx,void *key,int klen,int ilen,int tlen)
 {
 	struct nttl_aes_ccm *aes;
 
-	if(klen&7)goto err1;
-	if(!(aes=malloc(sizeof(struct nttl_aes_ccm))))goto err1;
+	if(U(klen&7))goto err1;
+	if(U(!(aes=malloc(sizeof(struct nttl_aes_ccm)))))goto err1;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	aes->ilen=ilen;
 	aes->tlen=tlen;
@@ -2717,7 +2724,7 @@ static int nttl_chacha_poly_decrypt(void *ctx,void *iv,void *src,int slen,
 		CHACHA_POLY1305_DIGEST_SIZE,cmp);
 	r=memcmp(cmp,tag,CHACHA_POLY1305_DIGEST_SIZE);
 	((struct nttl_chacha_poly *)ctx)->global->memclear(cmp,sizeof(cmp));
-	return r?-1:0;
+	return U(r)?-1:0;
 }
 
 #ifndef USICRYPT_NO_IOV
@@ -2739,7 +2746,7 @@ static int nttl_chacha_poly_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 		CHACHA_POLY1305_DIGEST_SIZE,cmp);
 	r=memcmp(cmp,tag,CHACHA_POLY1305_DIGEST_SIZE);
 	((struct nttl_chacha_poly *)ctx)->global->memclear(cmp,sizeof(cmp));
-	return r?-1:0;
+	return U(r)?-1:0;
 }
 
 #endif
@@ -2749,8 +2756,8 @@ static void *nttl_chacha_poly_init(void *ctx,void *key,int klen,int ilen,
 {
 	struct nttl_chacha_poly *chp;
 
-	if(klen!=256||ilen!=12||tlen!=16)goto err1;
-	if(!(chp=malloc(sizeof(struct nttl_chacha_poly))))goto err1;
+	if(U(klen!=256)||U(ilen!=12)||U(tlen!=16))goto err1;
+	if(U(!(chp=malloc(sizeof(struct nttl_chacha_poly)))))goto err1;
 	chp->global=((struct usicrypt_thread *)ctx)->global;
 	chacha_poly1305_set_key(&chp->ctx,key);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,32);
@@ -2800,12 +2807,14 @@ static int nttl_chacha_crypt(void *ctx,void *src,int slen,void *dst)
 static void *nttl_chacha_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct nttl_chacha *ch;
+	unsigned long long zero[2]={0,0};
 
-	if(klen!=256)goto err1;
-	if(!(ch=malloc(sizeof(struct nttl_chacha))))goto err1;
+	if(U(klen!=256))goto err1;
+	if(U(!(ch=malloc(sizeof(struct nttl_chacha)))))goto err1;
 	ch->global=((struct usicrypt_thread *)ctx)->global;
 	ch->n=0;
 	chacha_set_key(&ch->ctx,key);
+	if(!iv)iv=zero;
 	chacha_set_nonce(&ch->ctx,iv);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,32);
 	return ch;
@@ -2995,7 +3004,7 @@ static int nttl_camellia_cmac_iov(void *ctx,void *key,int klen,
 
 static int nttl_camellia_ecb_encrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	((struct nttl_camellia_ecb *)ctx)->
 		crypt(&((struct nttl_camellia_ecb *)ctx)->enc,slen,dst,src);
 	return 0;
@@ -3003,7 +3012,7 @@ static int nttl_camellia_ecb_encrypt(void *ctx,void *src,int slen,void *dst)
 
 static int nttl_camellia_ecb_decrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	((struct nttl_camellia_ecb *)ctx)->
 		crypt(&((struct nttl_camellia_ecb *)ctx)->dec,slen,dst,src);
 	return 0;
@@ -3013,7 +3022,7 @@ static void *nttl_camellia_ecb_init(void *ctx,void *key,int klen)
 {
 	struct nttl_camellia_ecb *camellia;
 
-	if(!(camellia=malloc(sizeof(struct nttl_camellia_ecb))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct nttl_camellia_ecb)))))goto err1;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
 	switch(klen)
 	{
@@ -3058,7 +3067,7 @@ static void nttl_camellia_ecb_exit(void *ctx)
 
 static int nttl_camellia_cbc_encrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	cbc_encrypt(&((struct nttl_camellia_cbc *)ctx)->enc,
 		(void *)(((struct nttl_camellia_cbc *)ctx)->crypt),
 		16,((struct nttl_camellia_cbc *)ctx)->iv,slen,dst,src);
@@ -3067,7 +3076,7 @@ static int nttl_camellia_cbc_encrypt(void *ctx,void *src,int slen,void *dst)
 
 static int nttl_camellia_cbc_decrypt(void *ctx,void *src,int slen,void *dst)
 {
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	cbc_decrypt(&((struct nttl_camellia_cbc *)ctx)->dec,
 		(void *)(((struct nttl_camellia_cbc *)ctx)->crypt),
 		16,((struct nttl_camellia_cbc *)ctx)->iv,slen,dst,src);
@@ -3078,7 +3087,7 @@ static void *nttl_camellia_cbc_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct nttl_camellia_cbc *camellia;
 
-	if(!(camellia=malloc(sizeof(struct nttl_camellia_cbc))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct nttl_camellia_cbc)))))goto err1;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
 	switch(klen)
 	{
@@ -3099,7 +3108,8 @@ static void *nttl_camellia_cbc_init(void *ctx,void *key,int klen,void *iv)
 		break;
 	default:goto err2;
 	}
-	memcpy(camellia->iv,iv,16);
+	if(iv)memcpy(camellia->iv,iv,16);
+	else memset(camellia->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
 
@@ -3134,7 +3144,7 @@ static int nttl_camellia_cts_encrypt(void *ctx,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<=16)return -1;
+	if(U(slen<=16))return -1;
 	if(!(rem=slen&0xf))rem=0x10;
 	cbc_encrypt(&camellia->enc,(void *)(camellia->crypt),16,camellia->iv,
 		slen-rem,d,s);
@@ -3155,7 +3165,7 @@ static int nttl_camellia_cts_decrypt(void *ctx,void *src,int slen,void *dst)
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<=16)return -1;
+	if(U(slen<=16))return -1;
 	if(!(rem=slen&0xf))rem=0x10;
 	if(slen-rem-16)
 	{
@@ -3177,7 +3187,7 @@ static void *nttl_camellia_cts_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct nttl_camellia_cts *camellia;
 
-	if(!(camellia=malloc(sizeof(struct nttl_camellia_cts))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct nttl_camellia_cts)))))goto err1;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
 	switch(klen)
 	{
@@ -3198,7 +3208,8 @@ static void *nttl_camellia_cts_init(void *ctx,void *key,int klen,void *iv)
 		break;
 	default:goto err2;
 	}
-	memcpy(camellia->iv,iv,16);
+	if(iv)memcpy(camellia->iv,iv,16);
+	else memset(camellia->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
 
@@ -3265,7 +3276,7 @@ static void *nttl_camellia_cfb_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct nttl_camellia_xfb *camellia;
 
-	if(!(camellia=malloc(sizeof(struct nttl_camellia_xfb))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct nttl_camellia_xfb)))))goto err1;
 	switch(klen)
 	{
 	case 128:
@@ -3284,7 +3295,8 @@ static void *nttl_camellia_cfb_init(void *ctx,void *key,int klen,void *iv)
 	}
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
 	camellia->n=0;
-	memcpy(camellia->iv,iv,16);
+	if(iv)memcpy(camellia->iv,iv,16);
+	else memset(camellia->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
 
@@ -3347,7 +3359,7 @@ static void *nttl_camellia_cfb8_init(void *ctx,void *key,int klen,void *iv)
 {
         struct nttl_camellia_cfb8 *camellia;
 
-        if(!(camellia=malloc(sizeof(struct nttl_camellia_cfb8))))goto err1;
+        if(U(!(camellia=malloc(sizeof(struct nttl_camellia_cfb8)))))goto err1;
         camellia->global=((struct usicrypt_thread *)ctx)->global;
 	switch(klen)
 	{
@@ -3365,7 +3377,8 @@ static void *nttl_camellia_cfb8_init(void *ctx,void *key,int klen,void *iv)
 		break;
 	default:goto err2;
 	}
-        memcpy(camellia->iv,iv,16);
+	if(iv)memcpy(camellia->iv,iv,16);
+	else memset(camellia->iv,0,16);
         ((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
         return camellia;
 
@@ -3423,7 +3436,7 @@ static void *nttl_camellia_ofb_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct nttl_camellia_xfb *camellia;
 
-	if(!(camellia=malloc(sizeof(struct nttl_camellia_xfb))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct nttl_camellia_xfb)))))goto err1;
 	switch(klen)
 	{
 	case 128:
@@ -3442,7 +3455,8 @@ static void *nttl_camellia_ofb_init(void *ctx,void *key,int klen,void *iv)
 	}
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
 	camellia->n=0;
-	memcpy(camellia->iv,iv,16);
+	if(iv)memcpy(camellia->iv,iv,16);
+	else memset(camellia->iv,0,16);
 	memset(camellia->zero,0,sizeof(camellia->zero));
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
@@ -3507,7 +3521,7 @@ static void *nttl_camellia_ctr_init(void *ctx,void *key,int klen,void *iv)
 {
 	struct nttl_camellia_ctr *camellia;
 
-	if(!(camellia=malloc(sizeof(struct nttl_camellia_ctr))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct nttl_camellia_ctr)))))goto err1;
 	switch(klen)
 	{
 	case 128:
@@ -3526,7 +3540,8 @@ static void *nttl_camellia_ctr_init(void *ctx,void *key,int klen,void *iv)
 	}
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
 	camellia->n=0;
-	memcpy(camellia->ctr,iv,16);
+	if(iv)memcpy(camellia->ctr,iv,16);
+	else memset(camellia->ctr,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return camellia;
 
@@ -3563,7 +3578,7 @@ static int nttl_camellia_xts_encrypt(void *ctx,void *iv,void *src,int slen,
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<16)return -1;
+	if(U(slen<16))return -1;
 
 	camellia->crypt(&camellia->twe,16,camellia->twk,iv);
 
@@ -3603,7 +3618,7 @@ static int nttl_camellia_xts_decrypt(void *ctx,void *iv,void *src,int slen,
 	unsigned char *s=src;
 	unsigned char *d=dst;
 
-	if(slen<16)return -1;
+	if(U(slen<16))return -1;
 
 	camellia->crypt(&camellia->twe,16,camellia->twk,iv);
 
@@ -3644,7 +3659,7 @@ static void *nttl_camellia_xts_init(void *ctx,void *key,int klen)
 {
 	struct nttl_camellia_xts *camellia;
 
-	if(!(camellia=malloc(sizeof(struct nttl_camellia_xts))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct nttl_camellia_xts)))))goto err1;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
 	switch(klen)
 	{
@@ -3689,7 +3704,7 @@ static int nttl_camellia_essiv_encrypt(void *ctx,void *iv,void *src,int slen,
 {
 	struct nttl_camellia_essiv *camellia=ctx;
 
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	camellia256_crypt(&camellia->aux,16,camellia->iv,iv);
 	cbc_encrypt(&camellia->enc,(void *)camellia->crypt,16,camellia->iv,slen,
 		dst,src);
@@ -3701,7 +3716,7 @@ static int nttl_camellia_essiv_decrypt(void *ctx,void *iv,void *src,int slen,
 {
 	struct nttl_camellia_essiv *camellia=ctx;
 
-	if(slen&0xf)return -1;
+	if(U(slen&0xf))return -1;
 	camellia256_crypt(&camellia->aux,16,camellia->iv,iv);
 	cbc_decrypt(&camellia->dec,(void *)camellia->crypt,16,camellia->iv,slen,
 		dst,src);
@@ -3714,7 +3729,7 @@ static void *nttl_camellia_essiv_init(void *ctx,void *key,int klen)
 	struct sha256_ctx h;
 	unsigned char tmp[SHA256_DIGEST_SIZE];
 
-	if(!(camellia=malloc(sizeof(struct nttl_camellia_essiv))))goto err1;
+	if(U(!(camellia=malloc(sizeof(struct nttl_camellia_essiv)))))goto err1;
 	camellia->global=((struct usicrypt_thread *)ctx)->global;
 	switch(klen)
 	{
@@ -3800,7 +3815,7 @@ static void *nttl_ec_mpz_sign(void *ctx,int md,void *key,void *data,int dlen,
 	default:goto err1;
 	}
 
-	if(nttl_reseed(ctx))goto err1;
+	if(U(nttl_reseed(ctx)))goto err1;
 
 	nttl_md[c.idx].init(&c.ctx);
 	if(!mode)nttl_md[c.idx].update(&c.ctx,dlen,data);
@@ -3823,7 +3838,7 @@ static void *nttl_ec_mpz_sign(void *ctx,int md,void *key,void *data,int dlen,
 	if(len<0x80)*slen=len+2;
 	else if(len<0x100)*slen=len+3;
 	else *slen=len+4;
-	if(!(ptr=sig=malloc(*slen)))goto err2;
+	if(U(!(ptr=sig=malloc(*slen))))goto err2;
 	*ptr++=0x30;
 	if(len<0x80)*ptr++=(unsigned char)len;
 	else if(len<0x100)
@@ -3897,17 +3912,17 @@ static int nttl_ec_mpz_verify(void *ctx,int md,void *key,void *data,int dlen,
 	default:goto err1;
 	}
 
-	if(nttl_asn_next(sig,slen,0x30,&hh,&ll))goto err1;
+	if(U(nttl_asn_next(sig,slen,0x30,&hh,&ll)))goto err1;
 	sig+=hh;
 	slen-=hh;
 
-	if(nttl_asn_next(sig,slen,0x02,&hh,&ll))goto err1;
+	if(U(nttl_asn_next(sig,slen,0x02,&hh,&ll)))goto err1;
 	rptr=sig+hh;
 	rl=ll;
 	sig+=hh+ll;
 	slen-=hh+ll;
 
-	if(nttl_asn_next(sig,slen,0x02,&hh,&ll))goto err1;
+	if(U(nttl_asn_next(sig,slen,0x02,&hh,&ll)))goto err1;
 	sptr=sig+hh;
 	sl=ll;
 
@@ -3921,7 +3936,7 @@ static int nttl_ec_mpz_verify(void *ctx,int md,void *key,void *data,int dlen,
 	nttl_md[c.idx].digest(&c.ctx,nttl_md[c.idx].size,hash);
 	((struct usicrypt_thread *)ctx)->global->
 		memclear(&c.ctx,sizeof(c.ctx));
-	if(ecdsa_verify(&ec->pub,nttl_md[c.idx].size,hash,&dsg)==1)res=0;
+	if(L(ecdsa_verify(&ec->pub,nttl_md[c.idx].size,hash,&dsg)==1))res=0;
 	dsa_signature_clear(&dsg);
 	((struct usicrypt_thread *)ctx)->global->memclear(hash,sizeof(hash));
 
@@ -3932,9 +3947,9 @@ err1:	return res;
 
 int USICRYPT(random)(void *ctx,void *data,int len)
 {
-	if((((struct usicrypt_thread *)ctx)->total+=1)>=10000)
+	if(U((((struct usicrypt_thread *)ctx)->total+=1)>=10000))
 	{
-		if(nttl_reseed(ctx))return -1;
+		if(U(nttl_reseed(ctx)))return -1;
 		((struct usicrypt_thread *)ctx)->total=0;
 	}
 	yarrow256_random(&((struct usicrypt_thread *)ctx)->rng,len,data);
@@ -4249,7 +4264,7 @@ void *USICRYPT(base64_encode)(void *ctx,void *in,int ilen,int *olen)
 #ifndef USICRYPT_NO_BASE64
 	*olen=BASE64_ENCODE_RAW_LENGTH(ilen);
 
-	if(!(out=malloc(*olen+1)))return NULL;
+	if(U(!(out=malloc(*olen+1))))return NULL;
 	base64_encode_raw(out,ilen,in);
 	out[*olen]=0;
 #endif
@@ -4264,9 +4279,9 @@ void *USICRYPT(base64_decode)(void *ctx,void *in,int ilen,int *olen)
 	struct base64_decode_ctx b64;
 
 	len=*olen=BASE64_DECODE_LENGTH(ilen);
-	if(!(out=malloc(len)))goto err1;
+	if(U(!(out=malloc(len))))goto err1;
 	base64_decode_init(&b64);
-	if(!base64_decode_update(&b64,&len,out,ilen,in))goto err2;
+	if(U(!base64_decode_update(&b64,&len,out,ilen,in)))goto err2;
 	out=USICRYPT(do_realloc)(ctx,out,*olen,len);
 	((struct usicrypt_thread *)ctx)->global->memclear(&b64,sizeof(b64));
 	*olen=len;
@@ -4284,14 +4299,14 @@ void *USICRYPT(rsa_generate)(void *ctx,int bits)
 #ifndef USICRYPT_NO_RSA
 	struct nttl_rsa *rsa;
 
-	if(bits<USICRYPT_RSA_BITS_MIN||bits>USICRYPT_RSA_BITS_MAX||(bits&7))
-		goto err1;
-	if(!(rsa=malloc(sizeof(struct nttl_rsa))))goto err1;
+	if(U(bits<USICRYPT_RSA_BITS_MIN)||U(bits>USICRYPT_RSA_BITS_MAX)||
+		U(bits&7))goto err1;
+	if(U(!(rsa=malloc(sizeof(struct nttl_rsa)))))goto err1;
 	rsa_public_key_init(&rsa->pub);
 	rsa_private_key_init(&rsa->key);
 	mpz_set_ui(rsa->pub.e,USICRYPT_RSA_EXPONENT);
-	if(rsa_generate_keypair(&rsa->pub,&rsa->key,ctx,nttl_cb_random,
-		NULL,NULL,bits,0)!=1)goto err2;
+	if(U(rsa_generate_keypair(&rsa->pub,&rsa->key,ctx,nttl_cb_random,
+		NULL,NULL,bits,0)!=1))goto err2;
 	return rsa;
 
 err2:	rsa_public_key_clear(&rsa->pub);
@@ -4330,7 +4345,7 @@ void *USICRYPT(rsa_get_pub)(void *ctx,void *key,int *len)
 	sum1=nttl_rsa_mpz_hdr_add(sum0)+1;
 	sum2=nttl_rsa_mpz_hdr_add(sum1);
 	*len=nttl_rsa_mpz_hdr_add(sum2+sizeof(nttl_rsa_pub_oid)+6);
-	if(!(ptr=data=malloc(*len)))goto err1;
+	if(U(!(ptr=data=malloc(*len))))goto err1;
 	ptr+=nttl_rsa_mpz_write_hdr(0x30,ptr,sum2+sizeof(nttl_rsa_pub_oid)+6);
 	ptr+=nttl_rsa_mpz_write_hdr(0x30,ptr,sizeof(nttl_rsa_pub_oid)+4);
 	*ptr++=0x06;
@@ -4360,53 +4375,53 @@ void *USICRYPT(rsa_set_pub)(void *ctx,void *key,int len)
 	struct nttl_rsa *rsa;
 	unsigned char *pub=key;
 
-	if(!(rsa=malloc(sizeof(struct nttl_rsa))))goto err1;
+	if(U(!(rsa=malloc(sizeof(struct nttl_rsa)))))goto err1;
 	rsa_public_key_init(&rsa->pub);
 	rsa_private_key_init(&rsa->key);
 
-	if(nttl_asn_next(pub,len,0x30,&h,&l))goto err2;
+	if(U(nttl_asn_next(pub,len,0x30,&h,&l)))goto err2;
 	pub+=h;
 	len-=h;
 
-	if(nttl_asn_next(pub,len,0x30,&h,&l))goto err2;
+	if(U(nttl_asn_next(pub,len,0x30,&h,&l)))goto err2;
 	pub+=h;
 	len-=h;
 
-	if(nttl_asn_next(pub,len,0x06,&h,&l))goto err2;
-	if(l!=sizeof(nttl_rsa_pub_oid)||memcmp(pub+h,nttl_rsa_pub_oid,l))
+	if(U(nttl_asn_next(pub,len,0x06,&h,&l)))goto err2;
+	if(U(l!=sizeof(nttl_rsa_pub_oid))||U(memcmp(pub+h,nttl_rsa_pub_oid,l)))
 		goto err2;
 	pub+=h+l;
 	len-=h+l;
 
-	if(nttl_asn_next(pub,len,0x05,&h,&l))goto err2;
+	if(U(nttl_asn_next(pub,len,0x05,&h,&l)))goto err2;
 	if(l)goto err2;
 	pub+=h;
 	len-=h;
 
-	if(nttl_asn_next(pub,len,0x03,&h,&l))goto err2;
+	if(U(nttl_asn_next(pub,len,0x03,&h,&l)))goto err2;
 	if(l<1||pub[h])goto err2;
 	pub+=h+1;
 	len-=h+1;
 
-	if(nttl_asn_next(pub,len,0x30,&h,&l))goto err2;
+	if(U(nttl_asn_next(pub,len,0x30,&h,&l)))goto err2;
 	pub+=h;
 	len-=h;
 
-	if(nttl_asn_next(pub,len,0x02,&h,&l))goto err2;
+	if(U(nttl_asn_next(pub,len,0x02,&h,&l)))goto err2;
 	nettle_mpz_set_str_256_u(rsa->pub.n,l,pub+h);
 	pub+=h+l;
 	len-=h+l;
 
-	if(nttl_asn_next(pub,len,0x02,&h,&l))goto err2;
+	if(U(nttl_asn_next(pub,len,0x02,&h,&l)))goto err2;
 	nettle_mpz_set_str_256_u(rsa->pub.e,l,pub+h);
 
-	if(rsa_public_key_prepare(&rsa->pub)!=1)goto err2;
+	if(U(rsa_public_key_prepare(&rsa->pub)!=1))goto err2;
 
-	if(rsa->pub.size<USICRYPT_RSA_BYTES_MIN||
-		rsa->pub.size>USICRYPT_RSA_BYTES_MAX)goto err2;
-	if(!mpz_cmp_ui(rsa->pub.n,0)||!mpz_cmp_ui(rsa->pub.e,0))goto err2;
-	if(!mpz_tstbit(rsa->pub.n,0)||!mpz_tstbit(rsa->pub.e,0))goto err2;
-	if(mpz_cmp(rsa->pub.e,rsa->pub.n)>=0)goto err2;
+	if(U(rsa->pub.size<USICRYPT_RSA_BYTES_MIN)||
+		U(rsa->pub.size>USICRYPT_RSA_BYTES_MAX))goto err2;
+	if(U(!mpz_cmp_ui(rsa->pub.n,0))||U(!mpz_cmp_ui(rsa->pub.e,0)))goto err2;
+	if(U(!mpz_tstbit(rsa->pub.n,0))||U(!mpz_tstbit(rsa->pub.e,0)))goto err2;
+	if(U(mpz_cmp(rsa->pub.e,rsa->pub.n)>=0))goto err2;
 
 	return rsa;
 
@@ -4445,7 +4460,7 @@ void *USICRYPT(rsa_get_key)(void *ctx,void *key,int *len)
 	lc=nttl_rsa_mpz_int_size(rsa->key.c);
 	sum=ln+le+ld+lp+lq+le1+le2+lc+3;
 	*len=nttl_rsa_mpz_hdr_add(sum);
-	if(!(ptr=data=malloc(*len)))goto err1;
+	if(U(!(ptr=data=malloc(*len))))goto err1;
 	ptr+=nttl_rsa_mpz_write_hdr(0x30,ptr,sum);
 	*ptr++=0x02;
 	*ptr++=0x01;
@@ -4471,17 +4486,17 @@ void *USICRYPT(rsa_set_key)(void *ctx,void *key,int len)
 #ifndef USICRYPT_NO_RSA
 	struct nttl_rsa *rsa;
 
-	if(!(rsa=malloc(sizeof(struct nttl_rsa))))goto err1;
+	if(U(!(rsa=malloc(sizeof(struct nttl_rsa)))))goto err1;
 	rsa_public_key_init(&rsa->pub);
 	rsa_private_key_init(&rsa->key);
-	if(!rsa_keypair_from_der(&rsa->pub,&rsa->key,USICRYPT_RSA_BITS_MAX,
-		len,key))goto err2;
-	if(rsa->pub.size<USICRYPT_RSA_BYTES_MIN||
-		rsa->pub.size>USICRYPT_RSA_BYTES_MAX)goto err2;
-	if(!mpz_cmp_ui(rsa->pub.n,0)||!mpz_cmp_ui(rsa->pub.e,0))goto err2;
-	if(!mpz_tstbit(rsa->pub.n,0)||!mpz_tstbit(rsa->pub.e,0))goto err2;
-	if(mpz_cmp(rsa->pub.e,rsa->pub.n)>=0)goto err2;
-	if(nttl_rsa_mpz_check(rsa))goto err2;
+	if(U(!rsa_keypair_from_der(&rsa->pub,&rsa->key,USICRYPT_RSA_BITS_MAX,
+		len,key)))goto err2;
+	if(U(rsa->pub.size<USICRYPT_RSA_BYTES_MIN)||
+		U(rsa->pub.size>USICRYPT_RSA_BYTES_MAX))goto err2;
+	if(U(!mpz_cmp_ui(rsa->pub.n,0))||U(!mpz_cmp_ui(rsa->pub.e,0)))goto err2;
+	if(U(!mpz_tstbit(rsa->pub.n,0))||U(!mpz_tstbit(rsa->pub.e,0)))goto err2;
+	if(U(mpz_cmp(rsa->pub.e,rsa->pub.n)>=0))goto err2;
+	if(U(nttl_rsa_mpz_check(rsa)))goto err2;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,len);
 	return rsa;
 
@@ -4582,12 +4597,13 @@ void *USICRYPT(rsa_encrypt_v15)(void *ctx,void *key,void *data,int dlen,
 	unsigned char *out=NULL;
 	mpz_t s;
 
-	if(nttl_reseed(ctx))goto err1;
+	if(U(nttl_reseed(ctx)))goto err1;
 	mpz_init(s);
-	if(rsa_encrypt(&rsa->pub,ctx,nttl_cb_random,dlen,data,s)!=1)goto err2;
+	if(U(rsa_encrypt(&rsa->pub,ctx,nttl_cb_random,dlen,data,s)!=1))
+		goto err2;
 	*olen=nettle_mpz_sizeinbase_256_u(rsa->pub.n);
 	n=nettle_mpz_sizeinbase_256_u(s);
-	if(!(out=malloc(*olen)))goto err2;
+	if(U(!(out=malloc(*olen))))goto err2;
 	if(n<*olen)memset(out,0,*olen-n);
 	nettle_mpz_get_str_256(n,out+*olen-n,s);
 err2:	mpz_clear(s);
@@ -4606,12 +4622,12 @@ void *USICRYPT(rsa_decrypt_v15)(void *ctx,void *key,void *data,int dlen,
 	unsigned char *out=NULL;
 	mpz_t s;
 
-	if(nttl_reseed(ctx))goto err1;
+	if(U(nttl_reseed(ctx)))goto err1;
 	len=*olen=((struct rsa_public_key *)key)->size;
 	nettle_mpz_init_set_str_256_u(s,dlen,data);
-	if(!(out=malloc(len)))goto err2;
-	if(rsa_decrypt_tr(&rsa->pub,&rsa->key,ctx,nttl_cb_random,&len,out,s)
-		!=1)goto err3;
+	if(U(!(out=malloc(len))))goto err2;
+	if(U(rsa_decrypt_tr(&rsa->pub,&rsa->key,ctx,nttl_cb_random,&len,out,s)
+		!=1))goto err3;
 	out=USICRYPT(do_realloc)(ctx,out,*olen,len);
 	*olen=len;
 	goto err2;
@@ -4661,13 +4677,13 @@ void *USICRYPT(rsa_encrypt_oaep)(void *ctx,int md,void *key,void *data,int dlen,
 	default:goto err1;
 	}
 
-	if(nttl_reseed(ctx))goto err1;
+	if(U(nttl_reseed(ctx)))goto err1;
 	*olen=(mpz_sizeinbase(rsa->pub.n,2)+7)>>3;
-	if(dlen>*olen-2*nttl_md[c.idx].size-2)goto err1;
-	if(!(tmp=malloc(*olen)))goto err1;
-	if(!(out=malloc(*olen)))goto err2;
-	if(nttl_add_oaep_mgf1(ctx,tmp,*olen,data,dlen,NULL,0,&c))goto err3;
-	if(!nttl_rsa_mpz_public(tmp,*olen,out,&l,rsa)&&l==*olen)goto err2;
+	if(U(dlen>*olen-2*nttl_md[c.idx].size-2))goto err1;
+	if(U(!(tmp=malloc(*olen))))goto err1;
+	if(U(!(out=malloc(*olen))))goto err2;
+	if(U(nttl_add_oaep_mgf1(ctx,tmp,*olen,data,dlen,NULL,0,&c)))goto err3;
+	if(L(!nttl_rsa_mpz_public(tmp,*olen,out,&l,rsa))&&L(l==*olen))goto err2;
 
 err3:	((struct usicrypt_thread *)ctx)->global->memclear(out,*olen);
 	free(out);
@@ -4717,13 +4733,14 @@ void *USICRYPT(rsa_decrypt_oaep)(void *ctx,int md,void *key,void *data,int dlen,
 	}
 
 	*olen=(mpz_sizeinbase(rsa->pub.n,2)+7)>>3;
-	if(dlen!=*olen)goto err1;
-	if(!(tmp=malloc(*olen)))goto err1;
-	if(!(out=malloc(*olen)))goto err2;
-	if(nttl_rsa_mpz_private(ctx,data,*olen,tmp,&l,rsa)||l!=*olen)goto err3;
-	if(tmp[0])goto err3;
-	if((l=nttl_check_oaep_mgf1(ctx,out,*olen,tmp+1,*olen-1,*olen,NULL,0,
-		&c))==-1)goto err3;
+	if(U(dlen!=*olen))goto err1;
+	if(U(!(tmp=malloc(*olen))))goto err1;
+	if(U(!(out=malloc(*olen))))goto err2;
+	if(U(nttl_rsa_mpz_private(ctx,data,*olen,tmp,&l,rsa))||U(l!=*olen))
+		goto err3;
+	if(U(tmp[0]))goto err3;
+	if(U((l=nttl_check_oaep_mgf1(ctx,out,*olen,tmp+1,*olen-1,*olen,NULL,0,
+		&c))==-1))goto err3;
 	out=USICRYPT(do_realloc)(ctx,out,*olen,l);
 	*olen=l;
 	goto err2;
@@ -4762,14 +4779,14 @@ void *USICRYPT(dh_generate)(void *ctx,int bits,int generator,int *len)
 	unsigned char *data;
 	unsigned char *ptr;
 
-	if(bits<USICRYPT_DH_BITS_MIN||bits>USICRYPT_DH_BITS_MAX||
-		(bits&7)||(generator!=2&&generator!=5))goto err1;
-	if(nttl_reseed(ctx))goto err1;
+	if(U(bits<USICRYPT_DH_BITS_MIN)||U(bits>USICRYPT_DH_BITS_MAX)||
+		U(bits&7)||U(generator!=2&&generator!=5))goto err1;
+	if(U(nttl_reseed(ctx)))goto err1;
 	mpz_init(p);
 	mpz_init(x);
 	while(1)
 	{
-		if(nttl_dh_mpz_gen_prime(ctx,&p,bits))goto err2;
+		if(U(nttl_dh_mpz_gen_prime(ctx,&p,bits)))goto err2;
 		switch(generator)
 		{
 		case 2:	mpz_tdiv_r_ui(x,p,24);
@@ -4787,7 +4804,7 @@ void *USICRYPT(dh_generate)(void *ctx,int bits,int generator,int *len)
 		break;
 	}
 	l=nettle_mpz_sizeinbase_256_u(p);
-	if(!(bfr=malloc(l)))goto err2;
+	if(U(!(bfr=malloc(l))))goto err2;
 	nettle_mpz_get_str_256(l,bfr,p);
 
 	n=l+((*bfr&0x80)?1:0);
@@ -4798,7 +4815,7 @@ void *USICRYPT(dh_generate)(void *ctx,int bits,int generator,int *len)
 	else if(n>=0x80)n+=3;
 	else n+=2;
 	*len=n;
-	if(!(ptr=data=malloc(n)))goto err3;
+	if(U(!(ptr=data=malloc(n))))goto err3;
 
 	*ptr++=0x30;
 	n=l+((*bfr&0x80)?1:0);
@@ -4860,23 +4877,23 @@ void *USICRYPT(dh_init)(void *ctx,void *params,int len)
 	unsigned char *g;
 	mpz_t tmp;
 
-	if(!(dh=malloc(sizeof(struct nttl_dh))))goto err1;
+	if(U(!(dh=malloc(sizeof(struct nttl_dh)))))goto err1;
 
-	if(nttl_asn_next(prms,len,0x30,&h,&l))goto err2;
+	if(U(nttl_asn_next(prms,len,0x30,&h,&l)))goto err2;
 	prms+=h;
 	len-=h;
 
-	if(nttl_asn_next(prms,len,0x02,&h,&l))goto err2;
+	if(U(nttl_asn_next(prms,len,0x02,&h,&l)))goto err2;
 	p=prms+h;
 	plen=l;
 	prms+=h+l;
 	len-=h+l;
 
-	if(nttl_asn_next(prms,len,0x02,&h,&l))goto err2;
+	if(U(nttl_asn_next(prms,len,0x02,&h,&l)))goto err2;
 	g=prms+h;
 	glen=l;
 
-	if(!plen||!glen||(*p&0x80)||(*g&0x80))goto err2;
+	if(U(!plen)||U(!glen)||U(*p&0x80)||U(*g&0x80))goto err2;
 
 	nettle_mpz_init_set_str_256_u(dh->p,plen,p);
 	nettle_mpz_init_set_str_256_u(dh->g,glen,g);
@@ -4884,26 +4901,26 @@ void *USICRYPT(dh_init)(void *ctx,void *params,int len)
 
 	mpz_init(tmp);
 	h=mpz_sizeinbase(dh->p,2);
-	if(h<USICRYPT_DH_BITS_MIN||h>USICRYPT_DH_BITS_MAX)goto err3;
-	if(mpz_cmp_ui(dh->p,3)<0||mpz_cmp_ui(dh->g,1)<=0||
-		!mpz_probab_prime_p(dh->p,32))goto err3;
+	if(U(h<USICRYPT_DH_BITS_MIN)||U(h>USICRYPT_DH_BITS_MAX))goto err3;
+	if(U(mpz_cmp_ui(dh->p,3)<0)||U(mpz_cmp_ui(dh->g,1)<=0)||
+		U(!mpz_probab_prime_p(dh->p,32)))goto err3;
 	if(!mpz_cmp_ui(dh->g,2))
 	{
 		mpz_set_ui(tmp,24);
 		mpz_mod(tmp,dh->p,tmp);
-		if(mpz_cmp_ui(tmp,11))goto err3;
+		if(U(mpz_cmp_ui(tmp,11)))goto err3;
 	}
 	else if(!mpz_cmp_ui(dh->g,3))
 	{
 		mpz_set_ui(tmp,12);
 		mpz_mod(tmp,dh->p,tmp);
-		if(mpz_cmp_ui(tmp,5))goto err3;
+		if(U(mpz_cmp_ui(tmp,5)))goto err3;
 	}
 	else if(!mpz_cmp_ui(dh->g,5))
 	{
 		mpz_set_ui(tmp,10);
 		mpz_mod(tmp,dh->p,tmp);
-		if(mpz_cmp_ui(tmp,3)&&mpz_cmp_ui(tmp,7))goto err3;
+		if(U(mpz_cmp_ui(tmp,3)&&mpz_cmp_ui(tmp,7)))goto err3;
 	}
 	mpz_clear(tmp);
 
@@ -4930,10 +4947,10 @@ void *USICRYPT(dh_genex)(void *ctx,void *dh,int *len)
 	unsigned char *data=NULL;
 	mpz_t pub;
 
-	if(nttl_reseed(ctx))goto err1;
-        if((bits=mpz_sizeinbase(d->p,2)-1)<=0)goto err1;
+	if(U(nttl_reseed(ctx)))goto err1;
+        if(U((bits=mpz_sizeinbase(d->p,2)-1)<=0))goto err1;
 	bytes=(bits+7)>>3;
-	if(!(tmp=malloc(bytes)))goto err1;
+	if(U(!(tmp=malloc(bytes))))goto err1;
 	yarrow256_random(&((struct usicrypt_thread *)ctx)->rng,bytes,tmp);
 	switch(bits&7)
 	{
@@ -4991,14 +5008,14 @@ void *USICRYPT(dh_derive)(void *ctx,void *dh,void *pub,int plen,int *slen)
 	mpz_t p;
 	mpz_t s;
 
-	if(plen<0)goto err1;
+	if(U(plen<0))goto err1;
 	else if(!plen)mpz_init(p);
 	else nettle_mpz_init_set_str_256_u(p,plen,pub);
-	if(mpz_sizeinbase(d->p,2)<=1)goto err2;
+	if(U(mpz_sizeinbase(d->p,2)<=1))goto err2;
 	mpz_init(s);
-	if(mpz_cmp_ui(p,2)<0)goto err3;
+	if(U(mpz_cmp_ui(p,2)<0))goto err3;
 	mpz_sub_ui(s,d->p,2);
-	if(mpz_cmp(p,s)>0)goto err3;
+	if(U(mpz_cmp(p,s)>0))goto err3;
 	mpz_powm(s,p,d->key,d->p);
 	if((bits=mpz_sizeinbase(s,2))>0)
 	{
@@ -5034,7 +5051,7 @@ void *USICRYPT(ec_generate)(void *ctx,int curve)
 #ifndef USICRYPT_NO_EC
 	struct nttl_ec *ec;
 
-	if(nttl_reseed(ctx))goto err1;
+	if(U(nttl_reseed(ctx)))goto err1;
 	switch(curve)
 	{
 	case USICRYPT_BRAINPOOLP512R1:
@@ -5046,8 +5063,8 @@ void *USICRYPT(ec_generate)(void *ctx,int curve)
 		break;
 	default:goto err1;
 	}
-	if(!nttl_ec_map[curve].curve)goto err1;
-	if(!(ec=malloc(sizeof(struct nttl_ec))))goto err1;
+	if(U(!nttl_ec_map[curve].curve))goto err1;
+	if(U(!(ec=malloc(sizeof(struct nttl_ec)))))goto err1;
 	ec->curve=curve;
 	ecc_scalar_init(&ec->key,nttl_ec_map[curve].curve);
 	ecc_point_init(&ec->pub,nttl_ec_map[curve].curve);
@@ -5082,14 +5099,14 @@ void *USICRYPT(ec_derive)(void *ctx,void *key,void *pub,int *klen)
 	struct ecc_point r;
 	mpz_t x;
 
-	if(k->curve!=p->curve)return NULL;
+	if(U(k->curve!=p->curve))return NULL;
 	mpz_init(x);
 	ecc_point_init(&r,nttl_ec_map[k->curve].curve);
 	ecc_point_mul(&r,&k->key,&p->pub);
 	ecc_point_get(&r,x,NULL);
 	l=nettle_mpz_sizeinbase_256_u(x);
 	n=(ecc_bit_size(nttl_ec_map[k->curve].curve)+7)>>3;
-	if(!(sec=malloc(n)))goto err1;
+	if(U(!(sec=malloc(n))))goto err1;
 	*klen=n;
 	if(l<n)memset(sec,0,n-l);
 	nettle_mpz_get_str_256(l,sec+n-l,x);
@@ -5119,10 +5136,10 @@ void *USICRYPT(ec_get_pub)(void *ctx,void *k,int *len)
 	n=nttl_ec_map[ec->curve].xylen>>1;
 	xl=nettle_mpz_sizeinbase_256_u(x);
 	yl=nettle_mpz_sizeinbase_256_u(y);
-	if(xl>n||yl>n)goto err1;
+	if(U(xl>n)||U(yl>n))goto err1;
 	*len=nttl_ec_map[ec->curve].publen;
 	l=nttl_ec_map[ec->curve].phdrlen;
-	if(!(data=malloc(*len)))goto err1;
+	if(U(!(data=malloc(*len))))goto err1;
 	memcpy(data,nttl_ec_map[ec->curve].phdr,l);
 	data[l]=0x04;
 	memset(data+l+1,0,nttl_ec_map[ec->curve].xylen-1);
@@ -5148,40 +5165,41 @@ void *USICRYPT(ec_set_pub)(void *ctx,void *key,int len)
 	mpz_t x;
 	mpz_t y;
 
-	if(!(ec=malloc(sizeof(struct nttl_ec))))goto err1;
+	if(U(!(ec=malloc(sizeof(struct nttl_ec)))))goto err1;
 
-	if(nttl_asn_next(key,len,0x30,&h,&l))goto err2;
+	if(U(nttl_asn_next(key,len,0x30,&h,&l)))goto err2;
 	key+=h;
 	len-=h;
 
-	if(nttl_asn_next(key,len,0x30,&h,&l))goto err2;
+	if(U(nttl_asn_next(key,len,0x30,&h,&l)))goto err2;
 	pptr=key+h+l;
 	plen=len-h-l;
 	key+=h;
 	len=l;
 
-	if(nttl_asn_next(key,len,0x06,&h,&l))goto err2;
-	if(l!=7||memcmp(key+h,nttl_ansi_pubkey_type,7))goto err2;
+	if(U(nttl_asn_next(key,len,0x06,&h,&l)))goto err2;
+	if(U(l!=7)||U(memcmp(key+h,nttl_ansi_pubkey_type,7)))goto err2;
 	key+=h+l;
 	len-=h+l;
 
-	if(nttl_asn_next(key,len,0x06,&h,&l))goto err2;
+	if(U(nttl_asn_next(key,len,0x06,&h,&l)))goto err2;
 	for(idx=0;idx<USICRYPT_TOT_EC_CURVES;idx++)
 		if(nttl_ec_map[idx].oidlen==l&&
 			!memcmp(key+h,nttl_ec_map[idx].oid,l))break;
-	if(idx==USICRYPT_TOT_EC_CURVES||!nttl_ec_map[idx].curve)goto err2;
+	if(U(idx==USICRYPT_TOT_EC_CURVES)||U(!nttl_ec_map[idx].curve))goto err2;
 
 	ec->curve=idx;
 
-	if(nttl_asn_next(pptr,plen,0x03,&h,&l))goto err2;
-	if(l-1!=nttl_ec_map[idx].xylen||pptr[h]||pptr[h+1]!=0x04)goto err2;
+	if(U(nttl_asn_next(pptr,plen,0x03,&h,&l)))goto err2;
+	if(U(l-1!=nttl_ec_map[idx].xylen)||U(pptr[h])||U(pptr[h+1]!=0x04))
+		goto err2;
 
 	ecc_scalar_init(&ec->key,nttl_ec_map[idx].curve);
 	ecc_point_init(&ec->pub,nttl_ec_map[idx].curve);
 	nettle_mpz_init_set_str_256_u(x,nttl_ec_map[idx].xylen>>1,pptr+h+2);
 	nettle_mpz_init_set_str_256_u(y,nttl_ec_map[idx].xylen>>1,
 		pptr+h+2+(nttl_ec_map[idx].xylen>>1));
-	if(!ecc_point_set(&ec->pub,x,y))goto err3;
+	if(U(!ecc_point_set(&ec->pub,x,y)))goto err3;
 	mpz_clear(x);
 	mpz_clear(y);
 	return ec;
@@ -5221,13 +5239,13 @@ void *USICRYPT(ec_get_key)(void *ctx,void *k,int *len)
 	xlen=nettle_mpz_sizeinbase_256_u(x);
 	ylen=nettle_mpz_sizeinbase_256_u(y);
 	n=nttl_ec_map[ec->curve].xylen>>1;
-	if(klen>nttl_ec_map[ec->curve].kmax||xlen>n||ylen>n)goto err1;
+	if(U(klen>nttl_ec_map[ec->curve].kmax)||U(xlen>n)||U(ylen>n))goto err1;
 	dlen=nttl_ec_map[ec->curve].xylen+nttl_ec_map[ec->curve].k1h2len+klen+1+
 		sizeof(nttl_ec_k1h1);
 	*len=dlen+2;
 	if(dlen>=0x80)*len+=1;
 	if(dlen>=0x100)*len+=1;
-	if(!(ptr=data=malloc(*len)))goto err1;
+	if(U(!(ptr=data=malloc(*len))))goto err1;
 	*ptr++=0x30;
 	if(dlen<0x80)*ptr++=(unsigned char)dlen;
 	else if(dlen<0x100)
@@ -5282,32 +5300,32 @@ void *USICRYPT(ec_set_key)(void *ctx,void *key,int len)
 	mpz_t y1;
 	struct ecc_point tmp;
 
-	if(!(ec=malloc(sizeof(struct nttl_ec))))goto err1;
+	if(U(!(ec=malloc(sizeof(struct nttl_ec)))))goto err1;
 
-	if(nttl_asn_next(k,len,0x30,&h,&l))goto err2;
+	if(U(nttl_asn_next(k,len,0x30,&h,&l)))goto err2;
 	k+=h;
 	len-=h;
 
-	if(nttl_asn_next(k,len,0x02,&h,&l))goto err2;
-	if(l!=1||k[h]!=0x01)goto err2;
+	if(U(nttl_asn_next(k,len,0x02,&h,&l)))goto err2;
+	if(U(l!=1)||U(k[h]!=0x01))goto err2;
 	k+=h+l;
 	len-=h+l;
 
-	if(nttl_asn_next(k,len,0x04,&h,&l))goto err2;
+	if(U(nttl_asn_next(k,len,0x04,&h,&l)))goto err2;
 	kptr=k+h;
 	klen=l;
 	k+=h+l;
 	len-=h+l;
 
-	if(nttl_asn_next(k,len,0xa0,&h,&l))goto err2;
+	if(U(nttl_asn_next(k,len,0xa0,&h,&l)))goto err2;
 	k+=h;
 	len-=h;
 
-	if(nttl_asn_next(k,len,0x06,&h,&l))goto err2;
+	if(U(nttl_asn_next(k,len,0x06,&h,&l)))goto err2;
 	for(idx=0;idx<USICRYPT_TOT_EC_CURVES;idx++)
 		if(nttl_ec_map[idx].oidlen==l&&
 			!memcmp(k+h,nttl_ec_map[idx].oid,l))break;
-	if(idx==USICRYPT_TOT_EC_CURVES||!nttl_ec_map[idx].curve)goto err2;
+	if(U(idx==USICRYPT_TOT_EC_CURVES)||U(!nttl_ec_map[idx].curve))goto err2;
 	ec->curve=idx;
 	k+=h+l;
 	len-=h+l;
@@ -5317,8 +5335,9 @@ void *USICRYPT(ec_set_key)(void *ctx,void *key,int len)
 		k+=h;
 		len-=h;
 
-		if(nttl_asn_next(k,len,0x03,&h,&l))goto err2;
-		if(l-1!=nttl_ec_map[idx].xylen||k[h]||k[h+1]!=0x04)goto err2;
+		if(U(nttl_asn_next(k,len,0x03,&h,&l)))goto err2;
+		if(U(l-1!=nttl_ec_map[idx].xylen)||U(k[h])||U(k[h+1]!=0x04))
+			goto err2;
 		xylen=(l-1)>>1;
 		xptr=k+h+2;
 		yptr=xptr+xylen;
@@ -5333,9 +5352,9 @@ void *USICRYPT(ec_set_key)(void *ctx,void *key,int len)
 		nettle_mpz_init_set_str_256_u(x,xylen,xptr);
 		nettle_mpz_init_set_str_256_u(y,xylen,yptr);
 	}
-	if(!(ecc_scalar_set(&ec->key,kk)))goto err3;
+	if(U(!(ecc_scalar_set(&ec->key,kk))))goto err3;
 	if(synth)ecc_point_mul_g(&ec->pub,&ec->key);
-	else if(!ecc_point_set(&ec->pub,x,y))goto err3;
+	else if(U(!ecc_point_set(&ec->pub,x,y)))goto err3;
 	else
 	{
 		mpz_init(x1);
@@ -5348,7 +5367,7 @@ void *USICRYPT(ec_set_key)(void *ctx,void *key,int len)
 		ecc_point_clear(&tmp);
 		mpz_clear(x1);
 		mpz_clear(y1);
-		if(h||l)goto err3;
+		if(U(h)||U(l))goto err3;
 	}
 	if(!synth)
 	{
@@ -5429,8 +5448,8 @@ void *USICRYPT(x25519_generate)(void *ctx)
 #ifndef USICRYPT_NO_X25519
 	struct nttl_x25519 *x;
 
-	if(nttl_reseed(ctx))return NULL;
-	if(!(x=malloc(sizeof(struct nttl_x25519))))return NULL;
+	if(U(nttl_reseed(ctx)))return NULL;
+	if(U(!(x=malloc(sizeof(struct nttl_x25519)))))return NULL;
 	yarrow256_random(&((struct usicrypt_thread *)ctx)->rng,
 		CURVE25519_SIZE,x->key);
 	x->key[0]&=0xf8;
@@ -5451,7 +5470,7 @@ void *USICRYPT(x25519_derive)(void *ctx,void *key,void *pub,int *klen)
 	unsigned char *out;
 
 	*klen=CURVE25519_SIZE;
-	if(!(out=malloc(*klen)))return NULL;
+	if(U(!(out=malloc(*klen))))return NULL;
 	curve25519_mul(out,k->key,p->pub);
 	return out;
 #else
@@ -5465,7 +5484,7 @@ void *USICRYPT(x25519_get_pub)(void *ctx,void *key,int *len)
 	unsigned char *data;
 
 	*len=sizeof(nttl_x25519_asn1_pub)+CURVE25519_SIZE;
-	if(!(data=malloc(*len)))return NULL;
+	if(U(!(data=malloc(*len))))return NULL;
 	memcpy(data,nttl_x25519_asn1_pub,sizeof(nttl_x25519_asn1_pub));
 	memcpy(data+sizeof(nttl_x25519_asn1_pub),
 		((struct nttl_x25519 *)key)->pub,CURVE25519_SIZE);
@@ -5480,10 +5499,10 @@ void *USICRYPT(x25519_set_pub)(void *ctx,void *key,int len)
 #ifndef USICRYPT_NO_X25519
 	struct nttl_x25519 *x;
 
-	if(len<sizeof(nttl_x25519_asn1_pub)+CURVE25519_SIZE||
-		memcmp(key,nttl_x25519_asn1_pub,sizeof(nttl_x25519_asn1_pub)))
+	if(U(len<sizeof(nttl_x25519_asn1_pub)+CURVE25519_SIZE)||
+	    U(memcmp(key,nttl_x25519_asn1_pub,sizeof(nttl_x25519_asn1_pub))))
 		goto err1;
-	if(!(x=malloc(sizeof(struct nttl_x25519))))goto err1;
+	if(U(!(x=malloc(sizeof(struct nttl_x25519)))))goto err1;
 	memcpy(x->pub,((unsigned char *)key)+sizeof(nttl_x25519_asn1_pub),
 		CURVE25519_SIZE);
 	return x;
@@ -5500,7 +5519,7 @@ void *USICRYPT(x25519_get_key)(void *ctx,void *key,int *len)
 	unsigned char *data;
 
 	*len=sizeof(nttl_x25519_asn1_key)+CURVE25519_SIZE;
-	if(!(data=malloc(*len)))return NULL;
+	if(U(!(data=malloc(*len))))return NULL;
 	memcpy(data,nttl_x25519_asn1_key,sizeof(nttl_x25519_asn1_key));
 	memcpy(data+sizeof(nttl_x25519_asn1_key),
 		((struct nttl_x25519 *)key)->key,CURVE25519_SIZE);
@@ -5515,10 +5534,10 @@ void *USICRYPT(x25519_set_key)(void *ctx,void *key,int len)
 #ifndef USICRYPT_NO_X25519
 	struct nttl_x25519 *x;
 
-	if(len<sizeof(nttl_x25519_asn1_key)+CURVE25519_SIZE||
-		memcmp(key,nttl_x25519_asn1_key,sizeof(nttl_x25519_asn1_key)))
+	if(U(len<sizeof(nttl_x25519_asn1_key)+CURVE25519_SIZE)||
+	    U(memcmp(key,nttl_x25519_asn1_key,sizeof(nttl_x25519_asn1_key))))
 		goto err1;
-	if(!(x=malloc(sizeof(struct nttl_x25519))))goto err1;
+	if(U(!(x=malloc(sizeof(struct nttl_x25519)))))goto err1;
 	memcpy(x->key,((unsigned char *)key)+sizeof(nttl_x25519_asn1_key),
 		CURVE25519_SIZE);
 	curve25519_mul_g(x->pub,x->key);
@@ -5557,29 +5576,31 @@ void *USICRYPT(encrypt_p8)(void *ctx,void *key,int klen,void *data,int dlen,
 	unsigned char iv[16];
 	unsigned char salt[8];
 
-	if(dlen>0x3fff||iter<=0||(digest==USICRYPT_SHA1&&bits!=128))goto err1;
+	if(U(dlen>0x3fff)||U(iter<=0)||U(digest==USICRYPT_SHA1&&bits!=128))
+		goto err1;
 
-	if(nttl_asn_next(data,dlen,0x30,&cidx,&didx))goto err1;
-	if(cidx+didx!=dlen)goto err1;
+	if(U(nttl_asn_next(data,dlen,0x30,&cidx,&didx)))goto err1;
+	if(U(cidx+didx!=dlen))goto err1;
 
 	for(didx=0;didx<4;didx++)if(nttl_digest_asn[didx].oidlen&&
 		nttl_digest_asn[didx].digest==digest)break;
-	if(didx==4)goto err1;
+	if(U(didx==4))goto err1;
 
 	for(cidx=0;cidx<24;cidx++)if(nttl_cipher_asn[cidx].oidlen&&
 		nttl_cipher_asn[cidx].cipher==cipher&&
 		nttl_cipher_asn[cidx].mode==mode&&
 		nttl_cipher_asn[cidx].bits==bits)break;
-	if(cidx==24)goto err1;
+	if(U(cidx==24))goto err1;
 
-	if(USICRYPT(random)(ctx,salt,8))goto err1;
-	if(USICRYPT(pbkdf2)(ctx,digest,key,klen,salt,8,iter,bfr))goto err2;
+	if(U(USICRYPT(random)(ctx,salt,8)))goto err1;
+	if(U(USICRYPT(pbkdf2)(ctx,digest,key,klen,salt,8,iter,bfr)))goto err2;
 
 	if(nttl_cipher_asn[cidx].ivlen)
-		if(USICRYPT(random)(ctx,iv,nttl_cipher_asn[cidx].ivlen))
+		if(U(USICRYPT(random)(ctx,iv,nttl_cipher_asn[cidx].ivlen)))
 			goto err3;
 
-	if(!(c=USICRYPT(blkcipher_init)(ctx,cipher,mode,bfr,bits,iv)))goto err4;
+	if(U(!(c=USICRYPT(blkcipher_init)(ctx,cipher,mode,bfr,bits,iv))))
+		goto err4;
 
 	if(iter>=0x800000)ilen=4;
 	else if(iter>=0x8000)ilen=3;
@@ -5596,7 +5617,7 @@ void *USICRYPT(encrypt_p8)(void *ctx,void *key,int klen,void *data,int dlen,
 	*rlen=nttl_asn_length(NULL,len1+len2+len3+dlen+plen)+
 		len1+len2+len3+dlen+plen+1;
 
-	if(!(ptr=out=malloc(*rlen)))goto err5;
+	if(U(!(ptr=out=malloc(*rlen))))goto err5;
 
 	*ptr++=0x30;
 	ptr+=nttl_asn_length(ptr,len1+len2+len3+dlen+plen);
@@ -5661,7 +5682,7 @@ void *USICRYPT(encrypt_p8)(void *ctx,void *key,int klen,void *data,int dlen,
 	memcpy(ptr,data,dlen);
 	if(nttl_cipher_asn[cidx].pad)usicrypt_cipher_padding_add(ctx,ptr,dlen);
 
-	if(USICRYPT(blkcipher_encrypt)(c,ptr,dlen+plen,ptr))goto err6;
+	if(U(USICRYPT(blkcipher_encrypt)(c,ptr,dlen+plen,ptr)))goto err6;
 	USICRYPT(blkcipher_exit)(c);
 
 	((struct usicrypt_thread *)ctx)->global->memclear(salt,sizeof(salt));
@@ -5703,137 +5724,139 @@ void *USICRYPT(decrypt_p8)(void *ctx,void *key,int klen,void *data,int dlen,
 	unsigned char *iv;
 	unsigned char bfr[64];
 
-	if(dlen>0x3fff)goto err1;
+	if(U(dlen>0x3fff))goto err1;
 
-	if(nttl_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(nttl_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	data+=h;
 	dlen-=h;
 
-	if(nttl_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(nttl_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	eptr=data+h+l;
 	elen=dlen-h-l;
 	data+=h;
 	dlen=l;
 
-	if(nttl_asn_next(data,dlen,0x06,&h,&l))goto err1;
-	if(l!=sizeof(nttl_pbes2_oid)||memcmp(data+h,nttl_pbes2_oid,l))goto err1;
+	if(U(nttl_asn_next(data,dlen,0x06,&h,&l)))goto err1;
+	if(U(l!=sizeof(nttl_pbes2_oid))||
+		U(memcmp(data+h,nttl_pbes2_oid,l)))goto err1;
 	data+=h+l;
 	dlen-=h+l;
 
-	if(nttl_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(nttl_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	data+=h;
 	dlen-=h;
 
-	if(nttl_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(nttl_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	data+=h;
 	dlen-=h;
 
-	if(nttl_asn_next(data,dlen,0x06,&h,&l))goto err1;
-	if(l!=sizeof(nttl_pbkdf2_oid)||memcmp(data+h,nttl_pbkdf2_oid,l))
+	if(U(nttl_asn_next(data,dlen,0x06,&h,&l)))goto err1;
+	if(U(l!=sizeof(nttl_pbkdf2_oid))||U(memcmp(data+h,nttl_pbkdf2_oid,l)))
 		goto err1;
 	data+=h+l;
 	dlen-=h+l;
 
-	if(nttl_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(nttl_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	data+=h;
 	dlen-=h;
 	mlen=l;
 
-	if(nttl_asn_next(data,dlen,0x04,&h,&l))goto err1;
+	if(U(nttl_asn_next(data,dlen,0x04,&h,&l)))goto err1;
 	salt=data+h;
 	slen=l;
 	data+=h+l;
 	dlen-=h+l;
 	mlen-=h+l;
 
-	if(nttl_asn_next(data,dlen,0x02,&h,&l))goto err1;
-	if(!l||l>sizeof(int))goto err1;
+	if(U(nttl_asn_next(data,dlen,0x02,&h,&l)))goto err1;
+	if(U(!l)||U(l>sizeof(int)))goto err1;
 	iter=data+h;
 	ilen=l;
 	data+=h+l;
 	dlen-=h+l;
 	mlen-=h+l;
 
-	if(mlen<0)goto err1;
+	if(U(mlen<0))goto err1;
 	else if(mlen)
 	{
-		if(nttl_asn_next(data,dlen,0x30,&h,&l))goto err1;
+		if(U(nttl_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 		data+=h;
 		dlen-=h;
 
-		if(nttl_asn_next(data,dlen,0x06,&h,&l))goto err1;
+		if(U(nttl_asn_next(data,dlen,0x06,&h,&l)))goto err1;
 		md=data+h;
 		mlen=l;
 		data+=h+l;
 		dlen-=h+l;
 
-		if(nttl_asn_next(data,dlen,0x05,&h,&l))goto err1;
-		if(l)goto err1;
+		if(U(nttl_asn_next(data,dlen,0x05,&h,&l)))goto err1;
+		if(U(l))goto err1;
 		data+=h;
 		dlen-=h;
 	}
 
-	if(nttl_asn_next(data,dlen,0x30,&h,&l))goto err1;
+	if(U(nttl_asn_next(data,dlen,0x30,&h,&l)))goto err1;
 	data+=h;
 	dlen-=h;
 
-	if(nttl_asn_next(data,dlen,0x06,&h,&l))goto err1;
+	if(U(nttl_asn_next(data,dlen,0x06,&h,&l)))goto err1;
 	cipher=data+h;
 	clen=l;
 	data+=h+l;
 	dlen-=h+l;
 
-	if(nttl_asn_next(data,dlen,0x04,&h,&l))goto err1;
+	if(U(nttl_asn_next(data,dlen,0x04,&h,&l)))goto err1;
 	iv=data+h;
 	ivlen=l;
 	data+=h+l;
 	dlen-=h+l;
-	if(data!=eptr)goto err1;
+	if(U(data!=eptr))goto err1;
 
-	if(nttl_asn_next(eptr,elen,0x04,&h,&l))goto err1;
+	if(U(nttl_asn_next(eptr,elen,0x04,&h,&l)))goto err1;
 	eptr+=h;
 	elen=l;
 
 	for(l=0,h=0;h<ilen;h++)l=(l<<8)|iter[h];
-	if(!l)goto err1;
+	if(U(!l))goto err1;
 
 	if(mlen)
 	{
 		for(h=0;h<4;h++)if(nttl_digest_asn[h].oidlen&&
 			mlen==nttl_digest_asn[h].oidlen&&
 			!memcmp(md,nttl_digest_asn[h].oid,mlen))break;
-		if(h==4)goto err1;
+		if(U(h==4))goto err1;
 		else digest=nttl_digest_asn[h].digest;
 	}
 
 	for(h=0;h<24;h++)if(nttl_cipher_asn[h].oidlen&&
 		clen==nttl_cipher_asn[h].oidlen&&
 		!memcmp(cipher,nttl_cipher_asn[h].oid,clen))break;
-	if(h==24||nttl_cipher_asn[h].ivlen!=ivlen||
-		(nttl_cipher_asn[h].bits!=128&&digest==USICRYPT_SHA1))goto err1;
+	if(U(h==24)||U(nttl_cipher_asn[h].ivlen!=ivlen)||
+		U(nttl_cipher_asn[h].bits!=128&&digest==USICRYPT_SHA1))
+		goto err1;
 
-	if(nttl_cipher_asn[h].pad)if(elen&0x0f)goto err1;
+	if(nttl_cipher_asn[h].pad)if(U(elen&0x0f))goto err1;
 
-	if(USICRYPT(pbkdf2)(ctx,digest,key,klen,salt,slen,l,bfr))goto err1;
+	if(U(USICRYPT(pbkdf2)(ctx,digest,key,klen,salt,slen,l,bfr)))goto err1;
 
-	if(!(out=malloc(elen)))goto err2;
+	if(U(!(out=malloc(elen))))goto err2;
 
-	if(!(c=USICRYPT(blkcipher_init)(ctx,nttl_cipher_asn[h].cipher,
-		nttl_cipher_asn[h].mode,bfr,nttl_cipher_asn[h].bits,iv)))
+	if(U(!(c=USICRYPT(blkcipher_init)(ctx,nttl_cipher_asn[h].cipher,
+		nttl_cipher_asn[h].mode,bfr,nttl_cipher_asn[h].bits,iv))))
 		goto err3;
-	if(USICRYPT(blkcipher_decrypt)(c,eptr,elen,out))goto err5;
+	if(U(USICRYPT(blkcipher_decrypt)(c,eptr,elen,out)))goto err5;
 	USICRYPT(blkcipher_exit)(c);
 
 	if(nttl_cipher_asn[h].pad)
 	{
-		if((*rlen=usicrypt_cipher_padding_get(ctx,out,elen))==-1)
+		if(U((*rlen=usicrypt_cipher_padding_get(ctx,out,elen))==-1))
 			goto err4;
 		else *rlen=elen-*rlen;
 	}
 	else *rlen=elen;
 
-	if(nttl_asn_next(out,*rlen,0x30,&h,&l))goto err4;
-	if(h+l!=*rlen)goto err4;
+	if(U(nttl_asn_next(out,*rlen,0x30,&h,&l)))goto err4;
+	if(U(h+l!=*rlen))goto err4;
 
 	((struct usicrypt_thread *)ctx)->global->memclear(bfr,sizeof(bfr));
 	return USICRYPT(do_realloc)(ctx,out,elen,*rlen);
@@ -5899,17 +5922,16 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #ifndef USICRYPT_NO_AES
 #ifndef USICRYPT_NO_ECB
 	case USICRYPT_AES|USICRYPT_ECB:
-		if(!(c=nttl_aes_ecb_init(ctx,key,klen)))break;
+		if(U(!(c=nttl_aes_ecb_init(ctx,key,klen))))break;
 		c->encrypt=nttl_aes_ecb_encrypt;
 		c->decrypt=nttl_aes_ecb_decrypt;
 		c->reset=NULL;
 		c->exit=nttl_aes_ecb_exit;
 		break;
-		return c;
 #endif
 #ifndef USICRYPT_NO_CBC
 	case USICRYPT_AES|USICRYPT_CBC:
-		if(!(c=nttl_aes_cbc_init(ctx,key,klen,iv)))break;
+		if(U(!(c=nttl_aes_cbc_init(ctx,key,klen,iv))))break;
 		c->encrypt=nttl_aes_cbc_encrypt;
 		c->decrypt=nttl_aes_cbc_decrypt;
 		c->reset=nttl_aes_cbc_reset;
@@ -5918,7 +5940,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CTS
 	case USICRYPT_AES|USICRYPT_CTS:
-		if(!(c=nttl_aes_cts_init(ctx,key,klen,iv)))break;
+		if(U(!(c=nttl_aes_cts_init(ctx,key,klen,iv))))break;
 		c->encrypt=nttl_aes_cts_encrypt;
 		c->decrypt=nttl_aes_cts_decrypt;
 		c->reset=nttl_aes_cts_reset;
@@ -5927,7 +5949,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CFB
 	case USICRYPT_AES|USICRYPT_CFB:
-		if(!(c=nttl_aes_cfb_init(ctx,key,klen,iv)))break;
+		if(U(!(c=nttl_aes_cfb_init(ctx,key,klen,iv))))break;
 		c->encrypt=nttl_aes_cfb_encrypt;
 		c->decrypt=nttl_aes_cfb_decrypt;
 		c->reset=nttl_aes_cfb_reset;
@@ -5936,7 +5958,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CFB8
 	case USICRYPT_AES|USICRYPT_CFB8:
-		if(!(c=nttl_aes_cfb8_init(ctx,key,klen,iv)))break;
+		if(U(!(c=nttl_aes_cfb8_init(ctx,key,klen,iv))))break;
 		c->encrypt=nttl_aes_cfb8_encrypt;
 		c->decrypt=nttl_aes_cfb8_decrypt;
 		c->reset=nttl_aes_cfb8_reset;
@@ -5945,7 +5967,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_OFB
 	case USICRYPT_AES|USICRYPT_OFB:
-		if(!(c=nttl_aes_ofb_init(ctx,key,klen,iv)))break;
+		if(U(!(c=nttl_aes_ofb_init(ctx,key,klen,iv))))break;
 		c->encrypt=nttl_aes_ofb_crypt;
 		c->decrypt=nttl_aes_ofb_crypt;
 		c->reset=nttl_aes_ofb_reset;
@@ -5954,7 +5976,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CTR
 	case USICRYPT_AES|USICRYPT_CTR:
-		if(!(c=nttl_aes_ctr_init(ctx,key,klen,iv)))break;
+		if(U(!(c=nttl_aes_ctr_init(ctx,key,klen,iv))))break;
 		c->encrypt=nttl_aes_ctr_crypt;
 		c->decrypt=nttl_aes_ctr_crypt;
 		c->reset=nttl_aes_ctr_reset;
@@ -5965,17 +5987,16 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #ifndef USICRYPT_NO_CAMELLIA
 #ifndef USICRYPT_NO_ECB
 	case USICRYPT_CAMELLIA|USICRYPT_ECB:
-		if(!(c=nttl_camellia_ecb_init(ctx,key,klen)))break;
+		if(U(!(c=nttl_camellia_ecb_init(ctx,key,klen))))break;
 		c->encrypt=nttl_camellia_ecb_encrypt;
 		c->decrypt=nttl_camellia_ecb_decrypt;
 		c->reset=NULL;
 		c->exit=nttl_camellia_ecb_exit;
 		break;
-		return c;
 #endif
 #ifndef USICRYPT_NO_CBC
 	case USICRYPT_CAMELLIA|USICRYPT_CBC:
-		if(!(c=nttl_camellia_cbc_init(ctx,key,klen,iv)))break;
+		if(U(!(c=nttl_camellia_cbc_init(ctx,key,klen,iv))))break;
 		c->encrypt=nttl_camellia_cbc_encrypt;
 		c->decrypt=nttl_camellia_cbc_decrypt;
 		c->reset=nttl_camellia_cbc_reset;
@@ -5984,7 +6005,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CTS
 	case USICRYPT_CAMELLIA|USICRYPT_CTS:
-		if(!(c=nttl_camellia_cts_init(ctx,key,klen,iv)))break;
+		if(U(!(c=nttl_camellia_cts_init(ctx,key,klen,iv))))break;
 		c->encrypt=nttl_camellia_cts_encrypt;
 		c->decrypt=nttl_camellia_cts_decrypt;
 		c->reset=nttl_camellia_cts_reset;
@@ -5993,7 +6014,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CFB
 	case USICRYPT_CAMELLIA|USICRYPT_CFB:
-		if(!(c=nttl_camellia_cfb_init(ctx,key,klen,iv)))break;
+		if(U(!(c=nttl_camellia_cfb_init(ctx,key,klen,iv))))break;
 		c->encrypt=nttl_camellia_cfb_encrypt;
 		c->decrypt=nttl_camellia_cfb_decrypt;
 		c->reset=nttl_camellia_cfb_reset;
@@ -6002,7 +6023,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CFB8
 	case USICRYPT_CAMELLIA|USICRYPT_CFB8:
-		if(!(c=nttl_camellia_cfb8_init(ctx,key,klen,iv)))break;
+		if(U(!(c=nttl_camellia_cfb8_init(ctx,key,klen,iv))))break;
 		c->encrypt=nttl_camellia_cfb8_encrypt;
 		c->decrypt=nttl_camellia_cfb8_decrypt;
 		c->reset=nttl_camellia_cfb8_reset;
@@ -6011,7 +6032,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_OFB
 	case USICRYPT_CAMELLIA|USICRYPT_OFB:
-		if(!(c=nttl_camellia_ofb_init(ctx,key,klen,iv)))break;
+		if(U(!(c=nttl_camellia_ofb_init(ctx,key,klen,iv))))break;
 		c->encrypt=nttl_camellia_ofb_crypt;
 		c->decrypt=nttl_camellia_ofb_crypt;
 		c->reset=nttl_camellia_ofb_reset;
@@ -6020,7 +6041,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CTR
 	case USICRYPT_CAMELLIA|USICRYPT_CTR:
-		if(!(c=nttl_camellia_ctr_init(ctx,key,klen,iv)))break;
+		if(U(!(c=nttl_camellia_ctr_init(ctx,key,klen,iv))))break;
 		c->encrypt=nttl_camellia_ctr_crypt;
 		c->decrypt=nttl_camellia_ctr_crypt;
 		c->reset=nttl_camellia_ctr_reset;
@@ -6031,7 +6052,7 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #ifndef USICRYPT_NO_CHACHA
 #ifndef USICRYPT_NO_STREAM
 	case USICRYPT_CHACHA20|USICRYPT_STREAM:
-		if(!(c=nttl_chacha_init(ctx,key,klen,iv)))break;
+		if(U(!(c=nttl_chacha_init(ctx,key,klen,iv))))break;
 		c->encrypt=nttl_chacha_crypt;
 		c->decrypt=nttl_chacha_crypt;
 		c->reset=nttl_chacha_reset;
@@ -6075,7 +6096,7 @@ void *USICRYPT(dskcipher_init)(void *ctx,int cipher,int mode,void *key,int klen)
 #ifndef USICRYPT_NO_AES
 #ifndef USICRYPT_NO_XTS
 	case USICRYPT_AES|USICRYPT_XTS:
-		if(!(c=nttl_aes_xts_init(ctx,key,klen)))break;
+		if(U(!(c=nttl_aes_xts_init(ctx,key,klen))))break;
 		c->encrypt=nttl_aes_xts_encrypt;
 		c->decrypt=nttl_aes_xts_decrypt;
 		c->exit=nttl_aes_xts_exit;
@@ -6083,7 +6104,7 @@ void *USICRYPT(dskcipher_init)(void *ctx,int cipher,int mode,void *key,int klen)
 #endif
 #ifndef USICRYPT_NO_ESSIV
 	case USICRYPT_AES|USICRYPT_ESSIV:
-		if(!(c=nttl_aes_essiv_init(ctx,key,klen)))break;
+		if(U(!(c=nttl_aes_essiv_init(ctx,key,klen))))break;
 		c->encrypt=nttl_aes_essiv_encrypt;
 		c->decrypt=nttl_aes_essiv_decrypt;
 		c->exit=nttl_aes_essiv_exit;
@@ -6093,7 +6114,7 @@ void *USICRYPT(dskcipher_init)(void *ctx,int cipher,int mode,void *key,int klen)
 #ifndef USICRYPT_NO_CAMELLIA
 #ifndef USICRYPT_NO_XTS
 	case USICRYPT_CAMELLIA|USICRYPT_XTS:
-		if(!(c=nttl_camellia_xts_init(ctx,key,klen)))break;
+		if(U(!(c=nttl_camellia_xts_init(ctx,key,klen))))break;
 		c->encrypt=nttl_camellia_xts_encrypt;
 		c->decrypt=nttl_camellia_xts_decrypt;
 		c->exit=nttl_camellia_xts_exit;
@@ -6101,7 +6122,7 @@ void *USICRYPT(dskcipher_init)(void *ctx,int cipher,int mode,void *key,int klen)
 #endif
 #ifndef USICRYPT_NO_ESSIV
 	case USICRYPT_CAMELLIA|USICRYPT_ESSIV:
-		if(!(c=nttl_camellia_essiv_init(ctx,key,klen)))break;
+		if(U(!(c=nttl_camellia_essiv_init(ctx,key,klen))))break;
 		c->encrypt=nttl_camellia_essiv_encrypt;
 		c->decrypt=nttl_camellia_essiv_decrypt;
 		c->exit=nttl_camellia_essiv_exit;
@@ -6139,7 +6160,7 @@ void *USICRYPT(aeadcipher_init)(void *ctx,int cipher,void *key,int klen,
 #ifndef USICRYPT_NO_AES
 #ifndef USICRYPT_NO_GCM
 	case USICRYPT_AES_GCM:
-		if(!(c=nttl_aes_gcm_init(ctx,key,klen,ilen,tlen)))break;
+		if(U(!(c=nttl_aes_gcm_init(ctx,key,klen,ilen,tlen))))break;
 		c->encrypt=nttl_aes_gcm_encrypt;
 		c->decrypt=nttl_aes_gcm_decrypt;
 #ifndef USICRYPT_NO_IOV
@@ -6151,7 +6172,7 @@ void *USICRYPT(aeadcipher_init)(void *ctx,int cipher,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CCM
 	case USICRYPT_AES_CCM:
-		if(!(c=nttl_aes_ccm_init(ctx,key,klen,ilen,tlen)))break;
+		if(U(!(c=nttl_aes_ccm_init(ctx,key,klen,ilen,tlen))))break;
 		c->encrypt=nttl_aes_ccm_encrypt;
 		c->decrypt=nttl_aes_ccm_decrypt;
 #ifndef USICRYPT_NO_IOV
@@ -6165,7 +6186,7 @@ void *USICRYPT(aeadcipher_init)(void *ctx,int cipher,void *key,int klen,
 #ifndef USICRYPT_NO_CHACHA
 #ifndef USICRYPT_NO_POLY
 	case USICRYPT_CHACHA20_POLY1305:
-		if(!(c=nttl_chacha_poly_init(ctx,key,klen,ilen,tlen)))break;
+		if(U(!(c=nttl_chacha_poly_init(ctx,key,klen,ilen,tlen))))break;
 		c->encrypt=nttl_chacha_poly_encrypt;
 		c->decrypt=nttl_chacha_poly_decrypt;
 #ifndef USICRYPT_NO_IOV
@@ -6266,17 +6287,17 @@ void *USICRYPT(thread_init)(void *global)
 	struct usicrypt_thread *ctx;
 	unsigned char bfr[32];
 
-	if(!(ctx=malloc(sizeof(struct usicrypt_thread))))goto err1;
+	if(U(!(ctx=malloc(sizeof(struct usicrypt_thread)))))goto err1;
 	ctx->global=global;
 	ctx->total=0;
 	yarrow256_init(&ctx->rng,2,ctx->src);
-	if(ctx->global->rng_seed(bfr,sizeof(bfr)))goto err2;
+	if(U(ctx->global->rng_seed(bfr,sizeof(bfr))))goto err2;
 	yarrow256_seed(&ctx->rng,sizeof(bfr),bfr);
-	if(ctx->global->rng_seed(bfr,sizeof(bfr)))goto err2;
+	if(U(ctx->global->rng_seed(bfr,sizeof(bfr))))goto err2;
 	yarrow256_update(&ctx->rng,0,0,sizeof(bfr),bfr);
-	if(ctx->global->rng_seed(bfr,sizeof(bfr)))goto err2;
+	if(U(ctx->global->rng_seed(bfr,sizeof(bfr))))goto err2;
 	yarrow256_update(&ctx->rng,1,0,sizeof(bfr),bfr);
-	if(!yarrow256_is_seeded(&ctx->rng))goto err2;
+	if(U(!yarrow256_is_seeded(&ctx->rng)))goto err2;
 	return ctx;
 
 err2:	free(ctx);
@@ -6297,7 +6318,7 @@ void *USICRYPT(global_init)(int (*rng_seed)(void *data,int len),
 	struct usicrypt_global *ctx;
 
 	USICRYPT(do_realloc)(NULL,NULL,0,0);
-	if(!(ctx=malloc(sizeof(struct usicrypt_global))))goto err1;
+	if(U(!(ctx=malloc(sizeof(struct usicrypt_global)))))goto err1;
 	ctx->rng_seed=(rng_seed?rng_seed:USICRYPT(get_random));
 	ctx->memclear=(memclear?memclear:USICRYPT(do_memclear));
 	return ctx;

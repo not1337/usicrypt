@@ -126,7 +126,7 @@ static int USICRYPT(rdrand)(void *data)
 {
 #if defined(__x86_64) || defined(__i386) || defined(_WIN64) || defined(_WIN32)
 #ifndef __DISABLE_RDRND__
-	if(_rdrand64_step(data))return 0;
+	if(L(_rdrand64_step(data)))return 0;
 #endif
 #endif
 	return -1;
@@ -136,7 +136,7 @@ static int USICRYPT(rdseed)(void *data)
 {
 #if defined(__x86_64) || defined(__i386) || defined(_WIN64) || defined(_WIN32)
 #ifndef __DISABLE_RDSEED__
-	if(_rdseed64_step(data))return 0;
+	if(L(_rdseed64_step(data)))return 0;
 #endif
 #endif
 	return -1;
@@ -148,18 +148,18 @@ static int USICRYPT(osrandom)(void *data,int len)
 	int fd;
 	size_t l;
 
-	if((fd=open("/dev/urandom",O_RDONLY|O_CLOEXEC))==-1)return -1;
+	if(U((fd=open("/dev/urandom",O_RDONLY|O_CLOEXEC))==-1))return -1;
 	l=read(fd,data,len);
 	close(fd);
-	if(l==len)return 0;
+	if(L(l==len))return 0;
 #elif defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
 	int fd;
 	size_t l;
 
-	if((fd=open("/dev/urandom",O_RDONLY))==-1)return -1;
+	if(U((fd=open("/dev/urandom",O_RDONLY))==-1))return -1;
 	l=read(fd,data,len);
 	close(fd);
-	if(l==len)return 0;
+	if(L(l==len))return 0;
 #elif defined(_WIN64) || defined(_WIN32)
 #warning Somebody needs to implement CryptGenRandom or RtlGenRandom
 #endif
@@ -172,7 +172,7 @@ static int USICRYPT(get_random)(void *data,int len)
 	unsigned char *ptr=data;
 	unsigned long long tmp;
 
-	if(features==-1)features=USICRYPT(get_features)();
+	if(U(features==-1))features=USICRYPT(get_features)();
 
 	if(features&4)for(;len>=8;len-=8,ptr+=8)
 		if(USICRYPT(rdseed)(ptr))break;
@@ -181,10 +181,10 @@ static int USICRYPT(get_random)(void *data,int len)
 	if(!len)return 0;
 	if(len<8)
 	{
-		if((features&4)&&!USICRYPT(rdseed)(&tmp))
+		if((features&4)&&L(!USICRYPT(rdseed)(&tmp)))
 			for(;len;len--,ptr++,tmp>>=8)
 				*ptr++=(unsigned char)tmp;
-		else if((features&2)&&!USICRYPT(rdrand)(&tmp))
+		else if((features&2)&&L(!USICRYPT(rdrand)(&tmp)))
 			for(;len;len--,ptr++,tmp>>=8)
 				*ptr++=(unsigned char)tmp;
 		if(!len)return 0;
@@ -200,8 +200,8 @@ static void USICRYPT(do_memclear)(void *data,int len)
 static void *USICRYPT(do_realloc)(void *ctx,void *data,int olen,int nlen)
 {
 	void *tmp;
-	if(olen==nlen)return data;
-	if(!(tmp=malloc(nlen)))
+	if(U(olen==nlen))return data;
+	if(U(!(tmp=malloc(nlen))))
 	{
 		if(olen<nlen)goto err1;
 		((struct usicrypt_thread *)ctx)->global->
@@ -224,11 +224,12 @@ void *USICRYPT(dh_to_pem)(void *ctx,void *data,int dlen,int *rlen)
 	char *ptr;
 	char *r=NULL;
 
-	if(!(src=b64=USICRYPT(base64_encode)(ctx,data,dlen,&b64len)))goto err1;
+	if(U(!(src=b64=USICRYPT(base64_encode)(ctx,data,dlen,&b64len))))
+		goto err1;
 
 	*rlen=b64len+((b64len+63)>>6)+USICRYPT(pemtab)[3].hlen+
 		USICRYPT(pemtab)[3].tlen+2;
-	if(!(ptr=r=malloc(*rlen+1)))goto err2;
+	if(U(!(ptr=r=malloc(*rlen+1))))goto err2;
 
 	memcpy(ptr,USICRYPT(pemtab)[3].head,USICRYPT(pemtab)[3].hlen);
 	ptr+=USICRYPT(pemtab)[3].hlen;
@@ -267,7 +268,7 @@ void *USICRYPT(pem_to_dh)(void *ctx,void *data,int dlen,int *rlen)
 	char *tmp;
 	unsigned char *r=NULL;
 
-	if(!(tmp=malloc(dlen)))goto err1;
+	if(U(!(tmp=malloc(dlen))))goto err1;
 
 	for(i=0,mode=0,len=0,type=0;i<dlen&&mode!=2;i++)switch(mode)
 	{
@@ -301,9 +302,9 @@ void *USICRYPT(pem_to_dh)(void *ctx,void *data,int dlen,int *rlen)
 		break;
 	}
 
-	if(!len||(len&3))goto err2;
-	if(!(r=USICRYPT(base64_decode)(ctx,tmp,len,rlen)))goto err2;
-	if(!usicrypt_dh_cmp_params(ctx,r,*rlen,r,*rlen))goto err2;
+	if(U(!len)||U(len&3))goto err2;
+	if(U(!(r=USICRYPT(base64_decode)(ctx,tmp,len,rlen))))goto err2;
+	if(L(!usicrypt_dh_cmp_params(ctx,r,*rlen,r,*rlen)))goto err2;
 
 	((struct usicrypt_thread *)ctx)->global->memclear(r,*rlen);
 	free(r);
@@ -339,12 +340,13 @@ void *USICRYPT(p8_to_pem)(void *ctx,void *data,int dlen,int *rlen)
 		break;
 	}
 
-	if(!USICRYPT(pemtab)[idx].head)goto err1;
-	if(!(src=b64=USICRYPT(base64_encode)(ctx,data,dlen,&b64len)))goto err1;
+	if(U(!USICRYPT(pemtab)[idx].head))goto err1;
+	if(U(!(src=b64=USICRYPT(base64_encode)(ctx,data,dlen,&b64len))))
+		goto err1;
 
 	*rlen=b64len+((b64len+63)>>6)+USICRYPT(pemtab)[idx].hlen+
 		USICRYPT(pemtab)[idx].tlen+2;
-	if(!(ptr=r=malloc(*rlen+1)))goto err2;
+	if(U(!(ptr=r=malloc(*rlen+1))))goto err2;
 
 	memcpy(ptr,USICRYPT(pemtab)[idx].head,USICRYPT(pemtab)[idx].hlen);
 	ptr+=USICRYPT(pemtab)[idx].hlen;
@@ -388,7 +390,7 @@ void *USICRYPT(pem_to_p8)(void *ctx,void *data,int dlen,int *rlen)
 	char *tmp;
 	unsigned char *r=NULL;
 
-	if(!(tmp=malloc(dlen)))goto err1;
+	if(U(!(tmp=malloc(dlen))))goto err1;
 
 	for(i=0,mode=0,len=0,type=-1;i<dlen&&mode!=2;i++)switch(mode)
 	{
@@ -398,13 +400,13 @@ void *USICRYPT(pem_to_p8)(void *ctx,void *data,int dlen,int *rlen)
 		break;
 	case 1:	if(d[i]!='\r'&&d[i]!='\n')continue;
 		while(i>start&&(d[i-1]==' '||d[i-1]=='\t'))i--;
-		if(type==-1)
+		if(U(type==-1))
 		{
 			for(type=0;type<3;type++)if(USICRYPT(pemtab)[type].head)
 				if(i-start==USICRYPT(pemtab)[type].hlen&&
 				!memcmp(d+start,USICRYPT(pemtab)[type].head,
 					i-start))break;
-			if(type==3)goto err2;
+			if(U(type==3))goto err2;
 			mode=0;
 		}
 		else if(d[start]=='-')
@@ -423,16 +425,17 @@ void *USICRYPT(pem_to_p8)(void *ctx,void *data,int dlen,int *rlen)
 		break;
 	}
 
-	if(!len||(len&3))goto err2;
-	if(!(r=USICRYPT(base64_decode)(ctx,tmp,len,rlen)))goto err2;
+	if(U(!len)||U(len&3))goto err2;
+	if(U(!(r=USICRYPT(base64_decode)(ctx,tmp,len,rlen))))goto err2;
 	switch(type)
 	{
-	case 0:	if(usicrypt_pub_type_from_p8(ctx,r,*rlen)==-1)goto err3;
+	case 0:	if(U(usicrypt_pub_type_from_p8(ctx,r,*rlen)==-1))goto err3;
 		break;
-	case 1:	if((mode=usicrypt_key_type_from_p8(ctx,r,*rlen))==-1)goto err3;
-		if(mode==USICRYPT_PBES2)goto err3;
+	case 1:	if(U((mode=usicrypt_key_type_from_p8(ctx,r,*rlen))==-1))
+			goto err3;
+		if(U(mode==USICRYPT_PBES2))goto err3;
 		break;
-	case 2:	if(usicrypt_key_type_from_p8(ctx,r,*rlen)!=USICRYPT_PBES2)
+	case 2:	if(U(usicrypt_key_type_from_p8(ctx,r,*rlen)!=USICRYPT_PBES2))
 			goto err3;
 		break;
 	}
