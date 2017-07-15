@@ -1924,11 +1924,15 @@ static int mbed_chacha_poly_encrypt(void *ctx,void *iv,void *src,int slen,
 	return -1;
 }
 
+#ifndef USICRYPT_NO_IOV
+
 static int mbed_chacha_poly_encrypt_iov(void *ctx,void *iv,void *src,int slen,
 	struct usicrypt_iov *iov,int niov,void *dst,void *tag)
 {
 	return -1;
 }
+
+#endif
 
 static int mbed_chacha_poly_decrypt(void *ctx,void *iv,void *src,int slen,
 	void *aad,int alen,void *dst,void *tag)
@@ -1936,11 +1940,15 @@ static int mbed_chacha_poly_decrypt(void *ctx,void *iv,void *src,int slen,
 	return -1;
 }
 
+#ifndef USICRYPT_NO_IOV
+
 static int mbed_chacha_poly_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 	struct usicrypt_iov *iov,int niov,void *dst,void *tag)
 {
 	return -1;
 }
+
+#endif
 
 static void *mbed_chacha_poly_init(void *ctx,void *key,int klen,int ilen,
 	int tlen)
