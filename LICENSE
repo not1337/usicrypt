@@ -10,10 +10,27 @@ license.
 
 See https://opensource.org/licenses for the list of applicable licenses.
 
-The only exception to the above rule is a project that is put in the
+The first exception to the above rule is a project that is put in the
 public domain. In this case you have to pick a proper OSI approved
 license for the usicrypt code only, i.e. you cannot put the usicrypt
 code in the public domain.
+
+The second exception is that when using usicrypt with OpenSSL you may
+need to make a license exemption for OpenSSL like the following which
+is permitted:
+
+ * In addition, as a special exception, the copyright holders give
+ * permission to link the code of portions of this program with the
+ * OpenSSL library under certain conditions as described in each
+ * individual source file, and distribute linked combinations
+ * including the two.
+ * You must obey the GNU General Public License in all respects
+ * for all of the code used other than OpenSSL.  If you modify
+ * file(s) with this exception, you may extend this exception to your
+ * version of the file(s), but you are not obligated to do so.  If you
+ * do not wish to do so, delete this exception statement from your
+ * version.  If you delete this exception statement from all source
+ * files in the program, then also delete it here.
 
 And, well, yes, it is up to you to ensure that the licence you pick for
 your project is compatible with the crypto library you do actually select.
