@@ -126,7 +126,11 @@ static int USICRYPT(rdrand)(void *data)
 {
 #if defined(__x86_64) || defined(__i386) || defined(_WIN64) || defined(_WIN32)
 #ifndef __DISABLE_RDRND__
+#if !defined(__x86_64) && !defined(_WIN64)
+	if(L(_rdrand32_step(data)&&_rdrand32_step(data+4)))return 0;
+#else
 	if(L(_rdrand64_step(data)))return 0;
+#endif
 #endif
 #endif
 	return -1;
@@ -136,7 +140,11 @@ static int USICRYPT(rdseed)(void *data)
 {
 #if defined(__x86_64) || defined(__i386) || defined(_WIN64) || defined(_WIN32)
 #ifndef __DISABLE_RDSEED__
+#if !defined(__x86_64) && !defined(_WIN64)
+	if(L(_rdseed32_step(data)&&_rdseed32_step(data+4)))return 0;
+#else
 	if(L(_rdseed64_step(data)))return 0;
+#endif
 #endif
 #endif
 	return -1;
