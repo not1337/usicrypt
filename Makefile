@@ -74,8 +74,11 @@ CFLAGS+=-mrdrnd -mrdseed
 #CFLAGS+=-DUSICRYPT_NO_CCM
 #CFLAGS+=-DUSICRYPT_NO_POLY
 
-CFLAGS+=-I/usr/local/test/wolfssl310/include
-LDFLAGS+=-L/usr/local/test/wolfssl310/lib -Wl,-rpath,/usr/local/test/wolfssl310/lib
+#
+# samples if libraries are in non default locations
+#
+#CFLAGS+=-I/usr/local/test/wolfssl310/include
+#LDFLAGS+=-L/usr/local/test/wolfssl310/lib -Wl,-rpath,/usr/local/test/wolfssl310/lib
 
 #CFLAGS+=-I/usr/local/test/libressl24/include
 #LDFLAGS+=-L/usr/local/test/libressl24/lib -Wl,-rpath,/usr/local/test/libressl24/lib
