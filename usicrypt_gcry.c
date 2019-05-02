@@ -128,7 +128,7 @@ struct gcry_chacha_poly
 
 #ifndef USICRYPT_NO_BASE64
 
-static const unsigned char const gcry_b64enc[64]=
+static const unsigned char gcry_b64enc[64]=
 {
 	0x41,0x42,0x43,0x44,0x45,0x46,0x47,0x48,
 	0x49,0x4a,0x4b,0x4c,0x4d,0x4e,0x4f,0x50,
@@ -140,7 +140,7 @@ static const unsigned char const gcry_b64enc[64]=
 	0x34,0x35,0x36,0x37,0x38,0x39,0x2b,0x2f
 };
 
-static const unsigned char const gcry_b64dec[256]=
+static const unsigned char gcry_b64dec[256]=
 {
 	0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
 	0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
@@ -179,23 +179,23 @@ static const unsigned char const gcry_b64dec[256]=
 #endif
 #ifndef USICRYPT_NO_PBKDF2
 
-static const unsigned char const gcry_pbes2_oid[9]=
+static const unsigned char gcry_pbes2_oid[9]=
 {
 	0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x05,0x0d
 };
 
-static const unsigned char const gcry_pbkdf2_oid[9]=
+static const unsigned char gcry_pbkdf2_oid[9]=
 {
 	0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x05,0x0c
 };
 
 static const struct
 {
-	const int const digest;
-	const int const oidlen;
-	const unsigned char const oid[0x08];
+	const int digest;
+	const int oidlen;
+	const unsigned char oid[0x08];
 
-} const gcry_digest_asn[4]=
+} gcry_digest_asn[4]=
 {
 	{
 #ifndef USICRYPT_NO_SHA1
@@ -225,14 +225,14 @@ static const struct
 
 static const struct
 {
-	const unsigned int const cipher:9;
-	const unsigned int const mode:4;
-	const unsigned int const pad:1;
-	const unsigned int const bits:9;
-	const unsigned int const ivlen:5;
-	const unsigned int const oidlen:4;
-	const unsigned char const oid[0x0b];
-} const gcry_cipher_asn[24]=
+	const unsigned int cipher:9;
+	const unsigned int mode:4;
+	const unsigned int pad:1;
+	const unsigned int bits:9;
+	const unsigned int ivlen:5;
+	const unsigned int oidlen:4;
+	const unsigned char oid[0x0b];
+} gcry_cipher_asn[24]=
 {
 	{
 #if !defined(USICRYPT_NO_AES) && !defined(USICRYPT_NO_ECB)
@@ -383,7 +383,7 @@ static const struct
 #endif
 #ifndef USICRYPT_NO_RSA
 
-static const unsigned char const gcry_rsa_pub_oid[9]=
+static const unsigned char gcry_rsa_pub_oid[9]=
 {
 	0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x01,0x01
 };
@@ -391,7 +391,7 @@ static const unsigned char const gcry_rsa_pub_oid[9]=
 #endif
 #if !defined(USICRYPT_NO_RSA) || !defined(USICRYPT_NO_DH)
 
-static const int const gcry_primes[171]=
+static const int gcry_primes[171]=
 {
 	0x0003,0x0005,0x0007,0x000b,0x000d,0x0011,0x0013,0x0017,
 	0x001d,0x001f,0x0025,0x0029,0x002b,0x002f,0x0035,0x003b,
@@ -419,9 +419,9 @@ static const int const gcry_primes[171]=
 
 static const struct
 {
-	const int const bits;
-	const int const iter;
-} const gcry_mr_tab[11]=
+	const int bits;
+	const int iter;
+} gcry_mr_tab[11]=
 {
 	{1300,2},
 	{850,3},
@@ -439,29 +439,29 @@ static const struct
 #endif
 #ifndef USICRYPT_NO_EC
 
-static const unsigned char const gcry_ansi_pubkey_type[7]=
+static const unsigned char gcry_ansi_pubkey_type[7]=
 {
 	0x2a,0x86,0x48,0xce,0x3d,0x02,0x01
 };
 
-static const unsigned char const gcry_ec_k1h1[4]=
+static const unsigned char gcry_ec_k1h1[4]=
 {
 	0x02,0x01,0x01,0x04
 };
 
 static const struct
 {       
-	const char *const gcry_name;
+	const char *gcry_name;
 	const int publen;
 	const int kmax;
 	const int xylen;
 	const int phdrlen;
 	const int k1h2len;
 	const unsigned char oidlen;
-	const unsigned char const oid[9];
-	const unsigned char const phdr[29];
-	const unsigned char const k1h2[20];
-} const gcry_ec_map[USICRYPT_TOT_EC_CURVES]=
+	const unsigned char oid[9];
+	const unsigned char phdr[29];
+	const unsigned char k1h2[20];
+} gcry_ec_map[USICRYPT_TOT_EC_CURVES]=
 {
 	{
 		"brainpoolP512r1",
@@ -561,13 +561,13 @@ static const struct
 #endif
 #ifndef USICRYPT_NO_X25519
 
-static const unsigned char const gcry_x25519_asn1_pub[12]=
+static const unsigned char gcry_x25519_asn1_pub[12]=
 {       
 	0x30,0x2a,0x30,0x05,0x06,0x03,0x2b,0x65,
 	0x6e,0x03,0x21,0x00
 };
 
-static const unsigned char const gcry_x25519_asn1_key[16]=
+static const unsigned char gcry_x25519_asn1_key[16]=
 {
 	0x30,0x2e,0x02,0x01,0x00,0x30,0x05,0x06,
 	0x03,0x2b,0x65,0x6e,0x04,0x22,0x04,0x20
@@ -3896,7 +3896,7 @@ void *USICRYPT(base64_decode)(void *ctx,void *in,int ilen,int *olen)
 	}
 	else if(U(gcry_b64dec[s[i]]==0xff))goto err1;
 	*olen=(ilen>>2)*3-n;
-	if(U(!(d=data=malloc(*olen))))goto err1;
+	if(U(!(d=data=malloc(*olen+1))))goto err1;
 	for(ilen-=(n?4:0),i=0;i<ilen;i+=4)
 	{
 		*d++=(gcry_b64dec[s[i]]<<2)|(gcry_b64dec[s[i+1]]>>4);

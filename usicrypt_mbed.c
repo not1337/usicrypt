@@ -257,23 +257,23 @@ struct mbed_camellia_essiv
 
 #ifndef USICRYPT_NO_PBKDF2
 
-static const unsigned char const mbed_pbes2_oid[9]=
+static const unsigned char mbed_pbes2_oid[9]=
 {
 	0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x05,0x0d
 };
 
-static const unsigned char const mbed_pbkdf2_oid[9]=
+static const unsigned char mbed_pbkdf2_oid[9]=
 {
 	0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x05,0x0c
 };
 
 static const struct
 {
-	const int const digest;
-	const int const oidlen;
-	const unsigned char const oid[0x08];
+	const int digest;
+	const int oidlen;
+	const unsigned char oid[0x08];
 
-} const mbed_digest_asn[4]=
+} mbed_digest_asn[4]=
 {
 	{
 #ifndef USICRYPT_NO_SHA1
@@ -303,14 +303,14 @@ static const struct
 
 static const struct
 {
-	const unsigned int const cipher:9;
-	const unsigned int const mode:4;
-	const unsigned int const pad:1;
-	const unsigned int const bits:9;
-	const unsigned int const ivlen:5;
-	const unsigned int const oidlen:4;
-	const unsigned char const oid[0x0b];
-} const mbed_cipher_asn[24]=
+	const unsigned int cipher:9;
+	const unsigned int mode:4;
+	const unsigned int pad:1;
+	const unsigned int bits:9;
+	const unsigned int ivlen:5;
+	const unsigned int oidlen:4;
+	const unsigned char oid[0x0b];
+} mbed_cipher_asn[24]=
 {
 	{
 #if !defined(USICRYPT_NO_AES) && !defined(USICRYPT_NO_ECB)
@@ -461,7 +461,7 @@ static const struct
 #endif
 #ifndef USICRYPT_NO_EC
 
-static const int const mbed_ec_map[USICRYPT_TOT_EC_CURVES]=
+static const int mbed_ec_map[USICRYPT_TOT_EC_CURVES]=
 {
 	MBEDTLS_ECP_DP_BP512R1,
 	MBEDTLS_ECP_DP_BP384R1,
@@ -474,13 +474,13 @@ static const int const mbed_ec_map[USICRYPT_TOT_EC_CURVES]=
 #endif
 #ifndef USICRYPT_NO_X25519
 
-static const unsigned char const mbed_x25519_asn1_pub[12]=
+static const unsigned char mbed_x25519_asn1_pub[12]=
 {
 	0x30,0x2a,0x30,0x05,0x06,0x03,0x2b,0x65,
 	0x6e,0x03,0x21,0x00
 };
 
-static const unsigned char const mbed_x25519_asn1_key[16]=
+static const unsigned char mbed_x25519_asn1_key[16]=
 {
 	0x30,0x2e,0x02,0x01,0x00,0x30,0x05,0x06,
 	0x03,0x2b,0x65,0x6e,0x04,0x22,0x04,0x20
