@@ -252,7 +252,7 @@ static const struct
 	int (*const init)(void *ctx);
 	int (*const update)(void *ctx,const byte *data,word32 len);
 	int (*const digest)(void *ctx,byte *out);
-} const wolf_md[4]=
+} wolf_md[4]=
 {
 	{
 #ifndef USICRYPT_NO_SHA1
@@ -290,23 +290,23 @@ static const struct
 
 #ifndef USICRYPT_NO_PBKDF2
 
-static const unsigned char const wolf_pbes2_oid[9]=
+static const unsigned char wolf_pbes2_oid[9]=
 {
 	0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x05,0x0d
 };
 
-static const unsigned char const wolf_pbkdf2_oid[9]=
+static const unsigned char wolf_pbkdf2_oid[9]=
 {
 	0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x05,0x0c
 };
 
 static const struct
 {
-	const int const digest;
-	const int const oidlen;
-	const unsigned char const oid[0x08];
+	const int digest;
+	const int oidlen;
+	const unsigned char oid[0x08];
 
-} const wolf_digest_asn[4]=
+} wolf_digest_asn[4]=
 {
 	{
 #ifndef USICRYPT_NO_SHA1
@@ -336,14 +336,14 @@ static const struct
 
 static const struct
 {
-	const unsigned int const cipher:9;
-	const unsigned int const mode:4;
-	const unsigned int const pad:1;
-	const unsigned int const bits:9;
-	const unsigned int const ivlen:5;
-	const unsigned int const oidlen:4;
-	const unsigned char const oid[0x0b];
-} const wolf_cipher_asn[24]=
+	const unsigned int cipher:9;
+	const unsigned int mode:4;
+	const unsigned int pad:1;
+	const unsigned int bits:9;
+	const unsigned int ivlen:5;
+	const unsigned int oidlen:4;
+	const unsigned char oid[0x0b];
+} wolf_cipher_asn[24]=
 {
 	{
 #if !defined(USICRYPT_NO_AES) && !defined(USICRYPT_NO_ECB)
@@ -498,8 +498,8 @@ static const struct
 {
 	const ecc_curve_id id;
 	const unsigned char oidlen;
-	const unsigned char const oid[9];
-} const wolf_ec_map[USICRYPT_TOT_EC_CURVES]=
+	const unsigned char oid[9];
+} wolf_ec_map[USICRYPT_TOT_EC_CURVES]=
 {
 	{ECC_BRAINPOOLP512R1,0x09,
 		{0x2B,0x24,0x03,0x03,0x02,0x08,0x01,0x01,0x0D}},
@@ -515,19 +515,19 @@ static const struct
 #endif
 #ifndef USICRYPT_NO_X25519
 
-static const unsigned char const wolf_x25519_asn1_pub[12]=
+static const unsigned char wolf_x25519_asn1_pub[12]=
 {
 	0x30,0x2a,0x30,0x05,0x06,0x03,0x2b,0x65,
 	0x6e,0x03,0x21,0x00
 };
 
-static const unsigned char const wolf_x25519_asn1_key[16]=
+static const unsigned char wolf_x25519_asn1_key[16]=
 {
 	0x30,0x2e,0x02,0x01,0x00,0x30,0x05,0x06,
 	0x03,0x2b,0x65,0x6e,0x04,0x22,0x04,0x20
 };
 
-static const unsigned char const wolf_x25519_basepoint[32]=
+static const unsigned char wolf_x25519_basepoint[32]=
 {
 	0x09,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
