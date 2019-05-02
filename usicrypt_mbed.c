@@ -50,6 +50,13 @@ enabled in include/mbedtls/config.h:
 #include <mbedtls/base64.h>
 #include <mbedtls/cmac.h>
 #include <mbedtls/camellia.h>
+#if MBEDTLS_VERSION_NUMBER >= 0x020b0000
+#include <mbedtls/hkdf.h>
+#endif
+#if MBEDTLS_VERSION_NUMBER >= 0x020c0000
+#include <mbedtls/chacha20.h>
+#include <mbedtls/chachapoly.h>
+#endif
 
 #ifdef USICRYPT
 #undef USICRYPT
@@ -168,6 +175,19 @@ struct mbed_aes_ccm
 	mbedtls_ccm_context ctx;
 	int ilen;
 	int tlen;
+};
+
+struct mbed_chacha_poly
+{
+	struct usicrypt_aeadcipher cipher;
+	mbedtls_chachapoly_context ctx;
+};
+
+struct mbed_chacha
+{
+	struct usicrypt_cipher cipher;
+	struct usicrypt_global *global;
+	mbedtls_chacha20_context ctx;
 };
 
 struct mbed_camellia_ecb
@@ -1921,7 +1941,14 @@ static void mbed_aes_ccm_exit(void *ctx)
 static int mbed_chacha_poly_encrypt(void *ctx,void *iv,void *src,int slen,
 	void *aad,int alen,void *dst,void *tag)
 {
+#if MBEDTLS_VERSION_NUMBER >= 0x020c0000
+	if(U(mbedtls_chachapoly_encrypt_and_tag(
+		&((struct mbed_chacha_poly *)ctx)->ctx,slen,iv,aad,alen,src,dst,
+		tag)))return -1;
+	return 0;
+#else
 	return -1;
+#endif
 }
 
 #ifndef USICRYPT_NO_IOV
@@ -1929,7 +1956,20 @@ static int mbed_chacha_poly_encrypt(void *ctx,void *iv,void *src,int slen,
 static int mbed_chacha_poly_encrypt_iov(void *ctx,void *iv,void *src,int slen,
 	struct usicrypt_iov *iov,int niov,void *dst,void *tag)
 {
+#if MBEDTLS_VERSION_NUMBER >= 0x020c0000
+	if(U(mbedtls_chachapoly_starts(&((struct mbed_chacha_poly *)ctx)->ctx,
+		iv,MBEDTLS_CHACHAPOLY_ENCRYPT)))return -1;
+	for(;niov;niov--,iov++)if(U(mbedtls_chachapoly_update_aad(
+		&((struct mbed_chacha_poly *)ctx)->ctx,iov->data,iov->length)))
+			return -1;
+	if(U(mbedtls_chachapoly_update(&((struct mbed_chacha_poly *)ctx)->ctx,
+		slen,src,dst)))return -1;
+	if(U(mbedtls_chachapoly_finish(&((struct mbed_chacha_poly *)ctx)->ctx,
+		tag)))return -1;
+	return 0;
+#else
 	return -1;
+#endif
 }
 
 #endif
@@ -1937,7 +1977,14 @@ static int mbed_chacha_poly_encrypt_iov(void *ctx,void *iv,void *src,int slen,
 static int mbed_chacha_poly_decrypt(void *ctx,void *iv,void *src,int slen,
 	void *aad,int alen,void *dst,void *tag)
 {
+#if MBEDTLS_VERSION_NUMBER >= 0x020c0000
+	if(U(mbedtls_chachapoly_auth_decrypt(
+		&((struct mbed_chacha_poly *)ctx)->ctx,slen,iv,aad,alen,tag,src,
+		dst)))return -1;
+	return 0;
+#else
 	return -1;
+#endif
 }
 
 #ifndef USICRYPT_NO_IOV
@@ -1945,7 +1992,20 @@ static int mbed_chacha_poly_decrypt(void *ctx,void *iv,void *src,int slen,
 static int mbed_chacha_poly_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 	struct usicrypt_iov *iov,int niov,void *dst,void *tag)
 {
+#if MBEDTLS_VERSION_NUMBER >= 0x020c0000
+	if(U(mbedtls_chachapoly_starts(&((struct mbed_chacha_poly *)ctx)->ctx,
+		iv,MBEDTLS_CHACHAPOLY_DECRYPT)))return -1;
+	for(;niov;niov--,iov++)if(U(mbedtls_chachapoly_update_aad(
+		&((struct mbed_chacha_poly *)ctx)->ctx,iov->data,iov->length)))
+			return -1;
+	if(U(mbedtls_chachapoly_update(&((struct mbed_chacha_poly *)ctx)->ctx,
+		slen,src,dst)))return -1;
+	if(U(mbedtls_chachapoly_finish(&((struct mbed_chacha_poly *)ctx)->ctx,
+		tag)))return -1;
+	return 0;
+#else
 	return -1;
+#endif
 }
 
 #endif
@@ -1953,11 +2013,31 @@ static int mbed_chacha_poly_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 static void *mbed_chacha_poly_init(void *ctx,void *key,int klen,int ilen,
 	int tlen)
 {
+#if MBEDTLS_VERSION_NUMBER >= 0x020c0000
+	struct mbed_chacha_poly *chp;
+
+	if(U(klen!=256)||U(ilen!=12)||U(tlen!=16))goto err1;
+	if(U(!(chp=malloc(sizeof(struct mbed_chacha_poly)))))goto err1;
+	mbedtls_chachapoly_init(&chp->ctx);
+	if(U(mbedtls_chachapoly_setkey(&chp->ctx,key)))goto err2;
+	((struct usicrypt_thread *)ctx)->global->memclear(key,32);
+	return chp;
+
+err2:	mbedtls_chachapoly_free(&chp->ctx);
+	free(chp);
+err1:	((struct usicrypt_thread *)ctx)->global->memclear(key,32);
 	return NULL;
+#else
+	return NULL;
+#endif
 }
 
 static void mbed_chacha_poly_exit(void *ctx)
 {
+#if MBEDTLS_VERSION_NUMBER >= 0x020c0000
+	mbedtls_chachapoly_free(&((struct mbed_chacha_poly *)ctx)->ctx);
+	free(ctx);
+#endif
 }
 
 #endif
@@ -1965,20 +2045,60 @@ static void mbed_chacha_poly_exit(void *ctx)
 
 static int mbed_chacha_crypt(void *ctx,void *src,int slen,void *dst)
 {
+#if MBEDTLS_VERSION_NUMBER >= 0x020c0000
+	if(U(mbedtls_chacha20_update(&((struct mbed_chacha *)ctx)->ctx,slen,src,
+		dst)))return -1;
+	return 0;
+#else
 	return -1;
+#endif
 }
 
 static void *mbed_chacha_init(void *ctx,void *key,int klen,void *iv)
 {
+#if MBEDTLS_VERSION_NUMBER >= 0x020c0000
+	struct mbed_chacha *chx;
+	unsigned char tmp[12];
+
+	if(U(klen!=256))goto err1;
+	if(U(!(chx=malloc(sizeof(struct mbed_chacha)))))goto err1;
+	chx->global=((struct usicrypt_thread *)ctx)->global;
+	memset(tmp,0,4);
+	if(iv)memcpy(tmp+4,iv,8);
+	else memset(tmp+4,0,8);
+	mbedtls_chacha20_init(&chx->ctx);
+	if(U(mbedtls_chacha20_setkey(&chx->ctx,key)))goto err2;
+	if(U(mbedtls_chacha20_starts(&chx->ctx,tmp,0)))goto err2;
+	return chx;
+
+err2:	mbedtls_chacha20_free(&chx->ctx);
+	free(chx);
+	((struct usicrypt_thread *)ctx)->global->memclear(tmp,12);
+err1:	((struct usicrypt_thread *)ctx)->global->memclear(key,32);
 	return NULL;
+#else
+	return NULL;
+#endif
 }
 
 static void mbed_chacha_reset(void *ctx,void *iv)
 {
+#if MBEDTLS_VERSION_NUMBER >= 0x020c0000
+	unsigned char tmp[12];
+
+	memset(tmp,0,4);
+	memcpy(tmp+4,iv,8);
+	mbedtls_chacha20_starts(&((struct mbed_chacha *)ctx)->ctx,tmp,0);
+	((struct mbed_chacha *)ctx)->global->memclear(tmp,12);
+#endif
 }
 
 static void mbed_chacha_exit(void *ctx)
 {
+#if MBEDTLS_VERSION_NUMBER >= 0x020c0000
+	mbedtls_chacha20_free(&((struct mbed_chacha *)ctx)->ctx);
+	free(ctx);
+#endif
 }
 
 #endif
@@ -3012,9 +3132,10 @@ int USICRYPT(hkdf)(void *ctx,int md,void *key,int klen,void *salt,int slen,
 {
 #ifndef USICRYPT_NO_HKDF
 	int type;
+#if MBEDTLS_VERSION_NUMBER < 0x020b0000
 	mbedtls_md_context_t c;
 	unsigned char s[MBEDTLS_MD_MAX_SIZE];
-
+#endif
 	switch(md)
 	{
 #ifndef USICRYPT_NO_SHA1
@@ -3040,6 +3161,13 @@ int USICRYPT(hkdf)(void *ctx,int md,void *key,int klen,void *salt,int slen,
 	default:goto err1;
 	}
 
+#if MBEDTLS_VERSION_NUMBER >= 0x020b0000
+	if(U(mbedtls_hkdf(mbedtls_md_info_from_type(type),salt,slen,key,klen,
+		info,ilen,out,
+		mbedtls_md_get_size(mbedtls_md_info_from_type(type)))))
+			goto err1;
+	return 0;
+#else
 	mbedtls_md_init(&c);
 	if(U(mbedtls_md_setup(&c,mbedtls_md_info_from_type(type),1)))goto err2;
 	if(!salt||!slen)
@@ -3060,6 +3188,7 @@ int USICRYPT(hkdf)(void *ctx,int md,void *key,int klen,void *salt,int slen,
 	return 0;
 
 err2:	mbedtls_md_free(&c);
+#endif
 err1:	return -1;
 #else
 	return -1;

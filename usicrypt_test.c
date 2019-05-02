@@ -3023,7 +3023,9 @@ static int test_blkcipher_chacha(void **ctx)
 		if(i==0||j==0)x=0;
 		else x=1;
 #endif
+#if MBEDTLS_VERSION_NUMBER < 0x020c0000
 		if(i==1||j==1)x=0;
+#endif
 		if(x)test_blkcipher_pair(ctx[i],ctx[j],&cerr,&err[i],&err[j],
 			USICRYPT_CHACHA20,USICRYPT_STREAM,0,1,2,3,
 			&blkops[i],&blkops[j]);
@@ -3481,7 +3483,9 @@ static void test_aeadcipher_item(void **ctx,int *cerr, int *err,
 	for(i=0;i<5;i++)for(j=i+1;j<5;j++)
 	{
 		if(i==0||j==0)if(noxssl)continue;
+#if MBEDTLS_VERSION_NUMBER < 0x020c0000
 		if(i==1||j==1)if(nombed)continue;
+#endif
 		test_aeadcipher_pair(ctx[i],ctx[j],cerr,&err[i],&err[j],
 			cipher,klen,ilen,tlen,&aeadops[i],&aeadops[j]);
 	}

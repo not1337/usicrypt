@@ -82,7 +82,7 @@ Implementation Overview:
 |                         |OpenSSL|LibreSSL|mbedTLS|wolfSSL|Libgcrypt|Nettle|
 | ----------------------- | ----- | ------ | ----- | ----- | ------- | ---- |
 |                         |1.0.2k/|2.4.5/  |2.4.2/ |       |         |      |
-|                         |1.1.0e |2.5.3   |2.5.0  |3.10.2 |1.7.6    |3.3   |
+|                         |1.1.0e |2.5.3   |2.12.0 |3.10.2 |1.7.6    |3.3   |
 | ----------------------- | ----- | ------ | ----- | ----- | ------- | ---- |
 |Random Numbers           |  x/x  |  x/x   |  x/x  |   x   |    x    |  x   |
 |SHA1                     |  x/x  |  x/x   |  x/x  |   x   |    x    |  x   |
@@ -97,10 +97,10 @@ Implementation Overview:
 |PBKDF2/SHA256            |  x/x  |  x/x   |  x/x  |   x   |    x    |  x   |
 |PBKDF2/SHA384            |  x/x  |  x/x   |  x/x  |   o   |    x    |  x   |
 |PBKDF2/SHA512            |  x/x  |  x/x   |  x/x  |   x   |    x    |  x   |
-|HKDF/SHA1                |  o/x  |  o/o   |  o/o  |   x   |    o    |  o   |
-|HKDF/SHA256              |  o/x  |  o/o   |  o/o  |   x   |    o    |  o   |
-|HKDF/SHA384              |  o/x  |  o/o   |  o/o  |   x   |    o    |  o   |
-|HKDF/SHA512              |  o/x  |  o/o   |  o/o  |   x   |    o    |  o   |
+|HKDF/SHA1                |  o/x  |  o/o   |  o/x  |   x   |    o    |  o   |
+|HKDF/SHA256              |  o/x  |  o/o   |  o/x  |   x   |    o    |  o   |
+|HKDF/SHA384              |  o/x  |  o/o   |  o/x  |   x   |    o    |  o   |
+|HKDF/SHA512              |  o/x  |  o/o   |  o/x  |   x   |    o    |  o   |
 |Base64 Encode/Decode     |  x/x  |  x/x   |  x/x  |   x   |    o    |  x   |
 |RSA Generate             |  x/x  |  x/x   |  x/x  |   x   |    o    |  x   |
 |RSA Export/Import        |  x/x  |  x/x   |  x/x  |   x   |    o    |  o   |
@@ -141,8 +141,8 @@ Implementation Overview:
 |AES GCM                  |  x/x  |  x/x   |  x/x  |   x!  |    x    |  x!  |
 |AES CCM                  |  x/x  | x!/x!  |  x/x  |   x   |    x    |  x   |
 |AES CMAC                 |  x/x  |  x/x   |  x/x  |   x   |    x    |  o   |
-|ChaCha20/Poly1305        |  -/x  |  x/x   |  -/-  |   x   |    x    |  x   |
-|ChaCha20                 |  -/x  |  x/x   |  -/-  |   x!  |    x    |  x!  |
+|ChaCha20/Poly1305        |  -/x  |  x/x   |  -/x  |   x   |    x    |  x   |
+|ChaCha20                 |  -/x  |  x/x   |  -/x  |   x!  |    x    |  x!  |
 |Camellia ECB             |  x/x  |  x/x   |  x/x  |   x   |    x    |  x   |
 |Camellia CBC             |  x/x  |  x/x   |  x/x  |   x   |    x    |  x   |
 |Camellia CTS             |  x/x  |  x/x   |  o/o  |   o   |    x    |  o   |
