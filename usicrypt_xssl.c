@@ -476,13 +476,13 @@ struct xssl_x25519
 #endif
 #if ( defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER >= 0x20500000L ) || ( !defined(LIBRESSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER >= 0x10100000L )
 
-static const unsigned char const xssl_x25519_asn1_pub[12]=
+static const unsigned char xssl_x25519_asn1_pub[12]=
 {
 	0x30,0x2a,0x30,0x05,0x06,0x03,0x2b,0x65,
 	0x6e,0x03,0x21,0x00
 };
 
-static const unsigned char const xssl_x25519_asn1_key[16]=
+static const unsigned char xssl_x25519_asn1_key[16]=
 {
 	0x30,0x2e,0x02,0x01,0x00,0x30,0x05,0x06,
 	0x03,0x2b,0x65,0x6e,0x04,0x22,0x04,0x20

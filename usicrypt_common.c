@@ -45,11 +45,11 @@
 
 static const struct
 {
-	const char const *head;
-	const char const *tail;
-	const int const hlen;
-	const int const tlen;
-} const USICRYPT(pemtab)[4]=
+	const char *head;
+	const char *tail;
+	const int hlen;
+	const int tlen;
+} USICRYPT(pemtab)[4]=
 {
 	{
 #if !defined(USICRYPT_NO_RSA) || !defined(USICRYPT_NO_DH) || \

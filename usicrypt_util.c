@@ -73,7 +73,7 @@ static const struct
 
 #ifndef USICRYPT_NO_RSA
 
-static const char const util_rsap8hdr[19]=
+static const char util_rsap8hdr[19]=
 {
 	0x02,0x01,0x00,0x30,0x0d,0x06,0x09,0x2a,
 	0x86,0x48,0x86,0xf7,0x0d,0x01,0x01,0x01,
@@ -261,7 +261,7 @@ static const unsigned char usicrypt_dh_2048_256[526]=
 	0x4c,0x0f,0x6c,0xc4,0x16,0x59
 };
 
-static const char const util_dh_oid[11]=
+static const char util_dh_oid[11]=
 {
 	0x06,0x09,0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x03,0x01
 };
@@ -269,7 +269,7 @@ static const char const util_dh_oid[11]=
 #endif
 #ifndef USICRYPT_NO_EC
 
-static const char const util_ecp8_hdr[14]=
+static const char util_ecp8_hdr[14]=
 {
 	0x02,0x01,0x00,0x30,0x09,0x06,0x07,0x2a,
 	0x86,0x48,0xce,0x3d,0x02,0x01
@@ -278,7 +278,7 @@ static const char const util_ecp8_hdr[14]=
 #endif
 #ifndef USICRYPT_NO_PBKDF2
 
-static const unsigned char const util_pbes2_oid[9]=
+static const unsigned char util_pbes2_oid[9]=
 {
         0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x05,0x0d
 };
@@ -287,12 +287,12 @@ static const unsigned char const util_pbes2_oid[9]=
 
 static const struct
 {
-	const unsigned char const oid[9];
-	const int const oidlen;
-	const int const type;
-	const int const sub;
-	const int const key;
-} const util_oids[]=
+	const unsigned char oid[9];
+	const int oidlen;
+	const int type;
+	const int sub;
+	const int key;
+} util_oids[]=
 {
 #ifndef USICRYPT_NO_RSA
 	{
