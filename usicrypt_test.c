@@ -3805,7 +3805,6 @@ int main(int argc,char *argv[])
 
 	if(!err)do
 	{
-#if 0
 		err+=test_random(ctx);
 		err+=test_digest_size(ctx);
 		err+=test_digest(ctx);
@@ -3813,9 +3812,7 @@ int main(int argc,char *argv[])
 		err+=test_pbkdf2(ctx);
 		err+=test_hkdf(ctx);
 		err+=test_base64(ctx);
-#endif
 		err+=test_rsa(ctx);
-#if 0
 		err+=test_dh(ctx);
 		err+=test_ec(ctx);
 		err+=test_x25519(ctx);
@@ -3828,7 +3825,6 @@ int main(int argc,char *argv[])
 		err+=test_util_cipher_padding(ctx[0]);
 		err+=test_util_lfsr(ctx[0]);
 		err+=test_util_memclear(ctx[0]);
-#endif
 		if(err)tot++;
 		err=0;
 		if(cont||loop)printf("round %u errors %d\n",++cnt,tot);
