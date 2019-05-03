@@ -9,7 +9,10 @@
  */
 
 /*
+3.10.2
 --enable-aesccm --enable-aesni --enable-intelasm --enable-hkdf --enable-keygen --enable-pwdbased --enable-ecccustcurves --enable-cmac --enable-camellia --enable-curve25519 CFLAGS="-DHAVE_ECC_BRAINPOOL -DHAVE_AES_ECB -DWOLFSSL_AES_COUNTER"
+3.15.0
+--enable-aesccm --enable-aesctr --enable-aesni --enable-intelasm --enable-hkdf --enable-keygen --enable-pwdbased --enable-rsapss --enable-ecccustcurves --enable-cmac --enable-camellia --enable-curve25519 CFLAGS="-DHAVE_ECC_BRAINPOOL -DHAVE_AES_ECB -DWOLFSSL_AES_COUNTER -DWOLFSSL_PUBLIC_MP -DHAVE_INTEL_RDRAND"
 */
 
 /******************************************************************************/
@@ -46,6 +49,13 @@
 #include <wolfssl/wolfcrypt/chacha20_poly1305.h>
 #include <wolfssl/wolfcrypt/chacha.h>
 #include <wolfssl/wolfcrypt/camellia.h>
+#if LIBWOLFSSL_VERSION_HEX >= 0x03012002
+#include <wolfssl/wolfcrypt/integer.h>
+#endif
+
+#if LIBWOLFSSL_VERSION_HEX == 0x03012002
+#error "chacha20/poly1305 broken, use either 3.10.2 or 3.15.0 (or later)"
+#endif
 
 #ifdef USICRYPT
 #undef USICRYPT
@@ -540,7 +550,9 @@ static const unsigned char wolf_x25519_basepoint[32]=
 #ifndef USICRYPT_NO_AES
 #ifndef USICRYPT_NO_GCM
 #ifdef WOLFSSL_AESNI
+#if LIBWOLFSSL_VERSION_HEX < 0x03012002
 static int wolf_need_gcm_bugfix=0;
+#endif
 #endif
 #endif
 #endif
@@ -739,8 +751,286 @@ err1:	((struct usicrypt_thread *)ctx)->global->memclear(hash,sizeof(hash));
 	return -1;
 }
 
+#if 0
+
+/* as of WolfSSL 3.15.0 this is still broken, you can't use the maximum
+   padding length due to a buggy restriction */
+
+static void *wolf_rsa_do_sign_pss(void *ctx,int md,void *key,void *data,
+	int dlen,int *slen,int mode)
+{
+	int i;
+	int type;
+	int mgf;
+	int len;
+	unsigned char *sig;
+	struct usicrypt_iov *iov=data;
+	struct wolf_md c;
+	unsigned char hash[SHA512_DIGEST_SIZE];
+
+	switch(md)
+	{
+#ifndef USICRYPT_NO_SHA1
+	case USICRYPT_SHA1:
+		type=WC_HASH_TYPE_SHA;
+		mgf=WC_MGF1SHA1;
+		len=SHA_DIGEST_SIZE;
+		c.idx=md;
+		break;
+#endif
+#ifndef USICRYPT_NO_SHA256
+	case USICRYPT_SHA256:
+		type=WC_HASH_TYPE_SHA256;
+		mgf=WC_MGF1SHA256;
+		len=SHA256_DIGEST_SIZE;
+		c.idx=md;
+		break;
+#endif
+#ifndef USICRYPT_NO_SHA384
+	case USICRYPT_SHA384:
+		type=WC_HASH_TYPE_SHA384;
+		mgf=WC_MGF1SHA384;
+		len=SHA384_DIGEST_SIZE;
+		c.idx=md;
+		break;
+#endif
+#ifndef USICRYPT_NO_SHA512
+	case USICRYPT_SHA512:
+		type=WC_HASH_TYPE_SHA512;
+		mgf=WC_MGF1SHA512;
+		len=SHA512_DIGEST_SIZE;
+		c.idx=md;
+		break;
+#endif
+	default:goto err1;
+	}
+
+	if(U(wolf_md[c.idx].init(&c.ctx)))goto err1;
+	if(!mode)
+	{
+		if(U(wolf_md[c.idx].update(&c.ctx,data,dlen)))goto err2;
+	}
+	else for(i=0;i<dlen;i++)
+		if(U(wolf_md[c.idx].update(&c.ctx,iov[i].data,iov[i].length)))
+			goto err2;
+	if(U(wolf_md[c.idx].digest(&c.ctx,hash)))goto err2;
+	*slen=wc_RsaEncryptSize(key);
+	len=*slen-len-2;
+	if(U(!(sig=malloc(*slen))))goto err2;
+	if(U(wc_RsaPSS_Sign_ex(hash,wolf_md[c.idx].size,sig,*slen,type,mgf,len,
+		key,&((struct usicrypt_thread *)ctx)->rng)!=*slen))goto err3;
+	((struct usicrypt_thread *)ctx)->global->memclear(&c.ctx,sizeof(c.ctx));
+	((struct usicrypt_thread *)ctx)->global->memclear(hash,sizeof(hash));
+	return sig;
+
+err3:	((struct usicrypt_thread *)ctx)->global->memclear(sig,*slen);
+	free(sig);
+err2:	((struct usicrypt_thread *)ctx)->global->memclear(&c.ctx,sizeof(c.ctx));
+err1:	((struct usicrypt_thread *)ctx)->global->memclear(hash,sizeof(hash));
+	return NULL;
+}
+
+static int wolf_rsa_do_verify_pss(void *ctx,int md,void *key,void *data,
+	int dlen,void *sig,int slen,int mode)
+{
+	int i;
+	int res;
+	int type;
+	int mgf;
+	int len;
+	unsigned char *tmp;
+	struct usicrypt_iov *iov=data;
+	struct wolf_md c;
+	unsigned char hash[SHA512_DIGEST_SIZE];
+
+	switch(md)
+	{
+#ifndef USICRYPT_NO_SHA1
+	case USICRYPT_SHA1:
+		type=WC_HASH_TYPE_SHA;
+		mgf=WC_MGF1SHA1;
+		len=SHA_DIGEST_SIZE;
+		c.idx=md;
+		break;
+#endif
+#ifndef USICRYPT_NO_SHA256
+	case USICRYPT_SHA256:
+		type=WC_HASH_TYPE_SHA256;
+		mgf=WC_MGF1SHA256;
+		len=SHA256_DIGEST_SIZE;
+		c.idx=md;
+		break;
+#endif
+#ifndef USICRYPT_NO_SHA384
+	case USICRYPT_SHA384:
+		type=WC_HASH_TYPE_SHA384;
+		mgf=WC_MGF1SHA384;
+		len=SHA384_DIGEST_SIZE;
+		c.idx=md;
+		break;
+#endif
+#ifndef USICRYPT_NO_SHA512
+	case USICRYPT_SHA512:
+		type=WC_HASH_TYPE_SHA512;
+		mgf=WC_MGF1SHA512;
+		len=SHA512_DIGEST_SIZE;
+		c.idx=md;
+		break;
+#endif
+	default:goto err1;
+	}
+
+	if(U(slen<(res=wc_RsaEncryptSize(key))))goto err1;
+	len=res-len-2;
+	if(U(wolf_md[c.idx].init(&c.ctx)))goto err1;
+	if(!mode)
+	{
+		if(U(wolf_md[c.idx].update(&c.ctx,data,dlen)))goto err2;
+	}
+	else for(i=0;i<dlen;i++)
+		if(U(wolf_md[c.idx].update(&c.ctx,iov[i].data,iov[i].length)))
+			goto err2;
+	if(U(wolf_md[c.idx].digest(&c.ctx,hash)))goto err2;
+	if(U(!(tmp=malloc(res))))goto err2;
+#ifdef WC_RSA_BLINDING
+	((RsaKey *)key)->rng=&((struct usicrypt_thread *)ctx)->rng;
+#endif
+	if(U((i=wc_RsaPSS_Verify_ex(sig,slen,tmp,res,type,mgf,len,key))<0))
+		goto err3;
+	if(U(wc_RsaPSS_CheckPadding_ex(hash,wolf_md[c.idx].size,tmp,i,type,
+		len)))goto err3;
+	((struct usicrypt_thread *)ctx)->global->memclear(tmp,res);
+	free(tmp);
+#ifdef WC_RSA_BLINDING
+	((RsaKey *)key)->rng=NULL;
+#endif
+	((struct usicrypt_thread *)ctx)->global->memclear(&c.ctx,sizeof(c.ctx));
+	((struct usicrypt_thread *)ctx)->global->memclear(hash,sizeof(hash));
+	return 0;
+
+err3:	((struct usicrypt_thread *)ctx)->global->memclear(tmp,res);
+	free(tmp);
+#ifdef WC_RSA_BLINDING
+	((RsaKey *)key)->rng=NULL;
+#endif
+err2:	((struct usicrypt_thread *)ctx)->global->memclear(&c.ctx,sizeof(c.ctx));
+err1:	((struct usicrypt_thread *)ctx)->global->memclear(hash,sizeof(hash));
+	return -1;
+}
+
+#endif
+#endif
+#ifndef USICRYPT_NO_DH
+#if LIBWOLFSSL_VERSION_HEX >= 0x03012002
+
+static int wolf_load_dh_bugfix(unsigned char *p,DhKey *key,int len)
+{
+	int l=0;
+	int l1=0;
+	int l2=0;
+	unsigned char *p1;
+	unsigned char *p2;
+
+	if(len<2)return -1;
+	if(*p++!=0x30)return -1;
+	if(*p>0x82)return -1;
+	if(*p==0x82)
+	{
+		if(len<4)return -1;
+		p++;
+		l=*p++;
+		l<<=8;
+		len-=2;
+	}
+	else if(*p==0x81)
+	{
+		p++;
+		len--;
+	}
+	l|=*p++;
+	len-=2;
+	if(len<l)return -1;
+
+	if(len<2)return -1;
+	if(*p++!=0x02)return -1;
+	if(*p>0x82)return -1;
+	if(*p==0x82)
+	{
+		if(len<4)return -1;
+		p++;
+		l1=*p++;
+		l1<<=8;
+		len-=2;
+	}
+	else if(*p==0x81)
+	{
+		p++;
+		len--;
+	}
+	l1|=*p++;
+	len-=2;
+	if(len<l1||!l1)return -1;
+	p1=p;
+
+	p+=l1;
+	len-=l1;
+
+	if(len<2)return -1;
+	if(*p++!=0x02)return -1;
+	if(*p>0x82)return -1;
+	if(*p==0x82)
+	{
+		if(len<4)return -1;
+		p++;
+		l2=*p++;
+		l2<<=8;
+		len-=2;
+	}
+	else if(*p==0x81)
+	{
+		p++;
+		len--;
+	}
+	l2|=*p++;
+	len-=2;
+	if(len<l2||!l2)return -1;
+	p2=p;
+
+	if(l1>1&&!*p1)
+	{
+		l1--;
+		p1++;
+	}
+
+	if(l2>1&&!*p2)
+	{
+		l2--;
+		p2++;
+	}
+
+	mp_init(&key->p);
+	if(mp_read_unsigned_bin(&key->p,p1,l1))
+	{
+		mp_clear(&key->p);
+		return -1;
+	}
+
+	mp_init(&key->g);
+	if(mp_read_unsigned_bin(&key->g,p2,l2))
+	{
+		mp_clear(&key->p);
+		mp_clear(&key->g);
+		return -1;
+	}
+
+	return 0;
+}
+
+#endif
 #endif
 #ifndef USICRYPT_NO_EC
+
+#if LIBWOLFSSL_VERSION_HEX < 0x03015000
 
 static void wolf_import_bugfix(ecc_key *key,unsigned char *data,int len)
 {
@@ -793,6 +1083,8 @@ static void wolf_import_bugfix(ecc_key *key,unsigned char *data,int len)
 		break;
 	}
 }
+
+#endif
 
 static void *wolf_ec_do_sign(void *ctx,int md,void *key,void *data,int dlen,
 	int *slen,int mode)
@@ -1634,6 +1926,7 @@ static int wolf_aes_gcm_encrypt(void *ctx,void *iv,void *src,int slen,
 	void *aad,int alen,void *dst,void *tag)
 {
 #ifdef WOLFSSL_AESNI
+#if LIBWOLFSSL_VERSION_HEX < 0x03012002
 	unsigned char tmp[16];
 
 	if(wolf_need_gcm_bugfix&&((struct wolf_aes_xcm *)ctx)->tlen!=16)
@@ -1646,6 +1939,7 @@ static int wolf_aes_gcm_encrypt(void *ctx,void *iv,void *src,int slen,
 		((struct wolf_aes_xcm *)ctx)->global->memclear(tmp,16);
 		return 0;
 	}
+#endif
 #endif
 	if(U(wc_AesGcmEncrypt(&((struct wolf_aes_xcm *)ctx)->enc,
 		dst,src,slen,iv,((struct wolf_aes_xcm *)ctx)->ilen,
@@ -1662,7 +1956,9 @@ static int wolf_aes_gcm_encrypt_iov(void *ctx,void *iv,void *src,int slen,
 	int alen;
 	unsigned char *aad=NULL;
 #ifdef WOLFSSL_AESNI
+#if LIBWOLFSSL_VERSION_HEX < 0x03012002
 	unsigned char tmp[16];
+#endif
 #endif
 	for(i=0,alen=0;i<niov;i++)alen+=iov[i].length;
 	if(alen)
@@ -1675,6 +1971,7 @@ static int wolf_aes_gcm_encrypt_iov(void *ctx,void *iv,void *src,int slen,
 		}
 	}
 #ifdef WOLFSSL_AESNI
+#if LIBWOLFSSL_VERSION_HEX < 0x03012002
 	if(wolf_need_gcm_bugfix&&((struct wolf_aes_xcm *)ctx)->tlen!=16)
 	{
 		if(U(wc_AesGcmEncrypt(&((struct wolf_aes_xcm *)ctx)->enc,
@@ -1691,6 +1988,7 @@ static int wolf_aes_gcm_encrypt_iov(void *ctx,void *iv,void *src,int slen,
 		}
 		return 0;
 	}
+#endif
 #endif
 	if(U(wc_AesGcmEncrypt(&((struct wolf_aes_xcm *)ctx)->enc,
 		dst,src,slen,iv,((struct wolf_aes_xcm *)ctx)->ilen,
@@ -1716,6 +2014,7 @@ static int wolf_aes_gcm_decrypt(void *ctx,void *iv,void *src,int slen,
 	void *aad,int alen,void *dst,void *tag)
 {
 #ifdef WOLFSSL_AESNI
+#if LIBWOLFSSL_VERSION_HEX < 0x03012002
 	int i;
 	unsigned char *ptr;
 	unsigned char tmp[16];
@@ -1738,6 +2037,7 @@ static int wolf_aes_gcm_decrypt(void *ctx,void *iv,void *src,int slen,
 		return U(i)?-1:0;
 	}
 #endif
+#endif
 	if(U(wc_AesGcmDecrypt(&((struct wolf_aes_xcm *)ctx)->enc,
 		dst,src,slen,iv,((struct wolf_aes_xcm *)ctx)->ilen,
 		tag,((struct wolf_aes_xcm *)ctx)->tlen,aad,alen)))return -1;
@@ -1753,8 +2053,10 @@ static int wolf_aes_gcm_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 	int alen;
 	unsigned char *aad=NULL;
 #ifdef WOLFSSL_AESNI
+#if LIBWOLFSSL_VERSION_HEX < 0x03012002
 	unsigned char *ptr;
 	unsigned char tmp[16];
+#endif
 #endif
 	for(i=0,alen=0;i<niov;i++)alen+=iov[i].length;
 	if(alen)
@@ -1767,6 +2069,7 @@ static int wolf_aes_gcm_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 		}
 	}
 #ifdef WOLFSSL_AESNI
+#if LIBWOLFSSL_VERSION_HEX < 0x03012002
 	if(wolf_need_gcm_bugfix&&((struct wolf_aes_xcm *)ctx)->tlen!=16)
 	{
 		if(U(wc_AesGcmEncrypt(&((struct wolf_aes_xcm *)ctx)->enc,
@@ -1790,6 +2093,7 @@ static int wolf_aes_gcm_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 		}
 		return U(i)?-1:0;
 	}
+#endif
 #endif
 	if(wc_AesGcmDecrypt(&((struct wolf_aes_xcm *)ctx)->enc,
 		dst,src,slen,iv,((struct wolf_aes_xcm *)ctx)->ilen,
@@ -3441,25 +3745,57 @@ int USICRYPT(rsa_verify_v15_iov)(void *ctx,int md,void *key,
 void *USICRYPT(rsa_sign_pss)(void *ctx,int md,void *key,void *data,int dlen,
 	int *slen)
 {
+#ifndef USICRYPT_NO_RSA
+#if 0
+	return wolf_rsa_do_sign_pss(ctx,md,key,data,dlen,slen,0);
+#else
 	return NULL;
+#endif
+#else
+	return NULL;
+#endif
 }
 
 void *USICRYPT(rsa_sign_pss_iov)(void *ctx,int md,void *key,
 	struct usicrypt_iov *iov,int niov,int *slen)
 {
+#if !defined(USICRYPT_NO_RSA) && !defined(USICRYPT_NO_IOV)
+#if 0
+	return wolf_rsa_do_sign_pss(ctx,md,key,iov,niov,slen,1);
+#else
 	return NULL;
+#endif
+#else
+	return NULL;
+#endif
 }
 
 int USICRYPT(rsa_verify_pss)(void *ctx,int md,void *key,void *data,int dlen,
 	void *sig,int slen)
 {
+#ifndef USICRYPT_NO_RSA
+#if 0
+	return wolf_rsa_do_verify_pss(ctx,md,key,data,dlen,sig,slen,0);
+#else
 	return -1;
+#endif
+#else
+	return -1;
+#endif
 }
 
 int USICRYPT(rsa_verify_pss_iov)(void *ctx,int md,void *key,
 	struct usicrypt_iov *iov,int niov,void *sig,int slen)
 {
+#if !defined(USICRYPT_NO_RSA) && !defined(USICRYPT_NO_IOV)
+#if 0
+	return wolf_rsa_do_verify_pss(ctx,md,key,iov,niov,sig,slen,1);
+#else
 	return -1;
+#endif
+#else
+	return -1;
+#endif
 }
 
 void *USICRYPT(rsa_encrypt_v15)(void *ctx,void *key,void *data,int dlen,
@@ -3649,7 +3985,119 @@ void USICRYPT(rsa_free)(void *ctx,void *key)
 
 void *USICRYPT(dh_generate)(void *ctx,int bits,int generator,int *len)
 {
+#ifndef USICRYPT_NO_DH
+#if LIBWOLFSSL_VERSION_HEX >= 0x03012002
+	int l;
+	int n;
+	mp_int p;
+	mp_int d;
+	mp_int r;
+	unsigned char rr;
+	unsigned char *bfr;
+	unsigned char *data=NULL;
+	unsigned char *ptr;
+
+	if(U(bits<USICRYPT_DH_BITS_MIN)||U(bits>USICRYPT_DH_BITS_MAX)||
+		U(bits&7)||U(generator!=2&&generator!=5))goto err1;
+
+	if(U(mp_init(&p)))goto err1;
+	if(U(mp_init(&d)))goto err2;
+	if(U(mp_init(&r)))goto err3;
+
+	switch(generator)
+	{
+	case 2:	if(U(mp_set_int(&d,24)))goto err4;
+		break;
+	case 3:	if(U(mp_set_int(&d,12)))goto err4;
+		break;
+	case 5:	if(U(mp_set_int(&d,10)))goto err4;
+		break;
+	}
+
+	while(1)
+	{
+		if(U(mp_rand_prime(&p,bits>>3,
+			&((struct usicrypt_thread *)ctx)->rng,NULL)))goto err4;
+		if(!mp_is_bit_set(&p,1))continue;
+
+		switch(generator)
+		{
+		case 2: if(U(mp_mod(&p,&d,&r)))goto err4;
+			if(U(mp_to_unsigned_bin(&r,&rr)))goto err4;
+			if(rr!=11)continue;
+			break;
+
+		case 3: if(U(mp_mod(&p,&d,&r)))goto err4;
+			if(U(mp_to_unsigned_bin(&r,&rr)))goto err4;
+			if(rr!=5)continue;
+			break;
+
+		case 5: if(U(mp_mod(&p,&d,&r)))goto err4;
+			if(U(mp_to_unsigned_bin(&r,&rr)))goto err4;
+			if(rr!=3&&rr!=7)continue;
+			break;
+		}
+		if(U(mp_div_2d(&p,1,&r,NULL)))goto err4;
+		if(U(mp_prime_is_prime(&r,8,&n)))goto err4;
+		if(L(n!=MP_YES))continue;
+		break;
+	}
+        l=mp_unsigned_bin_size(&p);
+	if(U(!(bfr=malloc(l))))goto err4;
+	if(U(mp_to_unsigned_bin(&p,bfr)))goto err5;
+
+	n=l+((*bfr&0x80)?1:0);
+	if(n>=0x100)n+=7;
+	else if(n>=0x80)n+=6;
+	else n+=5;
+	if(n>=0x100)n+=4;
+	else if(n>=0x80)n+=3;
+	else n+=2;
+	*len=n;
+	if(U(!(ptr=data=malloc(n))))goto err3;
+
+	*ptr++=0x30;
+	n=l+((*bfr&0x80)?1:0);
+	if(n>=0x100)n+=7;
+	else if(n>=0x80)n+=6;
+	else n+=5;
+	if(n>=0x100)
+	{
+		*ptr++=0x82;
+		*ptr++=(unsigned char)(n>>8);
+	}
+	else if(n>=0x80)*ptr++=0x81;
+	*ptr++=(unsigned char)n;
+
+	*ptr++=0x02;
+	n=l+((*bfr&0x80)?1:0);
+	if(n>=0x100)
+	{
+		*ptr++=0x82;
+		*ptr++=(unsigned char)(n>>8);
+	}
+	else if(n>=0x80)*ptr++=0x81;
+	*ptr++=(unsigned char)n;
+	if(*bfr&0x80)*ptr++=0x00;
+	memcpy(ptr,bfr,l);
+	ptr+=l;
+
+	*ptr++=0x02;
+	*ptr++=0x01;
+	*ptr=(unsigned char)generator;
+
+err5:	((struct usicrypt_thread *)ctx)->global->memclear(bfr,l);
+	free(bfr);
+err4:	mp_clear(&r);
+err3:	mp_clear(&d);
+err2:	mp_clear(&p);
+err1:	return data;
+#else
 	return NULL;
+#endif
+#else
+	return NULL;
+#endif
 }
 
 void *USICRYPT(dh_init)(void *ctx,void *params,int len)
@@ -3660,7 +4108,11 @@ void *USICRYPT(dh_init)(void *ctx,void *params,int len)
 
 	if(U(!(dh=malloc(sizeof(struct wolf_dh)))))goto err1;
 	wc_InitDhKey(&dh->dh);
+#if LIBWOLFSSL_VERSION_HEX >= 0x03012002
+	if(wolf_load_dh_bugfix(params,&dh->dh,len))goto err2;
+#else
 	if(U(wc_DhKeyDecode(params,&idx,&dh->dh,len)))goto err2;
+#endif
 	idx=dh->dh.p.used*sizeof(mp_digit);
 	if(U(idx<USICRYPT_DH_BYTES_MIN)||U(idx>USICRYPT_DH_BYTES_MAX))goto err2;
 	dh->plen=0;
@@ -3835,7 +4287,9 @@ void *USICRYPT(ec_set_pub)(void *ctx,void *key,int len)
 	if(U(!(ec=malloc(sizeof(ecc_key)))))goto err1;
 	if(U(wc_ecc_init(ec)))goto err2;
 	if(U(wc_EccPublicKeyDecode(key,&idx,ec,len)))goto err3;
+#if LIBWOLFSSL_VERSION_HEX < 0x03015000
 	wolf_import_bugfix(ec,key,len);
+#endif
 	return ec;
 
 err3:	wc_ecc_free(ec);
@@ -4842,7 +5296,9 @@ void *USICRYPT(global_init)(int (*rng_seed)(void *data,int len),
 #ifndef USICRYPT_NO_AES
 #ifndef USICRYPT_NO_GCM
 #ifdef WOLFSSL_AESNI
+#if LIBWOLFSSL_VERSION_HEX < 0x03012002
 	if(USICRYPT(get_features)()&1)wolf_need_gcm_bugfix=1;
+#endif
 #endif
 #endif
 #endif

@@ -81,78 +81,78 @@ Implementation Overview:
 
 |                         |OpenSSL|LibreSSL|mbedTLS|wolfSSL|Libgcrypt|Nettle|
 | ----------------------- | ----- | ------ | ----- | ----- | ------- | ---- |
-|                         |1.0.2k/|2.4.5/  |2.4.2/ |       |         |      |
-|                         |1.1.0e |2.5.3   |2.12.0 |3.10.2 |1.7.6    |3.3   |
+|                         |1.0.2k/|2.4.5/  |2.4.2/ |3.10.2/|         |      |
+|                         |1.1.0e |2.5.3   |2.12.0 |3.15.0 |1.7.6    |3.3   |
 | ----------------------- | ----- | ------ | ----- | ----- | ------- | ---- |
-|Random Numbers           |  x/x  |  x/x   |  x/x  |   x   |    x    |  x   |
-|SHA1                     |  x/x  |  x/x   |  x/x  |   x   |    x    |  x   |
-|SHA256                   |  x/x  |  x/x   |  x/x  |   x   |    x    |  x   |
-|SHA384                   |  x/x  |  x/x   |  x/x  |   x   |    x    |  x   |
-|SHA512                   |  x/x  |  x/x   |  x/x  |   x   |    x    |  x   |
-|HMAC/SHA1                |  x/x  |  x/x   |  x/x  |   x   |    x    |  x   |
-|HMAC/SHA256              |  x/x  |  x/x   |  x/x  |   x   |    x    |  x   |
-|HMAC/SHA384              |  x/x  |  x/x   |  x/x  |   x   |    x    |  x   |
-|HMAC/SHA512              |  x/x  |  x/x   |  x/x  |   x   |    x    |  x   |
-|PBKDF2/SHA1              |  x/x  |  x/x   |  x/x  |   x   |    x    |  x   |
-|PBKDF2/SHA256            |  x/x  |  x/x   |  x/x  |   x   |    x    |  x   |
-|PBKDF2/SHA384            |  x/x  |  x/x   |  x/x  |   o   |    x    |  x   |
-|PBKDF2/SHA512            |  x/x  |  x/x   |  x/x  |   x   |    x    |  x   |
-|HKDF/SHA1                |  o/x  |  o/o   |  o/x  |   x   |    o    |  o   |
-|HKDF/SHA256              |  o/x  |  o/o   |  o/x  |   x   |    o    |  o   |
-|HKDF/SHA384              |  o/x  |  o/o   |  o/x  |   x   |    o    |  o   |
-|HKDF/SHA512              |  o/x  |  o/o   |  o/x  |   x   |    o    |  o   |
-|Base64 Encode/Decode     |  x/x  |  x/x   |  x/x  |   x   |    o    |  x   |
-|RSA Generate             |  x/x  |  x/x   |  x/x  |   x   |    o    |  x   |
-|RSA Export/Import        |  x/x  |  x/x   |  x/x  |   x   |    o    |  o   |
-|RSA Sign/Verify/SHA1     |  x/x  |  x/x   |  x/x  |   x   |    o    |  x   |
-|RSA Sign/Verify/SHA256   |  x/x  |  x/x   |  x/x  |   x   |    o    |  x   |
-|RSA Sign/Verify/SHA384   |  x/x  |  x/x   |  x/x  |   x   |    o    |  x   |
-|RSA Sign/Verify/SHA512   |  x/x  |  x/x   |  x/x  |   x   |    o    |  x   |
-|RSASSA-PSS/SHA1          |  x/x  |  x/x   |  x/x  |   -   |    o    |  o   |
-|RSASSA-PSS/SHA256        |  x/x  |  x/x   |  x/x  |   -   |    o    |  o   |
-|RSASSA-PSS/SHA384        |  x/x  |  x/x   |  x/x  |   -   |    o    |  o   |
-|RSASSA-PSS/SHA512        |  x/x  |  x/x   |  x/x  |   -   |    o    |  o   |
-|RSA Encrypt/Decrypt      |  x/x  |  x/x   |  x/x  |   x   |    o    |  x   |
-|RSAES-OAEP/SHA1          |  x/x  |  x/x   |  x/x  |   x   |    o    |  o   |
-|RSAES-OAEP/SHA256        |  x/x  |  o/o   |  x/x  |   x   |    o    |  o   |
-|RSAES-OAEP/SHA384        |  x/x  |  o/o   |  x/x  |   x   |    o    |  o   |
-|RSAES-OAEP/SHA512        |  x/x  |  o/o   |  x/x  |   x   |    o    |  o   |
-|DH Generate              |  x/x  |  x/x   |  x/x  |   -   |    o    |  o   |
-|DH Key Agreement         |  x/x  |  x/x   |  x/x  |   x   |    o    |  o   |
-|EC Generate              |  x/x  |  x/x   |  x/x  |   x   |    o    |  ob  |
-|EC Export/Import         |  x/x  |  x/x   |  x/x  |   x!  |    o    |  ob  |
-|ECDH Key Agreement       |  x/x  |  x/x   |  x/x  |   x   |    o    |  ob  |
-|ECDSA/SHA1               |  x/x  |  x/x   |  x/x  |   x   |    o    |  ob  |
-|ECDSA/SHA256             |  x/x  |  x/x   |  x/x  |   x   |    o    |  ob  |
-|ECDSA/SHA384             |  x/x  |  x/x   |  x/x  |   x   |    o    |  ob  |
-|ECDSA/SHA512             |  x/x  |  x/x   |  x/x  |   x   |    o    |  ob  |
-|X25519 Generate          |  -/x  |  -/x   |  -/x  |   x   |    o    |  o   |
-|X25519 Export/Import     |  -/x  |  -/o   |  -/o  |   o   |    o    |  o   |
-|X25519 Key Agreement     |  -/x  |  -/x   |  -/x  |   x   |    o    |  o   |
-|AES ECB                  |  x/x  |  x/x   |  x/x  |   x   |    x    |  x   |
-|AES CBC                  |  x/x  |  x/x   |  x/x  |   x   |    x    |  x   |
-|AES CTS                  |  x/x  |  x/x   |  o/o  |   o   |    x    |  o   |
-|AES CFB                  |  x/x  |  x/x   |  x/x  |   o   |    x    |  o   |
-|AES CFB8                 |  x/x  |  x/x   |  x/x  |   o   |    o    |  o   |
-|AES OFB                  |  x/x  |  x/x   |  o/o  |   o   |    x    |  o   |
-|AES CTR                  |  x/x  |  x/x   |  x/x  |   x   |    x    |  o!  |
-|AES XTS                  |  x/x  |  x/x   |  o/o  |   o   |    o    |  o   |
-|AES CBC/ESSIV/SHA256     |  o/o  |  o/o   |  o/o  |   o   |    o    |  o   |
-|AES GCM                  |  x/x  |  x/x   |  x/x  |   x!  |    x    |  x!  |
-|AES CCM                  |  x/x  | x!/x!  |  x/x  |   x   |    x    |  x   |
-|AES CMAC                 |  x/x  |  x/x   |  x/x  |   x   |    x    |  o   |
-|ChaCha20/Poly1305        |  -/x  |  x/x   |  -/x  |   x   |    x    |  x   |
-|ChaCha20                 |  -/x  |  x/x   |  -/x  |   x!  |    x    |  x!  |
-|Camellia ECB             |  x/x  |  x/x   |  x/x  |   x   |    x    |  x   |
-|Camellia CBC             |  x/x  |  x/x   |  x/x  |   x   |    x    |  x   |
-|Camellia CTS             |  x/x  |  x/x   |  o/o  |   o   |    x    |  o   |
-|Camellia CFB             |  x/x  |  x/x   |  x/x  |   o   |    x    |  o   |
-|Camellia CFB8            |  x/x  |  x/x   |  o/o  |   o   |    o    |  o   |
-|Camellia OFB             |  x/x  |  x/x   |  o/o  |   o   |    x    |  o   |
-|Camellia CTR             |  x/x  |  x/x   |  x/x  |   o   |    x    |  o!  |
-|Camellia XTS             |  o/o  |  o/o   |  o/o  |   o   |    o    |  o   |
-|Camellia CBC/ESSIV/SHA256|  o/o  |  o/o   |  o/o  |   o   |    o    |  o   |
-|Camellia CMAC            |  x/x  |  x/x   |  o/o  |   o   |    x    |  o   |
+|Random Numbers           |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  x   |
+|SHA1                     |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  x   |
+|SHA256                   |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  x   |
+|SHA384                   |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  x   |
+|SHA512                   |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  x   |
+|HMAC/SHA1                |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  x   |
+|HMAC/SHA256              |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  x   |
+|HMAC/SHA384              |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  x   |
+|HMAC/SHA512              |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  x   |
+|PBKDF2/SHA1              |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  x   |
+|PBKDF2/SHA256            |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  x   |
+|PBKDF2/SHA384            |  x/x  |  x/x   |  x/x  |  o/o  |    x    |  x   |
+|PBKDF2/SHA512            |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  x   |
+|HKDF/SHA1                |  o/x  |  o/o   |  o/x  |  x/x  |    o    |  o   |
+|HKDF/SHA256              |  o/x  |  o/o   |  o/x  |  x/x  |    o    |  o   |
+|HKDF/SHA384              |  o/x  |  o/o   |  o/x  |  x/x  |    o    |  o   |
+|HKDF/SHA512              |  o/x  |  o/o   |  o/x  |  x/x  |    o    |  o   |
+|Base64 Encode/Decode     |  x/x  |  x/x   |  x/x  |  x/x  |    o    |  x   |
+|RSA Generate             |  x/x  |  x/x   |  x/x  |  x/x  |    o    |  x   |
+|RSA Export/Import        |  x/x  |  x/x   |  x/x  |  x/x  |    o    |  o   |
+|RSA Sign/Verify/SHA1     |  x/x  |  x/x   |  x/x  |  x/x  |    o    |  x   |
+|RSA Sign/Verify/SHA256   |  x/x  |  x/x   |  x/x  |  x/x  |    o    |  x   |
+|RSA Sign/Verify/SHA384   |  x/x  |  x/x   |  x/x  |  x/x  |    o    |  x   |
+|RSA Sign/Verify/SHA512   |  x/x  |  x/x   |  x/x  |  x/x  |    o    |  x   |
+|RSASSA-PSS/SHA1          |  x/x  |  x/x   |  x/x  |  -/-B |    o    |  o   |
+|RSASSA-PSS/SHA256        |  x/x  |  x/x   |  x/x  |  -/-B |    o    |  o   |
+|RSASSA-PSS/SHA384        |  x/x  |  x/x   |  x/x  |  -/-B |    o    |  o   |
+|RSASSA-PSS/SHA512        |  x/x  |  x/x   |  x/x  |  -/-B |    o    |  o   |
+|RSA Encrypt/Decrypt      |  x/x  |  x/x   |  x/x  |  x/x  |    o    |  x   |
+|RSAES-OAEP/SHA1          |  x/x  |  x/x   |  x/x  |  x/x  |    o    |  o   |
+|RSAES-OAEP/SHA256        |  x/x  |  o/o   |  x/x  |  x/x  |    o    |  o   |
+|RSAES-OAEP/SHA384        |  x/x  |  o/o   |  x/x  |  x/x  |    o    |  o   |
+|RSAES-OAEP/SHA512        |  x/x  |  o/o   |  x/x  |  x/x  |    o    |  o   |
+|DH Generate              |  x/x  |  x/x   |  x/x  |  -/o  |    o    |  o   |
+|DH Key Agreement         |  x/x  |  x/x   |  x/x  |  x/x! |    o    |  o   |
+|EC Generate              |  x/x  |  x/x   |  x/x  |  x/x  |    o    |  ob  |
+|EC Export/Import         |  x/x  |  x/x   |  x/x  | x!/x  |    o    |  ob  |
+|ECDH Key Agreement       |  x/x  |  x/x   |  x/x  |  x/x  |    o    |  ob  |
+|ECDSA/SHA1               |  x/x  |  x/x   |  x/x  |  x/x  |    o    |  ob  |
+|ECDSA/SHA256             |  x/x  |  x/x   |  x/x  |  x/x  |    o    |  ob  |
+|ECDSA/SHA384             |  x/x  |  x/x   |  x/x  |  x/x  |    o    |  ob  |
+|ECDSA/SHA512             |  x/x  |  x/x   |  x/x  |  x/x  |    o    |  ob  |
+|X25519 Generate          |  -/x  |  -/x   |  -/x  |  x/x  |    o    |  o   |
+|X25519 Export/Import     |  -/x  |  -/o   |  -/o  |  o/o  |    o    |  o   |
+|X25519 Key Agreement     |  -/x  |  -/x   |  -/x  |  x/x  |    o    |  o   |
+|AES ECB                  |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  x   |
+|AES CBC                  |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  x   |
+|AES CTS                  |  x/x  |  x/x   |  o/o  |  o/o  |    x    |  o   |
+|AES CFB                  |  x/x  |  x/x   |  x/x  |  o/o  |    x    |  o   |
+|AES CFB8                 |  x/x  |  x/x   |  x/x  |  o/o  |    o    |  o   |
+|AES OFB                  |  x/x  |  x/x   |  o/o  |  o/o  |    x    |  o   |
+|AES CTR                  |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  o!  |
+|AES XTS                  |  x/x  |  x/x   |  o/o  |  o/o  |    o    |  o   |
+|AES CBC/ESSIV/SHA256     |  o/o  |  o/o   |  o/o  |  o/o  |    o    |  o   |
+|AES GCM                  |  x/x  |  x/x   |  x/x  | x!/xm |    x    |  x!  |
+|AES CCM                  |  x/x  | x!/x!  |  x/x  |  x/x  |    x    |  x   |
+|AES CMAC                 |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  o   |
+|ChaCha20/Poly1305        |  -/x  |  x/x   |  -/x  |  x/x  |    x    |  x   |
+|ChaCha20                 |  -/x  |  x/x   |  -/x  | x!/x! |    x    |  x!  |
+|Camellia ECB             |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  x   |
+|Camellia CBC             |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  x   |
+|Camellia CTS             |  x/x  |  x/x   |  o/o  |  o/o  |    x    |  o   |
+|Camellia CFB             |  x/x  |  x/x   |  x/x  |  o/o  |    x    |  o   |
+|Camellia CFB8            |  x/x  |  x/x   |  o/o  |  o/o  |    o    |  o   |
+|Camellia OFB             |  x/x  |  x/x   |  o/o  |  o/o  |    x    |  o   |
+|Camellia CTR             |  x/x  |  x/x   |  x/x  |  o/o  |    x    |  o!  |
+|Camellia XTS             |  o/o  |  o/o   |  o/o  |  o/o  |    o    |  o   |
+|Camellia CBC/ESSIV/SHA256|  o/o  |  o/o   |  o/o  |  o/o  |    o    |  o   |
+|Camellia CMAC            |  x/x  |  x/x   |  o/o  |  o/o  |    x    |  o   |
 | ----------------------- | ----- | ------ | ----- | ----- | ------- | ---- |
 
 x = native support
@@ -160,6 +160,8 @@ o = available, no native support
 - = not available
 ! = bug workaround included
 b = Brainpool curves not available
+m = tag size minimum is 12
+B = broken implementation, no interoperability and thus not usable
 
 For details see the file usicrypt.h which includes all function prototypes
 as well as parameter documentation.

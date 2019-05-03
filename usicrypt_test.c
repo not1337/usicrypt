@@ -39,6 +39,7 @@
 
 #include <openssl/opensslv.h>
 #include <mbedtls/version.h>
+#include <wolfssl/version.h>
 
 static int expensive=0;
 
@@ -1598,7 +1599,11 @@ static int test_dh(void **ctx)
 	memset(err,0,sizeof(err));
 	for(i=0,skip=0;i<5;i++,skip=0)for(j=i+1;j<5;j++)
 	{
+#if LIBWOLFSSL_VERSION_HEX >= 0x03012002
+		if(skip)nogen=1;
+#else
 		if(i==2||j==2||skip)nogen=1;
+#endif
 		else nogen=0;
 		test_dh_pair(ctx[i],ctx[j],&cerr,&err[i],&err[j],
 			&dhops[i],&dhops[j],nogen);
@@ -3486,6 +3491,9 @@ static void test_aeadcipher_item(void **ctx,int *cerr, int *err,
 #if MBEDTLS_VERSION_NUMBER < 0x020c0000
 		if(i==1||j==1)if(nombed)continue;
 #endif
+#if LIBWOLFSSL_VERSION_HEX >= 0x03012002
+		if((i==2||j==2)&&cipher==USICRYPT_AES_GCM&&tlen<12)continue;
+#endif
 		test_aeadcipher_pair(ctx[i],ctx[j],cerr,&err[i],&err[j],
 			cipher,klen,ilen,tlen,&aeadops[i],&aeadops[j]);
 	}
@@ -3797,6 +3805,7 @@ int main(int argc,char *argv[])
 
 	if(!err)do
 	{
+#if 0
 		err+=test_random(ctx);
 		err+=test_digest_size(ctx);
 		err+=test_digest(ctx);
@@ -3804,7 +3813,9 @@ int main(int argc,char *argv[])
 		err+=test_pbkdf2(ctx);
 		err+=test_hkdf(ctx);
 		err+=test_base64(ctx);
+#endif
 		err+=test_rsa(ctx);
+#if 0
 		err+=test_dh(ctx);
 		err+=test_ec(ctx);
 		err+=test_x25519(ctx);
@@ -3817,6 +3828,7 @@ int main(int argc,char *argv[])
 		err+=test_util_cipher_padding(ctx[0]);
 		err+=test_util_lfsr(ctx[0]);
 		err+=test_util_memclear(ctx[0]);
+#endif
 		if(err)tot++;
 		err=0;
 		if(cont||loop)printf("round %u errors %d\n",++cnt,tot);
