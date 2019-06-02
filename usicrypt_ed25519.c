@@ -42,7 +42,7 @@ struct orlp_ed25519
 {
 	unsigned char raw[32];
 	unsigned char pub[32];
-	unsigned char key[32];
+	unsigned char key[64];
 };
 
 static const unsigned char orlp_ed25519_asn1_pub[12]=
