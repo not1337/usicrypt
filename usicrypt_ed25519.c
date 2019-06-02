@@ -170,7 +170,7 @@ void *USICRYPT(ed25519_sign_iov)(void *ctx,void *key,struct usicrypt_iov *iov,
 	for(len=0,i=0;i<niov;i++)len+=iov[i].length;
 	if(U(!(sig=malloc(*slen))))goto err1;
 	if(U(!(data=malloc(len))))goto err2;
-	for(p=data,i=0;i<niov;i++,p+=iov[i].length)
+	for(p=data,i=0;i<niov;p+=iov[i++].length)
 		memcpy(p,iov[i].data,iov[i].length);
 	ed25519_sign(sig,data,len,((struct orlp_ed25519 *)key)->pub,
 		((struct orlp_ed25519 *)key)->key);
@@ -211,7 +211,7 @@ int USICRYPT(ed25519_verify_iov)(void *ctx,void *key,struct usicrypt_iov *iov,
 	if(slen!=64)return -1;
 	for(len=0,i=0;i<niov;i++)len+=iov[i].length;
 	if(U(!(data=malloc(len))))goto err1;
-	for(p=data,i=0;i<niov;i++,p+=iov[i].length)
+	for(p=data,i=0;i<niov;p+=iov[i++].length)
 		memcpy(p,iov[i].data,iov[i].length);
 	if(ed25519_verify(sig,data,len,((struct orlp_ed25519 *)key)->pub))err=0;
 	((struct usicrypt_thread *)ctx)->global->memclear(data,sizeof(len));
