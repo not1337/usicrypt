@@ -13,9 +13,19 @@
 /*                                 Testing                                    */
 /******************************************************************************/
 
-#ifndef USICRYPT_ORLP25519
+#ifndef USICRYPT_TEST
+
+#ifdef USICRYPT_XSSL
+#include <openssl/opensslv.h>
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L && !defined(LIBRESSL_VERSION_NUMBER)
 #define USICRYPT_ORLP25519
 #endif
+#endif
+
+#endif
+
+#ifndef USICRYPT_ORLP25519
+#define USICRYPT_ORLP25519
 
 /******************************************************************************/
 /*                                 Headers                                    */
@@ -35,8 +45,6 @@
 #include "usicrypt_internal.h"
 #include "usicrypt.h"
 #include "usicrypt_common.c"
-
-#if defined(USICRYPT_ORLP25519)
 
 struct orlp_ed25519
 {

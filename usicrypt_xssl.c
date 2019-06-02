@@ -4026,7 +4026,7 @@ void *USICRYPT(ec_get_pub)(void *ctx,void *key,int *len)
 	if(U((l=i2d_EC_PUBKEY(k,NULL))<=0))goto err2;
 	if(U(!(m=p=malloc(l))))goto err2;
 	if(U((*len=i2d_EC_PUBKEY(k,&m))<=0))goto err3;
-	if(U(*len==l))goto err2;
+	if(L(*len==l))goto err2;
 
 err3:	((struct usicrypt_thread *)ctx)->global->memclear(p,l);
 	free(p);
@@ -4070,7 +4070,7 @@ void *USICRYPT(ec_get_key)(void *ctx,void *key,int *len)
 	if(U((l=i2d_ECPrivateKey(k,NULL))<=0))goto err2;
 	if(U(!(m=p=malloc(l))))goto err2;
 	if(U((*len=i2d_ECPrivateKey(k,&m))<=0))goto err3;
-	if(U(*len==l))goto err2;
+	if(L(*len==l))goto err2;
 
 err3:	((struct usicrypt_thread *)ctx)->global->memclear(p,l);
 	free(p);
@@ -4148,6 +4148,197 @@ void USICRYPT(ec_free)(void *ctx,void *key)
 	EVP_PKEY_free((EVP_PKEY *)key);
 #endif
 }
+
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L && !defined(LIBRESSL_VERSION_NUMBER)
+
+void *USICRYPT(ed25519_generate)(void *ctx)
+{
+#ifndef USICRYPT_NO_ED25519
+	EVP_PKEY *pkey=NULL;
+	EVP_PKEY_CTX *pctx=EVP_PKEY_CTX_new_id(EVP_PKEY_ED25519, NULL);
+
+	if(U(!pctx))goto err1;
+	if(U(EVP_PKEY_keygen_init(pctx)!=1))goto err2;
+	if(U(EVP_PKEY_keygen(pctx,&pkey)!=1))goto err2;
+	EVP_PKEY_CTX_free(pctx);
+	return pkey;
+
+err2:	EVP_PKEY_CTX_free(pctx);
+err1:	return NULL;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed25519_get_pub)(void *ctx,void *key,int *len)
+{
+#ifndef USICRYPT_NO_ED25519
+	int l;
+	unsigned char *p=NULL;
+	unsigned char *m;
+
+	if(U((l=i2d_PUBKEY(key,NULL))<=0))goto err1;
+	if(U(!(m=p=malloc(l))))goto err1;
+	if(U((*len=i2d_PUBKEY(key,&m))<=0))goto err2;
+	if(L(*len==l))goto err1;
+
+	((struct usicrypt_thread *)ctx)->global->memclear(p,l);
+err2:	free(p);
+	p=NULL;
+err1:	return p;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed25519_set_pub)(void *ctx,void *key,int len)
+{
+#ifndef USICRYPT_NO_ED25519
+	return d2i_PUBKEY(NULL,(const unsigned char **)&key,len);
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed25519_get_key)(void *ctx,void *key,int *len)
+{
+#ifndef USICRYPT_NO_ED25519
+	int l;
+	unsigned char *p=NULL;
+	unsigned char *m;
+
+	if(U((l=i2d_PrivateKey(key,NULL))<=0))goto err1;
+	if(U(!(m=p=malloc(l))))goto err1;
+	if(U((*len=i2d_PrivateKey(key,&m))<=0))goto err2;
+	if(L(*len==l))goto err1;
+
+	((struct usicrypt_thread *)ctx)->global->memclear(p,l);
+err2:	free(p);
+	p=NULL;
+err1:	return p;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed25519_set_key)(void *ctx,void *key,int len)
+{
+#ifndef USICRYPT_NO_ED25519
+	return d2i_PrivateKey(NID_ED25519,NULL,(const unsigned char **)&key,
+		len);
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed25519_sign)(void *ctx,void *key,void *data,int dlen,int *slen)
+{
+#ifndef USICRYPT_NO_ED25519
+	size_t olen=64;
+	void *sig;
+	EVP_MD_CTX *c;
+	EVP_PKEY_CTX *pctx=EVP_PKEY_CTX_new_id(EVP_PKEY_ED25519,NULL);
+	EVP_PKEY_CTX *pctxx=pctx;
+
+	if(U(!pctx))goto err1;
+	if(U(!(sig=malloc(olen))))goto err2;
+	if(U(!(c=EVP_MD_CTX_create())))goto err3;
+	if(U(EVP_DigestSignInit(c,&pctxx,NULL,NULL,key)!=1))goto err4;
+	if(U(EVP_DigestSign(c,sig,&olen,data,dlen)!=1))goto err4;
+	EVP_MD_CTX_destroy(c);
+	EVP_PKEY_CTX_free(pctx);
+	*slen=64;
+	return sig;
+
+err4:	EVP_MD_CTX_destroy(c);
+err3:	free(sig);
+err2:	EVP_PKEY_CTX_free(pctx);
+err1:	return NULL;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed25519_sign_iov)(void *ctx,void *key,struct usicrypt_iov *iov,
+	int niov,int *slen)
+{
+#if !defined(USICRYPT_NO_ED25519) && !defined(USICRYPT_NO_IOV)
+	unsigned char *sig;
+	int i;
+	int len;
+	unsigned char *data;
+	unsigned char *p;
+
+	for(len=0,i=0;i<niov;i++)len+=iov[i].length;
+	if(U(!(sig=malloc(*slen))))goto err1;
+	if(U(!(data=malloc(len))))goto err2;
+	for(p=data,i=0;i<niov;p+=iov[i++].length)
+		memcpy(p,iov[i].data,iov[i].length);
+	sig=USICRYPT(ed25519_sign)(ctx,key,data,len,slen);
+	((struct usicrypt_thread *)ctx)->global->memclear(data,sizeof(len));
+	free(data);
+	return sig;
+
+err2:	free(sig);
+err1:	return NULL;
+#else
+	return NULL;
+#endif
+}
+
+int USICRYPT(ed25519_verify)(void *ctx,void *key,void *data,int dlen,void *sig,
+	int slen)
+{
+#ifndef USICRYPT_NO_ED25519
+	int err=-1;
+	EVP_MD_CTX *c;
+	EVP_PKEY_CTX *pctx=EVP_PKEY_CTX_new_id(EVP_PKEY_ED25519,NULL);
+	EVP_PKEY_CTX *pctxx=pctx;
+
+	if(U(!pctx))goto err1;
+	if(U(!(c=EVP_MD_CTX_create())))goto err2;
+	if(U(EVP_DigestVerifyInit(c,&pctxx,NULL,NULL,pkey)!=1))goto err3;
+	if(U(EVP_DigestVerify(c,sig,slen,data,dlen)!=1))goto err3;
+	err=0;
+err3:	EVP_MD_CTX_destroy(c);
+err2:	EVP_PKEY_CTX_free(pctx);
+err1:	return err;
+#else
+	return -1;
+#endif
+}
+
+int USICRYPT(ed25519_verify_iov)(void *ctx,void *key,struct usicrypt_iov *iov,
+	int niov,void *sig,int slen)
+{
+#if !defined(USICRYPT_NO_ED25519) && !defined(USICRYPT_NO_IOV)
+	int err=-1;
+	int i;
+	int len;
+	unsigned char *data;
+	unsigned char *p;
+
+	for(len=0,i=0;i<niov;i++)len+=iov[i].length;
+	if(U(!(data=malloc(len))))goto err1;
+	for(p=data,i=0;i<niov;p+=iov[i++].length)
+		memcpy(p,iov[i].data,iov[i].length);
+	err=USICRYPT(ed25519_verify)(ctx,key,data,len,sig,slen);
+	((struct usicrypt_thread *)ctx)->global->memclear(data,sizeof(len));
+	free(data);
+err1:	return err;
+#else
+	return -1;
+#endif
+}
+
+void USICRYPT(ed25519_free)(void *ctx,void *key)
+{
+#ifndef USICRYPT_NO_ED25519
+	EVP_PKEY_free(key);
+#endif
+}
+
+#endif
 
 void *USICRYPT(x25519_generate)(void *ctx)
 {
@@ -4330,7 +4521,7 @@ err1:	return NULL;
 	if(U((l=i2d_PrivateKey(key,NULL))<=0))goto err1;
 	if(U(!(m=p=malloc(l))))goto err1;
 	if(U((*len=i2d_PrivateKey(key,&m))<=0))goto err2;
-	if(U(*len==l))goto err1;
+	if(L(*len==l))goto err1;
 
 err2:	((struct usicrypt_thread *)ctx)->global->memclear(p,l);
 	free(p);
