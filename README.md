@@ -56,7 +56,8 @@ License:
 ========
 
 Any OSI approved license of your choice applies, see the file LICENSE
-for details.
+for details. For ED25519 please see github-orlp-ed25519/license.txt,
+if this library is in use (see table below).
 
 
 Usage:
@@ -71,7 +72,7 @@ target library of your choice and to remove code not required.
 Run make and then link against libusicrypt.a (position dependent code)
 or libusicrypt-pic.a (position independent code).
 
-Note that usicrypt is only tested on Linux x86_64 using gcc, though
+Note that usicrypt is only tested on Linux x86\_64 using gcc, though
 code for other platforms is included on a best effort base
 (never compiled or tested).
 
@@ -129,6 +130,9 @@ Implementation Overview:
 |X25519 Generate          |  -/x  |  -/x   |  -/x  |  x/x  |    o    |  o   |
 |X25519 Export/Import     |  -/x  |  -/o   |  -/o  |  o/o  |    o    |  o   |
 |X25519 Key Agreement     |  -/x  |  -/x   |  -/x  |  x/x  |    o    |  o   |
+|ED25519 Generate         |  e/e  |  e/e   |  e/e  |  e/e  |    e    |  e   |
+|ED25519 Eport/Import     |  e/e  |  e/e   |  e/e  |  e/e  |    e    |  e   |
+|ED25519 Sign/Verify      |  e/e  |  e/e   |  e/e  |  e/e  |    e    |  e   |
 |AES ECB                  |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  x   |
 |AES CBC                  |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  x   |
 |AES CTS                  |  x/x  |  x/x   |  o/o  |  o/o  |    x    |  o   |
@@ -162,6 +166,7 @@ o = available, no native support
 b = Brainpool curves not available
 m = tag size minimum is 12
 B = broken implementation, no interoperability and thus not usable
+e = currently uses implementation from https://github.com/orlp/ed25519
 
 For details see the file usicrypt.h which includes all function prototypes
 as well as parameter documentation.

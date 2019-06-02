@@ -342,6 +342,12 @@ static const struct
 		3,USICRYPT_X25519,0,USICRYPT_X25519
 	},
 #endif
+#ifndef USICRYPT_NO_ED25519
+	{
+		{0x2b,0x65,0x70},
+		3,USICRYPT_ED25519,0,USICRYPT_ED25519
+	},
+#endif
 	{
 		{},
 		0,0,0,0

@@ -46,6 +46,7 @@ CFLAGS+=-mrdrnd -mrdseed
 #CFLAGS+=-DUSICRYPT_NO_DH
 #CFLAGS+=-DUSICRYPT_NO_EC
 #CFLAGS+=-DUSICRYPT_NO_X25519
+#CFLAGS+=-DUSICRYPT_NO_ED25519
 #CFLAGS+=-DUSICRYPT_NO_DIGEST
 #CFLAGS+=-DUSICRYPT_NO_HMAC
 #CFLAGS+=-DUSICRYPT_NO_PBKDF2
@@ -89,10 +90,19 @@ CFLAGS+=-mrdrnd -mrdseed
 #CFLAGS+=-I/usr/local/test/openssl11/include
 #LDFLAGS+=-L/usr/local/test/openssl11/lib -Wl,-rpath,/usr/local/test/openssl11/lib
 
+ifndef USICRYPT_NO_ED25519
+ED25519OBJS=add_scalar.eo fe.eo ge.eo key_exchange.eo keypair.eo sc.eo seed.eo sha512.eo sign.eo verify.eo
+ED25519SHOBJS=add_scalar.epo fe.epo ge.epo key_exchange.epo keypair.epo sc.epo seed.epo sha512.epo sign.epo verify.epo
+else
+ED25519OBJS=
+ED25519SHOBJS=
+endif
+
 all: libusicrypt.a libusicrypt-pic.a
 
 libusicrypt.a: usicrypt_gcry.o usicrypt_mbed.o usicrypt_nttl.o \
-	usicrypt_wolf.o usicrypt_util.o usicrypt_xssl.o
+	usicrypt_wolf.o usicrypt_util.o usicrypt_xssl.o usicrypt_ed25519.o \
+	$(ED25519OBJS)
 	$(AR) rcu $(ARFLAGS) $@ $^
 
 usicrypt_gcry.o: usicrypt_gcry.c usicrypt_internal.h usicrypt.h \
@@ -108,7 +118,8 @@ usicrypt_xssl.o: usicrypt_xssl.c usicrypt_internal.h usicrypt.h \
 	usicrypt_common.c
 
 libusicrypt-pic.a: usicrypt_gcry.po usicrypt_mbed.po usicrypt_nttl.po \
-	usicrypt_wolf.po usicrypt_util.po usicrypt_xssl.po
+	usicrypt_wolf.po usicrypt_util.po usicrypt_xssl.po usicrypt_ed25519.po \
+	$(ED25519SHOBJS)
 	$(AR) rcu $(ARFLAGS) $@ $^
 
 usicrypt_gcry.po: usicrypt_gcry.c usicrypt_internal.h usicrypt.h \
@@ -142,7 +153,7 @@ usicrypt_xssl.to: usicrypt_xssl.c usicrypt_internal.h usicrypt.h \
 	usicrypt_common.c
 
 clean:
-	rm -f usicrypt_test *.to *.po *.o *.a core
+	rm -f usicrypt_test *.to *.po *.o *.eo *.epo *.a core
 
 %.to : %.c
 	$(CC) -Wall $(CFLAGS) -DUSICRYPT_TEST -c -o $@ $<
@@ -152,3 +163,10 @@ clean:
 
 %.o : %.c
 	$(CC) -Wall $(CFLAGS) $(TARGET) -c -o $@ $<
+
+%.eo : github-orlp-ed25519/src/%.c
+	$(CC) -Wall $(CFLAGS) -DED25519_NO_SEED -c -o $@ $<
+
+%.epo : github-orlp-ed25519/src/%.c
+	$(CC) -Wall $(CFLAGS) -DED25519_NO_SEED -fPIC -c -o $@ $<
+
