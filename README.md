@@ -166,7 +166,8 @@ o = available, no native support
 b = Brainpool curves not available
 m = tag size minimum is 12
 B = broken implementation, no interoperability and thus not usable
-e = currently uses implementation from https://github.com/orlp/ed25519
+e = currently uses implementation from https://github.com/orlp/ed25519,
+    OpenSSL starting with 1.1.1 uses native implementation
 
 For details see the file usicrypt.h which includes all function prototypes
 as well as parameter documentation.
@@ -183,8 +184,8 @@ than looking for missing man pages or man pages with wrong information.
 
 LibreSSL Note:
 --------------
-LibreSSL is missing RSA_padding_add_PKCS1_OAEP_mgf1() as well as
-RSA_padding_check_PKCS1_OAEP_mgf1() which makes it impossible to
+LibreSSL is missing RSA\_padding\_add\_PKCS1\_OAEP\_mgf1() as well as
+RSA\_padding\_check\_PKCS1\_OAEP\_mgf1() which makes it impossible to
 use a message digest other than SHA1 natively for OAEP padding.
 The ChaCha20/Poly1305 AEAD interface is horrible. The tag is
 written to/read from the end of the encrypted data, thus intermediate
@@ -195,6 +196,8 @@ And, well, the X25519 private key value is broken purposely which
 can be an attack vector in detecting which library is in use.
 In addition the necessary X25519 public from private function
 is missing from the headers though it is not declared static.
+LibreSSL is broken with regard to ED25519 as keys in portable format
+can't be loaded (RFC8410, anybody?).
 In general I did see a few locations where LibreSSL leaks memory
 when a function fails so there's probably quite some more similar
 problems.
@@ -208,6 +211,8 @@ The missing functionality is planned by the target library developers,
 though there in no arrival date set.
 For CCM mode the length of the additional data is restricted to a
 maximum of 0xff00 bytes.
+For whatever reason ED25519 is missing out and the developers seem to be
+reluctant to accept patches.
 
 wolfSSL Note:
 -------------
@@ -220,6 +225,9 @@ on results in a segfault.
 Though there is a bignum header, none of the bignum functions are
 exported from the target library. Due to this fact neither DH
 parameter generation nor RSASSA-PSS operation can be emulated.
+A later revicion of thil library remedies the bignum export problem
+and implements RSASSA-PSS, but the RSASSA-PSS implementation is broken
+due to artificial limitiations which prevent interoperability.
 This target library doesn't support more than 4096 bit keys for
 RSA in general.
 There is no way to add seed to the random number generator of the
