@@ -4297,7 +4297,7 @@ int USICRYPT(ed25519_verify)(void *ctx,void *key,void *data,int dlen,void *sig,
 
 	if(U(!pctx))goto err1;
 	if(U(!(c=EVP_MD_CTX_create())))goto err2;
-	if(U(EVP_DigestVerifyInit(c,&pctxx,NULL,NULL,pkey)!=1))goto err3;
+	if(U(EVP_DigestVerifyInit(c,&pctxx,NULL,NULL,key)!=1))goto err3;
 	if(U(EVP_DigestVerify(c,sig,slen,data,dlen)!=1))goto err3;
 	err=0;
 err3:	EVP_MD_CTX_destroy(c);
