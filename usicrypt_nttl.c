@@ -24,6 +24,14 @@
 
 #if defined(USICRYPT_NTTL)
 
+#include <nettle/version.h>
+
+#if NETTLE_VERSION_MAJOR > 3
+#define NETTLE_HAS_ED25519
+#elif NETTLE_VERSION_MAJOR == 3 && NETTLE_VERSION_MINOR >= 4
+#define NETTLE_HAS_ED25519
+#endif
+
 #include <nettle/yarrow.h>
 #include <nettle/pbkdf2.h>
 #include <nettle/hmac.h>
@@ -36,6 +44,9 @@
 #include <nettle/ecc.h>
 #include <nettle/dsa.h>
 #include <nettle/ecdsa.h>
+#ifdef NETTLE_HAS_ED25519
+#include <nettle/eddsa.h>
+#endif
 #include <nettle/curve25519.h>
 #include <nettle/aes.h>
 #include <nettle/chacha.h>
@@ -5442,6 +5453,200 @@ void USICRYPT(ec_free)(void *ctx,void *key)
 	free(ec);
 #endif
 }
+
+#ifdef NETTLE_HAS_ED25519
+
+struct nttl_ed25519
+{
+	unsigned char key[32];
+	unsigned char pub[32];
+};
+
+static const unsigned char nttl_ed25519_asn1_pub[12]=
+{
+	0x30,0x2a,0x30,0x05,0x06,0x03,0x2b,0x65,
+	0x70,0x03,0x21,0x00
+};
+
+static const unsigned char nttl_ed25519_asn1_key[16]=
+{
+	0x30,0x2e,0x02,0x01,0x00,0x30,0x05,0x06,
+	0x03,0x2b,0x65,0x70,0x04,0x22,0x04,0x20
+};
+
+void *USICRYPT(ed25519_generate)(void *ctx)
+{
+#ifndef USICRYPT_NO_ED25519
+	struct nttl_ed25519 *key;
+
+	if(U(!(key=malloc(sizeof(struct nttl_ed25519)))))goto err1;
+	yarrow256_random(&((struct usicrypt_thread *)ctx)->rng,
+		sizeof(key->key),key->key);
+	ed25519_sha512_public_key(key->pub,key->key);
+err1:	return key;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed25519_get_pub)(void *ctx,void *key,int *len)
+{
+#ifndef USICRYPT_NO_ED25519
+	unsigned char *data=NULL;
+	struct nttl_ed25519 *k=key;
+
+	*len=sizeof(nttl_ed25519_asn1_pub)+32;
+	if(U(!(data=malloc(*len))))goto err1;
+	memcpy(data,nttl_ed25519_asn1_pub,sizeof(nttl_ed25519_asn1_pub));
+	memcpy(data+sizeof(nttl_ed25519_asn1_pub),k->pub,32);
+err1:	return data;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed25519_set_pub)(void *ctx,void *key,int len)
+{
+#ifndef USICRYPT_NO_ED25519
+	struct nttl_ed25519 *k=NULL;
+
+	if(U(len<sizeof(nttl_ed25519_asn1_pub)+32)||
+	    U(memcmp(key,nttl_ed25519_asn1_pub,sizeof(nttl_ed25519_asn1_pub))))
+		 goto err1;
+	if(U(!(k=malloc(sizeof(struct nttl_ed25519)))))goto err1;
+	USICRYPT(do_memclear)(k->key,sizeof(k->key));
+	memcpy(k->pub,key+sizeof(nttl_ed25519_asn1_pub),sizeof(k->pub));
+err1:	return k;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed25519_get_key)(void *ctx,void *key,int *len)
+{
+#ifndef USICRYPT_NO_ED25519
+	unsigned char *data=NULL;
+	struct nttl_ed25519 *k=key;
+	
+	*len=sizeof(nttl_ed25519_asn1_key)+32;
+	if(U(!(data=malloc(*len))))goto err1;
+	memcpy(data,nttl_ed25519_asn1_key,sizeof(nttl_ed25519_asn1_key));
+	memcpy(data+sizeof(nttl_ed25519_asn1_key),k->key,32);
+err1:	return data;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed25519_set_key)(void *ctx,void *key,int len)
+{
+#ifndef USICRYPT_NO_ED25519
+	struct nttl_ed25519 *k=NULL;
+
+	if(U(len<sizeof(nttl_ed25519_asn1_key)+32)||
+	    U(memcmp(key,nttl_ed25519_asn1_key,sizeof(nttl_ed25519_asn1_key))))
+		 goto err1;
+	if(U(!(k=malloc(sizeof(struct nttl_ed25519)))))goto err1;
+	memcpy(k->key,key+sizeof(nttl_ed25519_asn1_key),sizeof(k->key));
+	ed25519_sha512_public_key(k->pub,k->key);
+err1:	return k;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed25519_sign)(void *ctx,void *key,void *data,int dlen,int *slen)
+{
+#ifndef USICRYPT_NO_ED25519
+	unsigned char *sig=NULL;
+
+	*slen=64;
+	if(U(!(sig=malloc(*slen))))goto err1;
+	ed25519_sha512_sign(((struct nttl_ed25519 *)key)->pub,
+		((struct nttl_ed25519 *)key)->key,dlen,data,sig);
+err1:	return sig;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed25519_sign_iov)(void *ctx,void *key,struct usicrypt_iov *iov,
+	int niov,int *slen)
+{
+#if !defined(USICRYPT_NO_ED25519) && !defined(USICRYPT_NO_IOV)
+	unsigned char *sig;
+	int i;
+	int len; 
+	unsigned char *data;
+	unsigned char *p;
+	
+	*slen=64;
+	for(len=0,i=0;i<niov;i++)len+=iov[i].length;
+	if(U(!(sig=malloc(*slen))))goto err1;
+	if(U(!(data=malloc(len))))goto err2;
+	for(p=data,i=0;i<niov;p+=iov[i++].length)
+		memcpy(p,iov[i].data,iov[i].length);
+	ed25519_sha512_sign(((struct nttl_ed25519 *)key)->pub,
+		((struct nttl_ed25519 *)key)->key,len,data,sig);
+	((struct usicrypt_thread *)ctx)->global->memclear(data,sizeof(len));
+	free(data);
+	return sig;
+
+err2:	free(sig);
+err1:	return NULL;
+#else
+	return NULL;
+#endif
+}
+
+int USICRYPT(ed25519_verify)(void *ctx,void *key,void *data,int dlen,void *sig,
+	int slen)
+{
+#ifndef USICRYPT_NO_ED25519
+	if(slen!=64)return -1;
+	if(!ed25519_sha512_verify(((struct nttl_ed25519 *)key)->pub,dlen,data,
+		sig))return -1;
+	return 0;
+#else
+	return -1;
+#endif
+}
+
+int USICRYPT(ed25519_verify_iov)(void *ctx,void *key,struct usicrypt_iov *iov,
+	int niov,void *sig,int slen)
+{
+#if !defined(USICRYPT_NO_ED25519) && !defined(USICRYPT_NO_IOV)
+	int err=-1;
+	int i;
+	int len; 
+	unsigned char *data;
+	unsigned char *p;
+	
+	if(slen!=64)return -1;
+	for(len=0,i=0;i<niov;i++)len+=iov[i].length;
+	if(U(!(data=malloc(len))))goto err1;
+	for(p=data,i=0;i<niov;p+=iov[i++].length)
+		memcpy(p,iov[i].data,iov[i].length);
+	if(ed25519_sha512_verify(((struct nttl_ed25519 *)key)->pub,len,data,
+		sig))err=0;
+	((struct usicrypt_thread *)ctx)->global->memclear(data,sizeof(len));
+	free(data);
+err1:	return err;
+#else
+	return -1;
+#endif
+}
+
+void USICRYPT(ed25519_free)(void *ctx,void *key)
+{
+#ifndef USICRYPT_NO_ED25519
+	((struct usicrypt_thread *)ctx)->global->memclear(key,
+		sizeof(struct nttl_ed25519));
+	free(key);
+#endif
+}
+
+#endif
 
 void *USICRYPT(x25519_generate)(void *ctx)
 {

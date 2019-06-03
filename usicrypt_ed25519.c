@@ -22,6 +22,15 @@
 #endif
 #endif
 
+#ifdef USICRYPT_NTTL
+#include <nettle/version.h>
+#if NETTLE_VERSION_MAJOR > 3
+#define USICRYPT_ORLP25519
+#elif NETTLE_VERSION_MAJOR == 3 && NETTLE_VERSION_MINOR >= 4
+#define USICRYPT_ORLP25519
+#endif
+#endif
+
 #endif
 
 #ifndef USICRYPT_ORLP25519
