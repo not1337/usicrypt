@@ -83,7 +83,7 @@ Implementation Overview:
 |                         |OpenSSL|LibreSSL|mbedTLS|wolfSSL|Libgcrypt|Nettle|
 | ----------------------- | ----- | ------ | ----- | ----- | ------- | ---- |
 |                         |1.0.2k/|2.4.5/  |2.4.2/ |3.10.2/|         |      |
-|                         |1.1.0e |2.5.3   |2.12.0 |3.15.0 |1.7.6    |3.3   |
+|                         |1.1.0e |2.5.3   |2.12.0 |3.15.0 |1.7.6    |3.4   |
 | ----------------------- | ----- | ------ | ----- | ----- | ------- | ---- |
 |Random Numbers           |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  x   |
 |SHA1                     |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  x   |
@@ -130,9 +130,9 @@ Implementation Overview:
 |X25519 Generate          |  -/x  |  -/x   |  -/x  |  x/x  |    o    |  o   |
 |X25519 Export/Import     |  -/x  |  -/o   |  -/o  |  o/o  |    o    |  o   |
 |X25519 Key Agreement     |  -/x  |  -/x   |  -/x  |  x/x  |    o    |  o   |
-|ED25519 Generate         |  e/e  |  e/e   |  e/e  |  e/e  |    e    |  e   |
-|ED25519 Eport/Import     |  e/e  |  e/e   |  e/e  |  e/e  |    e    |  e   |
-|ED25519 Sign/Verify      |  e/e  |  e/e   |  e/e  |  e/e  |    e    |  e   |
+|ED25519 Generate         |  e/e  |  e/e   |  e/e  |  x/x  |    e    |  x   |
+|ED25519 Export/Import    |  e/e  |  e/e   |  e/e  | x!/x! |    e    |  x   |
+|ED25519 Sign/Verify      |  e/e  |  e/e   |  e/e  |  x/x  |    e    |  x   |
 |AES ECB                  |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  x   |
 |AES CBC                  |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  x   |
 |AES CTS                  |  x/x  |  x/x   |  o/o  |  o/o  |    x    |  o   |
@@ -162,13 +162,13 @@ Implementation Overview:
 x = native support
 o = available, no native support
 - = not available
-! = bug workaround included
+! = bug workaround included, fixes for ED25519 use code from
+    https://github.com/orlp/ed25519
 b = Brainpool curves not available
 m = tag size minimum is 12
 B = broken implementation, no interoperability and thus not usable
 e = currently uses implementation from https://github.com/orlp/ed25519,
     OpenSSL starting with 1.1.1 uses native implementation
-    Nettle starting with 3.4 uses native implementation
 
 For details see the file usicrypt.h which includes all function prototypes
 as well as parameter documentation.
