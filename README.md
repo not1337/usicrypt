@@ -244,7 +244,7 @@ specification whatsoever. It's no wonder that Libgcrypt is not in
 wide use. Adding an ASN.1/DER based interface is what is required for
 real world use. To add to the problem, all required support routines
 e.g. for padding are not exported and only available through the
-public key mess and thus out of reach. The only solution here was
+public key mess and thus are out of reach. The only solution here was
 to use the low level mpi interface and from there on to reinvent the
 wheel from scratch. This, however, causes another problem as
 Libgcrypt offers no API for blinding, thus private key operations
@@ -252,6 +252,9 @@ are not protected against timing and similar attacks.
 And, yes, the mpi interface of Libgcrypt is nearly as slow as a dead
 horse and the prime generator is, well, worse than that and simply
 not usable at all.
+For those reasons the allegedly available ed25519 functionality will
+be ignored and the replacement as stated above will be permanently
+used.
 
 Nettle Note:
 ------------
