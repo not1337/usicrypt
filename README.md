@@ -131,7 +131,7 @@ Implementation Overview:
 |X25519 Export/Import     |  -/x  |  -/o   |  -/o  |  o/o  |    o    |  o   |
 |X25519 Key Agreement     |  -/x  |  -/x   |  -/x  |  x/x  |    o    |  o   |
 |ED25519 Generate         |  e/e  |  e/e   |  e/e  |  x/x  |    e    |  x   |
-|ED25519 Export/Import    |  e/e  |  e/e   |  e/e  | x!/x! |    e    |  x   |
+|ED25519 Export/Import    |  e/e  |  e/e   |  e/e  | o!/o! |    e    |  o   |
 |ED25519 Sign/Verify      |  e/e  |  e/e   |  e/e  |  x/x  |    e    |  x   |
 |AES ECB                  |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  x   |
 |AES CBC                  |  x/x  |  x/x   |  x/x  |  x/x  |    x    |  x   |
