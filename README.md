@@ -198,7 +198,9 @@ can be an attack vector in detecting which library is in use.
 In addition the necessary X25519 public from private function
 is missing from the headers though it is not declared static.
 LibreSSL is broken with regard to ED25519 as keys in portable format
-can't be loaded (RFC8410, anybody?).
+can't be loaded (RFC8410, anybody?). Maybe it is a good thing that
+it anyway can't be easily compiled in and that there are no
+headers.
 In general I did see a few locations where LibreSSL leaks memory
 when a function fails so there's probably quite some more similar
 problems.
