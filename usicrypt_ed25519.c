@@ -31,6 +31,10 @@
 #endif
 #endif
 
+#ifdef USICRYPT_WOLF
+#define USICRYPT_ORLP25519
+#endif
+
 #endif
 
 #ifndef USICRYPT_ORLP25519

@@ -10,9 +10,9 @@
 
 /*
 3.10.2
---enable-aesccm --enable-aesni --enable-intelasm --enable-hkdf --enable-keygen --enable-pwdbased --enable-ecccustcurves --enable-cmac --enable-camellia --enable-curve25519 CFLAGS="-DHAVE_ECC_BRAINPOOL -DHAVE_AES_ECB -DWOLFSSL_AES_COUNTER"
+--enable-aesccm --enable-aesni --enable-intelasm --enable-hkdf --enable-keygen --enable-pwdbased --enable-ecccustcurves --enable-cmac --enable-camellia --enable-curve25519 --enable-ed25519 CFLAGS="-DHAVE_ECC_BRAINPOOL -DHAVE_AES_ECB -DWOLFSSL_AES_COUNTER"
 3.15.0
---enable-aesccm --enable-aesctr --enable-aesni --enable-intelasm --enable-hkdf --enable-keygen --enable-pwdbased --enable-rsapss --enable-ecccustcurves --enable-cmac --enable-camellia --enable-curve25519 CFLAGS="-DHAVE_ECC_BRAINPOOL -DHAVE_AES_ECB -DWOLFSSL_AES_COUNTER -DWOLFSSL_PUBLIC_MP -DHAVE_INTEL_RDRAND"
+--enable-aesccm --enable-aesctr --enable-aesni --enable-intelasm --enable-hkdf --enable-keygen --enable-pwdbased --enable-rsapss --enable-ecccustcurves --enable-cmac --enable-camellia --enable-curve25519 --enable-ed25519 CFLAGS="-DHAVE_ECC_BRAINPOOL -DHAVE_AES_ECB -DWOLFSSL_AES_COUNTER -DWOLFSSL_PUBLIC_MP -DHAVE_INTEL_RDRAND"
 */
 
 /******************************************************************************/
@@ -43,6 +43,7 @@
 #include <wolfssl/wolfcrypt/dh.h>
 #include <wolfssl/wolfcrypt/ecc.h>
 #include <wolfssl/wolfcrypt/curve25519.h>
+#include <wolfssl/wolfcrypt/ed25519.h>
 #include <wolfssl/wolfcrypt/asn_public.h>
 #include <wolfssl/wolfcrypt/aes.h>
 #include <wolfssl/wolfcrypt/cmac.h>
@@ -73,6 +74,21 @@
 /******************************************************************************/
 /*				 wolfSSL				    */
 /******************************************************************************/
+
+/* workaround for library deficiency and type clash */
+
+#ifndef USICRYPT_NO_ED25519
+
+typedef int32_t xfe[10];
+
+typedef struct {
+  xfe X;
+  xfe Y;
+  xfe Z;
+  xfe T;
+} xge_p3;
+
+#endif
 
 struct wolf_dh
 {
@@ -520,6 +536,21 @@ static const struct
 	{ECC_SECP521R1,0x05,{0x2B,0x81,0x04,0x00,0x23}},
 	{ECC_SECP384R1,0x05,{0x2B,0x81,0x04,0x00,0x22}},
 	{ECC_SECP256R1,0x08,{0x2A,0x86,0x48,0xCE,0x3D,0x03,0x01,0x07}}
+};
+
+#endif
+#ifndef USICRYPT_NO_ED25519
+
+static const unsigned char wolf_ed25519_asn1_pub[12]=
+{
+	0x30,0x2a,0x30,0x05,0x06,0x03,0x2b,0x65,
+	0x70,0x03,0x21,0x00
+};
+
+static const unsigned char wolf_ed25519_asn1_key[16]=
+{
+	0x30,0x2e,0x02,0x01,0x00,0x30,0x05,0x06,
+	0x03,0x2b,0x65,0x70,0x04,0x22,0x04,0x20
 };
 
 #endif
@@ -4384,6 +4415,218 @@ void USICRYPT(ec_free)(void *ctx,void *key)
 {
 #ifndef USICRYPT_NO_EC
 	wc_ecc_free((ecc_key *)key);
+	free(key);
+#endif
+}
+
+void *USICRYPT(ed25519_generate)(void *ctx)
+{
+#ifndef USICRYPT_NO_ED25519
+	ed25519_key *key;
+
+	if(U(!(key=malloc(sizeof(ed25519_key)))))goto err1;
+	if(U(wc_ed25519_init(key)))goto err2;
+	if(U(wc_ed25519_make_key(&((struct usicrypt_thread *)ctx)->rng,32,key)))
+		goto err2;
+	return key;
+
+err2:	free(key);
+err1:	return NULL;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed25519_get_pub)(void *ctx,void *key,int *len)
+{
+#ifndef USICRYPT_NO_ED25519
+	unsigned char *data;
+	word32 olen=32;
+
+	*len=sizeof(wolf_ed25519_asn1_pub)+32;
+	if(U(!(data=malloc(*len))))goto err1;
+	memcpy(data,wolf_ed25519_asn1_pub,sizeof(wolf_ed25519_asn1_pub));
+	if(U(wc_ed25519_export_public((ed25519_key *)key,
+		data+sizeof(wolf_ed25519_asn1_pub),&olen)))goto err2;
+	return data;
+
+err2:	free(data);
+err1:	return NULL;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed25519_set_pub)(void *ctx,void *key,int len)
+{
+#ifndef USICRYPT_NO_ED25519
+	ed25519_key *k;
+
+	if(U(len<sizeof(wolf_ed25519_asn1_pub)+32)||
+	    U(memcmp(key,wolf_ed25519_asn1_pub,sizeof(wolf_ed25519_asn1_pub))))
+		 goto err1;
+	if(U(!(k=malloc(sizeof(ed25519_key)))))goto err1;
+	if(U(wc_ed25519_init(k)))goto err2;
+	if(U(wc_ed25519_import_public(key+sizeof(wolf_ed25519_asn1_pub),32,k)))
+		goto err3;
+	return k;
+
+err3:	wc_ed25519_free(k);
+err2:	free(k);
+err1:	return NULL;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed25519_get_key)(void *ctx,void *key,int *len)
+{
+#ifndef USICRYPT_NO_ED25519
+	unsigned char *data;
+	word32 olen=32;
+
+	*len=sizeof(wolf_ed25519_asn1_key)+32;
+	if(U(!(data=malloc(*len))))goto err1;
+	memcpy(data,wolf_ed25519_asn1_key,sizeof(wolf_ed25519_asn1_key));
+	if(U(wc_ed25519_export_private_only((ed25519_key *)key,
+		data+sizeof(wolf_ed25519_asn1_key),&olen)))goto err2;
+	return data;
+
+err2:	free(data);
+err1:	return NULL;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed25519_set_key)(void *ctx,void *key,int len)
+{
+#ifndef USICRYPT_NO_ED25519
+	ed25519_key *k;
+	xge_p3 A;
+	unsigned char az[64];
+	unsigned char pub[32];
+	
+
+	if(U(len<sizeof(wolf_ed25519_asn1_key)+32)||
+	    U(memcmp(key,wolf_ed25519_asn1_key,sizeof(wolf_ed25519_asn1_key))))
+		 goto err1;
+	if(U(!(k=malloc(sizeof(ed25519_key)))))goto err1;
+	if(U(wc_ed25519_init(k)))goto err2;
+	wc_Sha512Hash(key+sizeof(wolf_ed25519_asn1_key),32,az);
+	az[0]&=248;
+	az[31]&=63;
+	az[31]|=64;
+	ge_scalarmult_base((void *)&A,az);
+	ge_p3_tobytes(pub,(void *)&A);
+	if(U(wc_ed25519_import_private_key(key+sizeof(wolf_ed25519_asn1_key),
+		32,pub,32,k)))goto err3;
+	return k;
+
+err3:	wc_ed25519_free(k);
+err2:	free(k);
+err1:	return NULL;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed25519_sign)(void *ctx,void *key,void *data,int dlen,int *slen)
+{
+#ifndef USICRYPT_NO_ED25519
+	unsigned char *sig=NULL;
+	word32 olen=64;
+
+	*slen=64;
+	if(U(!(sig=malloc(*slen))))goto err1;
+	if(U(wc_ed25519_sign_msg(data,dlen,sig,&olen,(ed25519_key *)key)))
+		goto err2;
+	return sig;
+
+err2:	free(sig);
+err1:	return NULL;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed25519_sign_iov)(void *ctx,void *key,struct usicrypt_iov *iov,
+	int niov,int *slen)
+{
+#if !defined(USICRYPT_NO_ED25519) && !defined(USICRYPT_NO_IOV)
+	unsigned char *sig;
+	int i;
+	int len;
+	unsigned char *data;
+	unsigned char *p;
+	word32 olen=64;
+
+	*slen=64;
+	for(len=0,i=0;i<niov;i++)len+=iov[i].length;
+	if(U(!(sig=malloc(*slen))))goto err1;
+	if(U(!(data=malloc(len))))goto err2;
+	for(p=data,i=0;i<niov;p+=iov[i++].length)
+		memcpy(p,iov[i].data,iov[i].length);
+	if(U(wc_ed25519_sign_msg(data,len,sig,&olen,(ed25519_key *)key)))
+		goto err3;
+	((struct usicrypt_thread *)ctx)->global->memclear(data,sizeof(len));
+	free(data);
+	return sig;
+
+err3:	((struct usicrypt_thread *)ctx)->global->memclear(data,sizeof(len));
+	free(data);
+err2:	free(sig);
+err1:	return NULL;
+#else
+	return NULL;
+#endif
+}
+
+int USICRYPT(ed25519_verify)(void *ctx,void *key,void *data,int dlen,void *sig,
+        int slen)
+{
+#ifndef USICRYPT_NO_ED25519
+	int r;
+
+	if(slen!=64)return -1;
+	if(wc_ed25519_verify_msg(sig,64,data,dlen,&r,(ed25519_key *)key)||!r)
+		return -1;
+	return 0;
+#else
+	return -1;
+#endif
+}
+
+int USICRYPT(ed25519_verify_iov)(void *ctx,void *key,struct usicrypt_iov *iov,
+	int niov,void *sig,int slen)
+{
+#if !defined(USICRYPT_NO_ED25519) && !defined(USICRYPT_NO_IOV)
+	int err=-1;
+	int i;
+	int r;
+	int len;
+	unsigned char *data;
+	unsigned char *p;
+
+	if(slen!=64)return -1;
+	for(len=0,i=0;i<niov;i++)len+=iov[i].length;
+	if(U(!(data=malloc(len))))goto err1;
+	for(p=data,i=0;i<niov;p+=iov[i++].length)
+		memcpy(p,iov[i].data,iov[i].length);
+	if(!wc_ed25519_verify_msg(sig,64,data,len,&r,(ed25519_key *)key)&&r)
+		err=0;
+	((struct usicrypt_thread *)ctx)->global->memclear(data,sizeof(len));
+	free(data);
+err1:	return err;
+#else
+	return -1;
+#endif
+}
+
+void USICRYPT(ed25519_free)(void *ctx,void *key)
+{
+#ifndef USICRYPT_NO_ED25519
+	wc_ed25519_free((ed25519_key *)key);
 	free(key);
 #endif
 }
