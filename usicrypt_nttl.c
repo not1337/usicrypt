@@ -94,6 +94,14 @@ struct nttl_ec
 	struct ecc_point pub;
 };
 
+#ifdef NETTLE_HAS_ED25519
+struct nttl_ed25519
+{
+	unsigned char key[ED25519_KEY_SIZE];
+	unsigned char pub[ED25519_KEY_SIZE];
+};
+#endif
+
 struct nttl_x25519
 {
 	unsigned char pub[CURVE25519_SIZE];
@@ -855,6 +863,23 @@ static const struct
 	}
 };
 
+#endif
+#ifdef NETTLE_HAS_ED25519
+#ifndef USICRYPT_NO_ED25519
+
+static const unsigned char nttl_ed25519_asn1_pub[12]=
+{
+	0x30,0x2a,0x30,0x05,0x06,0x03,0x2b,0x65,
+	0x70,0x03,0x21,0x00
+};
+
+static const unsigned char nttl_ed25519_asn1_key[16]=
+{
+	0x30,0x2e,0x02,0x01,0x00,0x30,0x05,0x06,
+	0x03,0x2b,0x65,0x70,0x04,0x22,0x04,0x20
+};
+
+#endif
 #endif
 #ifndef USICRYPT_NO_X25519
 
@@ -5455,24 +5480,6 @@ void USICRYPT(ec_free)(void *ctx,void *key)
 }
 
 #ifdef NETTLE_HAS_ED25519
-
-struct nttl_ed25519
-{
-	unsigned char key[32];
-	unsigned char pub[32];
-};
-
-static const unsigned char nttl_ed25519_asn1_pub[12]=
-{
-	0x30,0x2a,0x30,0x05,0x06,0x03,0x2b,0x65,
-	0x70,0x03,0x21,0x00
-};
-
-static const unsigned char nttl_ed25519_asn1_key[16]=
-{
-	0x30,0x2e,0x02,0x01,0x00,0x30,0x05,0x06,
-	0x03,0x2b,0x65,0x70,0x04,0x22,0x04,0x20
-};
 
 void *USICRYPT(ed25519_generate)(void *ctx)
 {
