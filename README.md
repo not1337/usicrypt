@@ -168,6 +168,7 @@ m = tag size minimum is 12
 B = broken implementation, no interoperability and thus not usable
 e = currently uses implementation from https://github.com/orlp/ed25519,
     OpenSSL starting with 1.1.1 uses native implementation
+    Nettle starting with 3.4 uses native implementation
 
 For details see the file usicrypt.h which includes all function prototypes
 as well as parameter documentation.
