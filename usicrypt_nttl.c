@@ -5595,7 +5595,7 @@ void *USICRYPT(ed25519_sign_iov)(void *ctx,void *key,struct usicrypt_iov *iov,
 		memcpy(p,iov[i].data,iov[i].length);
 	ed25519_sha512_sign(((struct nttl_ed25519 *)key)->pub,
 		((struct nttl_ed25519 *)key)->key,len,data,sig);
-	((struct usicrypt_thread *)ctx)->global->memclear(data,sizeof(len));
+	((struct usicrypt_thread *)ctx)->global->memclear(data,len);
 	free(data);
 	return sig;
 
@@ -5636,7 +5636,7 @@ int USICRYPT(ed25519_verify_iov)(void *ctx,void *key,struct usicrypt_iov *iov,
 		memcpy(p,iov[i].data,iov[i].length);
 	if(ed25519_sha512_verify(((struct nttl_ed25519 *)key)->pub,len,data,
 		sig))err=0;
-	((struct usicrypt_thread *)ctx)->global->memclear(data,sizeof(len));
+	((struct usicrypt_thread *)ctx)->global->memclear(data,len);
 	free(data);
 err1:	return err;
 #else
