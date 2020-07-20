@@ -58,6 +58,10 @@ enabled in include/mbedtls/config.h:
 #include <mbedtls/chachapoly.h>
 #endif
 
+#ifndef MBEDTLS_PK_SIGNATURE_MAX_SIZE
+#define MBEDTLS_PK_SIGNATURE_MAX_SIZE 1024
+#endif
+
 #ifdef USICRYPT
 #undef USICRYPT
 #endif
@@ -883,12 +887,12 @@ static void *mbed_ec_do_sign(void *ctx,int md,void *key,void *data,int dlen,
 {
 	int i;
 	int type;
-	size_t len=1024;
+	size_t len=MBEDTLS_PK_SIGNATURE_MAX_SIZE;
 	unsigned char *r=NULL;
 	struct usicrypt_iov *iov=data;
 	mbedtls_md_context_t c;
 	unsigned char hash[MBEDTLS_MD_MAX_SIZE];
-	unsigned char sig[1024];
+	unsigned char sig[MBEDTLS_PK_SIGNATURE_MAX_SIZE];
 
 	switch(md)
 	{
@@ -4046,7 +4050,9 @@ err1:	return NULL;
 void *USICRYPT(x25519_derive)(void *ctx,void *key,void *pub,int *klen)
 {
 #if !defined(USICRYPT_NO_X25519) && MBEDTLS_VERSION_NUMBER >= 0x02050000
+#if MBEDTLS_VERSION_NUMBER < 0x02160000
 	int i;
+#endif
 	size_t len;
 	unsigned char *sec;
 	mbedtls_ecdh_context ecdh;
@@ -4063,7 +4069,11 @@ void *USICRYPT(x25519_derive)(void *ctx,void *key,void *pub,int *klen)
 		goto err1;
 	*klen=len;
 	if(U(!(sec=malloc(*klen))))goto err2;
+#if MBEDTLS_VERSION_NUMBER >= 0x02160000
+	memcpy(sec,bfr,len);
+#else
 	for(i=0;i<len;i++)sec[len-i-1]=bfr[i];
+#endif
 	((struct usicrypt_thread *)ctx)->global->memclear(bfr,len);
 	mbedtls_ecdh_free(&ecdh);
 	return sec;
@@ -4102,7 +4112,31 @@ err1:	return NULL;
 
 void *USICRYPT(x25519_set_pub)(void *ctx,void *key,int len)
 {
-#if !defined(USICRYPT_NO_X25519) && MBEDTLS_VERSION_NUMBER >= 0x02050000
+#if !defined(USICRYPT_NO_X25519) && MBEDTLS_VERSION_NUMBER >= 0x02160000
+	mbedtls_pk_context *k;
+	mbedtls_ecp_keypair *ec;
+
+	if(U(len<sizeof(mbed_x25519_asn1_pub)+32)||
+	    U(memcmp(key,mbed_x25519_asn1_pub,sizeof(mbed_x25519_asn1_pub))))
+		goto err1;
+	if(U(!(k=malloc(sizeof(mbedtls_pk_context)))))goto err1;
+	mbedtls_pk_init(k);
+	if(U(mbedtls_pk_setup(k,mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY))))
+		goto err2;
+	ec=mbedtls_pk_ec(*((mbedtls_pk_context *)k));
+	mbedtls_ecp_keypair_init(ec);
+	if(U(mbedtls_ecp_group_load(&ec->grp,MBEDTLS_ECP_DP_CURVE25519)))
+		goto err3;
+	if(U(mbedtls_ecp_point_read_binary(&ec->grp,&ec->Q,
+		((unsigned char *)key)+sizeof(mbed_x25519_asn1_pub),32)))
+			goto err3;
+	if(U(mbedtls_ecp_check_pubkey(&ec->grp,&ec->Q)))goto err3;
+	return k;
+
+err3:	mbedtls_pk_free(k);
+err2:	free(k);
+err1:	return NULL;
+#elif !defined(USICRYPT_NO_X25519) && MBEDTLS_VERSION_NUMBER >= 0x02050000
 	int i;
 	mbedtls_pk_context *k;
 	mbedtls_ecp_keypair *ec;
@@ -4163,7 +4197,33 @@ err1:	return NULL;
 
 void *USICRYPT(x25519_set_key)(void *ctx,void *key,int len)
 {
-#if !defined(USICRYPT_NO_X25519) && MBEDTLS_VERSION_NUMBER >= 0x02050000
+#if !defined(USICRYPT_NO_X25519) && MBEDTLS_VERSION_NUMBER >= 0x02160000
+	mbedtls_pk_context *k;
+	mbedtls_ecp_keypair *ec;
+
+	if(U(len<sizeof(mbed_x25519_asn1_key)+32)||
+	    U(memcmp(key,mbed_x25519_asn1_key,sizeof(mbed_x25519_asn1_key))))
+		goto err1;
+	if(U(!(k=malloc(sizeof(mbedtls_pk_context)))))goto err1;
+	mbedtls_pk_init(k);
+	if(U(mbedtls_pk_setup(k,mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY))))
+		goto err2;
+	ec=mbedtls_pk_ec(*((mbedtls_pk_context *)k));
+	mbedtls_ecp_keypair_init(ec);
+	if(U(mbedtls_ecp_read_key(MBEDTLS_ECP_DP_CURVE25519,ec,
+		((unsigned char *)key)+sizeof(mbed_x25519_asn1_key),32)))
+			goto err3;
+	if(U(mbedtls_ecp_check_privkey(&ec->grp,&ec->d)))goto err3;
+	if(U(mbedtls_ecp_mul(&ec->grp,&ec->Q,&ec->d,&ec->grp.G,
+		mbedtls_hmac_drbg_random,
+		&((struct usicrypt_thread *)ctx)->rng)))goto err3;
+	((struct usicrypt_thread *)ctx)->global->memclear(key,len);
+	return k;
+
+err3:	mbedtls_pk_free(k);
+err2:	free(k);
+err1:	((struct usicrypt_thread *)ctx)->global->memclear(key,len);
+#elif !defined(USICRYPT_NO_X25519) && MBEDTLS_VERSION_NUMBER >= 0x02050000
 	int i;
 	mbedtls_pk_context *k;
 	mbedtls_ecp_keypair *ec;

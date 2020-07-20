@@ -261,23 +261,23 @@ struct xssl_camellia_essiv
 
 #if defined(LIBRESSL_VERSION_NUMBER) && !defined(USICRYPT_NO_PBKDF2)
 
-static const unsigned char const xssl_pbes2_oid[9]=
+static const unsigned char xssl_pbes2_oid[9]=
 {
 	0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x05,0x0d
 };
 
-static const unsigned char const xssl_pbkdf2_oid[9]=
+static const unsigned char xssl_pbkdf2_oid[9]=
 {
 	0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x05,0x0c
 };
 
 static const struct
 {
-	const int const digest;
-	const int const oidlen;
-	const unsigned char const oid[0x08];
+	const int digest;
+	const int oidlen;
+	const unsigned char oid[0x08];
 
-} const xssl_digest_asn[4]=
+} xssl_digest_asn[4]=
 {
 	{
 #ifndef USICRYPT_NO_SHA1
@@ -307,14 +307,14 @@ static const struct
 
 static const struct
 {
-	const unsigned int const cipher:9;
-	const unsigned int const mode:4;
-	const unsigned int const pad:1;
-	const unsigned int const bits:9;
-	const unsigned int const ivlen:5;
-	const unsigned int const oidlen:4;
-	const unsigned char const oid[0x0b];
-} const xssl_cipher_asn[24]=
+	const unsigned int cipher:9;
+	const unsigned int mode:4;
+	const unsigned int pad:1;
+	const unsigned int bits:9;
+	const unsigned int ivlen:5;
+	const unsigned int oidlen:4;
+	const unsigned char oid[0x0b];
+} xssl_cipher_asn[24]=
 {
 	{
 #if !defined(USICRYPT_NO_AES) && !defined(USICRYPT_NO_ECB)

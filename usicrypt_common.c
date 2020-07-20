@@ -192,12 +192,11 @@ static int USICRYPT(get_random)(void *data,int len)
 	if(!len)return 0;
 	if(len<8)
 	{
-		if((features&4)&&L(!USICRYPT(rdseed)(&tmp)))
-			for(;len;len--,ptr++,tmp>>=8)
-				*ptr++=(unsigned char)tmp;
-		else if((features&2)&&L(!USICRYPT(rdrand)(&tmp)))
-			for(;len;len--,ptr++,tmp>>=8)
-				*ptr++=(unsigned char)tmp;
+		if((features&4)&&!USICRYPT(rdseed)(&tmp))
+			for(;len;len--,tmp>>=8)*ptr++=(unsigned char)tmp;
+		if(!len)return 0;
+		if((features&2)&&!USICRYPT(rdrand)(&tmp))
+			for(;len;len--,tmp>>=8)*ptr++=(unsigned char)tmp;
 		if(!len)return 0;
 	}
 	return USICRYPT(osrandom)(ptr,len);

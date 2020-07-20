@@ -32,6 +32,14 @@
 #define NETTLE_HAS_ED25519
 #endif
 
+#if NETTLE_VERSION_MAJOR > 3
+#define NETTLE_USES_CURVE_FUNC
+#define NETTLE_AES_WORKAROUND
+#elif NETTLE_VERSION_MAJOR == 3 && NETTLE_VERSION_MINOR >= 5
+#define NETTLE_USES_CURVE_FUNC
+#define NETTLE_AES_WORKAROUND
+#endif
+
 #include <nettle/yarrow.h>
 #include <nettle/pbkdf2.h>
 #include <nettle/hmac.h>
@@ -107,6 +115,98 @@ struct nttl_x25519
 	unsigned char pub[CURVE25519_SIZE];
 	unsigned char key[CURVE25519_SIZE];
 };
+
+#ifdef NETTLE_AES_WORKAROUND
+
+struct usicrypt_aes_ctx
+{
+	unsigned key_size;
+	union
+	{
+		struct aes128_ctx ctx128;
+		struct aes192_ctx ctx192;
+		struct aes256_ctx ctx256;
+	};
+};
+
+static inline void usicrypt_aes_set_encrypt_key(struct usicrypt_aes_ctx *ctx,
+	size_t length,const uint8_t *key)
+{
+	switch(length)
+	{
+	case 16:ctx->key_size=length;
+		aes128_set_encrypt_key(&ctx->ctx128,key);
+		break;
+	case 24:ctx->key_size=length;
+		aes192_set_encrypt_key(&ctx->ctx192,key);
+		break;
+	case 32:ctx->key_size=length;
+		aes256_set_encrypt_key(&ctx->ctx256,key);
+		break;
+	default:ctx->key_size=0;
+	}
+}
+
+static inline void usicrypt_aes_set_decrypt_key(struct usicrypt_aes_ctx *ctx,
+	size_t length,const uint8_t *key)
+{
+	switch(length)
+	{
+	case 16:ctx->key_size=length;
+		aes128_set_decrypt_key(&ctx->ctx128,key);
+		break;
+	case 24:ctx->key_size=length;
+		aes192_set_decrypt_key(&ctx->ctx192,key);
+		break;
+	case 32:ctx->key_size=length;
+		aes256_set_decrypt_key(&ctx->ctx256,key);
+		break;
+	default:ctx->key_size=0;
+	}
+}
+
+static inline void usicrypt_aes_encrypt(const struct usicrypt_aes_ctx *ctx,
+	size_t length,uint8_t *dst,const uint8_t *src)
+{
+	switch(ctx->key_size)
+	{
+	case 16:aes128_encrypt(&ctx->ctx128,length,dst,src);
+		break;
+	case 24:aes192_encrypt(&ctx->ctx192,length,dst,src);
+		break;
+	case 32:aes256_encrypt(&ctx->ctx256,length,dst,src);
+		break;
+	}
+}
+
+static inline void usicrypt_aes_decrypt(const struct usicrypt_aes_ctx *ctx,
+	size_t length,uint8_t *dst,const uint8_t *src)
+{
+	switch(ctx->key_size)
+	{
+	case 16:aes128_decrypt(&ctx->ctx128,length,dst,src);
+		break;
+	case 24:aes192_decrypt(&ctx->ctx192,length,dst,src);
+		break;
+	case 32:aes256_decrypt(&ctx->ctx256,length,dst,src);
+		break;
+	}
+}
+
+#define aes_ctx usicrypt_aes_ctx
+#define nttl_aes_set_encrypt_key usicrypt_aes_set_encrypt_key
+#define nttl_aes_set_decrypt_key usicrypt_aes_set_decrypt_key
+#define nttl_aes_encrypt usicrypt_aes_encrypt
+#define nttl_aes_decrypt usicrypt_aes_decrypt
+
+#else
+
+#define nttl_aes_set_encrypt_key aes_set_encrypt_key
+#define nttl_aes_set_decrypt_key aes_set_decrypt_key
+#define nttl_aes_encrypt aes_encrypt
+#define nttl_aes_decrypt aes_decrypt
+
+#endif
 
 struct nttl_aes_ecb
 {
@@ -755,8 +855,12 @@ static const unsigned char nttl_ec_k1h1[4]=
 };
 
 static const struct
-{       
+{
+#ifdef NETTLE_USES_CURVE_FUNC
+	const struct ecc_curve *(*curve)(void);
+#else
 	const struct ecc_curve *curve;
+#endif
 	const int publen;
 	const int kmax;
 	const int xylen;
@@ -817,7 +921,11 @@ static const struct
 		}
 	},
 	{
+#ifdef NETTLE_USES_CURVE_FUNC
+		nettle_get_secp_521r1,
+#else
 		&nettle_secp_521r1,
+#endif
 		158,0x42,0x85,0x19,16,0x05,
 		{0x2b,0x81,0x04,0x00,0x23},
 		{
@@ -832,7 +940,11 @@ static const struct
 		}
 	},
 	{
+#ifdef NETTLE_USES_CURVE_FUNC
+		nettle_get_secp_384r1,
+#else
 		&nettle_secp_384r1,
+#endif
 		120,0x30,0x61,0x17,14,0x05,
 		{0x2b,0x81,0x04,0x00,0x22},
 		{
@@ -846,7 +958,11 @@ static const struct
 		}
 	},
 	{
+#ifdef NETTLE_USES_CURVE_FUNC
+		nettle_get_secp_256r1,
+#else
 		&nettle_secp_256r1,
+#endif
 		91,0x20,0x41,0x1a,17,0x08,
 		{0x2a,0x86,0x48,0xce,0x3d,0x03,0x01,0x07},
 		{
@@ -1692,9 +1808,9 @@ static int nttl_aes_cmac(void *ctx,void *key,int klen,void *src,int slen,
 	unsigned char wrk[4][16];
 
 	if(U(klen&7))return -1;
-	aes_set_encrypt_key(&enc,klen>>3,key);
+	nttl_aes_set_encrypt_key(&enc,klen>>3,key);
 	memset(wrk,0,sizeof(wrk));
-	aes_encrypt(&enc,16,wrk[1],wrk[1]);
+	nttl_aes_encrypt(&enc,16,wrk[1],wrk[1]);
 	for(n=0,i=15;i>=0;i--,n>>=8)
 		wrk[2][i]=(unsigned char)(n|=(wrk[1][i]<<1));
 	if(n)wrk[2][15]^=0x87;
@@ -1704,7 +1820,7 @@ static int nttl_aes_cmac(void *ctx,void *key,int klen,void *src,int slen,
 	for(;slen>16;slen-=16,s+=16)
 	{
 		for(i=0;i<16;i++)wrk[0][i]^=s[i];
-		aes_encrypt(&enc,16,wrk[0],wrk[0]);
+		nttl_aes_encrypt(&enc,16,wrk[0],wrk[0]);
 	}
 	if(slen<16)for(i=0;i<16;i++)
 	{
@@ -1715,7 +1831,7 @@ static int nttl_aes_cmac(void *ctx,void *key,int klen,void *src,int slen,
 	}
 	else for(i=0;i<16;i++)wrk[1][i]=s[i]^wrk[2][i];
 	for(i=0;i<16;i++)wrk[0][i]^=wrk[1][i];
-	aes_encrypt(&enc,16,dst,wrk[0]);
+	nttl_aes_encrypt(&enc,16,dst,wrk[0]);
 	((struct usicrypt_thread *)ctx)->global->memclear(wrk,sizeof(wrk));
 	((struct usicrypt_thread *)ctx)->global->memclear(&enc,sizeof(enc));
 	return 0;
@@ -1740,9 +1856,9 @@ static int nttl_aes_cmac_iov(void *ctx,void *key,int klen,
 	unsigned char wrk[6][16];
 
 	if(U(klen&7))return -1;
-	aes_set_encrypt_key(&enc,klen>>3,key);
+	nttl_aes_set_encrypt_key(&enc,klen>>3,key);
 	memset(wrk,0,sizeof(wrk));
-	aes_encrypt(&enc,16,wrk[1],wrk[1]);
+	nttl_aes_encrypt(&enc,16,wrk[1],wrk[1]);
 	for(n=0,i=15;i>=0;i--,n>>=8)
 		wrk[2][i]=(unsigned char)(n|=(wrk[1][i]<<1));
 	if(n)wrk[2][15]^=0x87;
@@ -1767,7 +1883,7 @@ static int nttl_aes_cmac_iov(void *ctx,void *key,int klen,
 			if(r2==16)
 			{
 				for(i=0;i<16;i++)wrk[0][i]^=p1[i];
-				aes_encrypt(&enc,16,wrk[0],wrk[0]);
+				nttl_aes_encrypt(&enc,16,wrk[0],wrk[0]);
 				s=p1;
 				p1=p2;
 				p2=s;
@@ -1778,7 +1894,7 @@ static int nttl_aes_cmac_iov(void *ctx,void *key,int klen,
 	if(r2)
 	{
 		for(i=0;i<16;i++)wrk[0][i]^=p1[i];
-		aes_encrypt(&enc,16,wrk[0],wrk[0]);
+		nttl_aes_encrypt(&enc,16,wrk[0],wrk[0]);
 		s=p1;
 		p1=p2;
 		p2=s;
@@ -1793,7 +1909,7 @@ static int nttl_aes_cmac_iov(void *ctx,void *key,int klen,
 	}
 	else for(i=0;i<16;i++)wrk[1][i]=p1[i]^wrk[2][i];
 	for(i=0;i<16;i++)wrk[0][i]^=wrk[1][i];
-	aes_encrypt(&enc,16,dst,wrk[0]);
+	nttl_aes_encrypt(&enc,16,dst,wrk[0]);
 	((struct usicrypt_thread *)ctx)->global->memclear(wrk,sizeof(wrk));
 	((struct usicrypt_thread *)ctx)->global->memclear(&enc,sizeof(enc));
 	return 0;
@@ -1806,14 +1922,14 @@ static int nttl_aes_cmac_iov(void *ctx,void *key,int klen,
 static int nttl_aes_ecb_encrypt(void *ctx,void *src,int slen,void *dst)
 {
 	if(U(slen&0xf))return -1;
-	aes_encrypt(&((struct nttl_aes_ecb *)ctx)->enc,slen,dst,src);
+	nttl_aes_encrypt(&((struct nttl_aes_ecb *)ctx)->enc,slen,dst,src);
 	return 0;
 }
 
 static int nttl_aes_ecb_decrypt(void *ctx,void *src,int slen,void *dst)
 {
 	if(U(slen&0xf))return -1;
-	aes_decrypt(&((struct nttl_aes_ecb *)ctx)->dec,slen,dst,src);
+	nttl_aes_decrypt(&((struct nttl_aes_ecb *)ctx)->dec,slen,dst,src);
 	return 0;
 }
 
@@ -1824,8 +1940,8 @@ static void *nttl_aes_ecb_init(void *ctx,void *key,int klen)
 	if(U(klen&7))goto err1;
 	if(U(!(aes=malloc(sizeof(struct nttl_aes_ecb)))))goto err1;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
-	aes_set_encrypt_key(&aes->enc,klen>>3,key);
-	aes_set_decrypt_key(&aes->dec,klen>>3,key);
+	nttl_aes_set_encrypt_key(&aes->enc,klen>>3,key);
+	nttl_aes_set_decrypt_key(&aes->dec,klen>>3,key);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
 
@@ -1848,7 +1964,7 @@ static void nttl_aes_ecb_exit(void *ctx)
 static int nttl_aes_cbc_encrypt(void *ctx,void *src,int slen,void *dst)
 {
 	if(U(slen&0xf))return -1;
-	cbc_encrypt(&((struct nttl_aes_cbc *)ctx)->enc,(void *)aes_encrypt,
+	cbc_encrypt(&((struct nttl_aes_cbc *)ctx)->enc,(void *)nttl_aes_encrypt,
 		16,((struct nttl_aes_cbc *)ctx)->iv,slen,dst,src);
 	return 0;
 }
@@ -1856,7 +1972,7 @@ static int nttl_aes_cbc_encrypt(void *ctx,void *src,int slen,void *dst)
 static int nttl_aes_cbc_decrypt(void *ctx,void *src,int slen,void *dst)
 {
 	if(U(slen&0xf))return -1;
-	cbc_decrypt(&((struct nttl_aes_cbc *)ctx)->dec,(void *)aes_decrypt,
+	cbc_decrypt(&((struct nttl_aes_cbc *)ctx)->dec,(void *)nttl_aes_decrypt,
 		16,((struct nttl_aes_cbc *)ctx)->iv,slen,dst,src);
 	return 0;
 }
@@ -1868,8 +1984,8 @@ static void *nttl_aes_cbc_init(void *ctx,void *key,int klen,void *iv)
 	if(U(klen&7))goto err1;
 	if(U(!(aes=malloc(sizeof(struct nttl_aes_cbc)))))goto err1;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
-	aes_set_encrypt_key(&aes->enc,klen>>3,key);
-	aes_set_decrypt_key(&aes->dec,klen>>3,key);
+	nttl_aes_set_encrypt_key(&aes->enc,klen>>3,key);
+	nttl_aes_set_decrypt_key(&aes->dec,klen>>3,key);
 	if(iv)memcpy(aes->iv,iv,16);
 	else memset(aes->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
@@ -1905,13 +2021,14 @@ static int nttl_aes_cts_encrypt(void *ctx,void *src,int slen,void *dst)
 
 	if(U(slen<=16))return -1;
 	if(!(rem=slen&0xf))rem=0x10;
-	cbc_encrypt(&aes->enc,(void *)aes_encrypt,16,aes->iv,slen-rem,d,s);
+	cbc_encrypt(&aes->enc,(void *)nttl_aes_encrypt,16,aes->iv,slen-rem,d,s);
 	s+=slen-rem;
 	d+=slen-rem;
 	memcpy(aes->tmp,s,rem);
 	if(rem<16)memset(aes->tmp+rem,0,16-rem);
 	memcpy(d,d-16,rem);
-	cbc_encrypt(&aes->enc,(void *)aes_encrypt,16,aes->iv,16,d-16,aes->tmp);
+	cbc_encrypt(&aes->enc,(void *)nttl_aes_encrypt,16,aes->iv,16,d-16,
+		aes->tmp);
 	return 0;
 }
 
@@ -1926,15 +2043,15 @@ static int nttl_aes_cts_decrypt(void *ctx,void *src,int slen,void *dst)
 	if(!(rem=slen&0xf))rem=0x10;
 	if(slen-rem-16)
 	{
-		cbc_decrypt(&aes->dec,(void *)aes_decrypt,16,aes->iv,
+		cbc_decrypt(&aes->dec,(void *)nttl_aes_decrypt,16,aes->iv,
 			slen-rem-16,d,s);
 		s+=slen-rem-16;
 		d+=slen-rem-16;
 	}
 	memcpy(aes->tmp+16,s,16);
-	aes_decrypt(&aes->dec,16,aes->tmp,s);
+	nttl_aes_decrypt(&aes->dec,16,aes->tmp,s);
 	memcpy(aes->tmp,s+16,rem);
-	cbc_decrypt(&aes->dec,(void *)aes_decrypt,16,aes->iv,32,aes->tmp,
+	cbc_decrypt(&aes->dec,(void *)nttl_aes_decrypt,16,aes->iv,32,aes->tmp,
 		aes->tmp);
 	memcpy(d,aes->tmp,rem+16);
 	return 0;
@@ -1947,8 +2064,8 @@ static void *nttl_aes_cts_init(void *ctx,void *key,int klen,void *iv)
 	if(U(klen&7))goto err1;
 	if(U(!(aes=malloc(sizeof(struct nttl_aes_cts)))))goto err1;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
-	aes_set_encrypt_key(&aes->enc,klen>>3,key);
-	aes_set_decrypt_key(&aes->dec,klen>>3,key);
+	nttl_aes_set_encrypt_key(&aes->enc,klen>>3,key);
+	nttl_aes_set_decrypt_key(&aes->dec,klen>>3,key);
 	if(iv)memcpy(aes->iv,iv,16);
 	else memset(aes->iv,0,16);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
@@ -1985,7 +2102,7 @@ static int nttl_aes_cfb_encrypt(void *ctx,void *src,int slen,void *dst)
 
 	while(slen--)
 	{
-		if(!aes->n)aes_encrypt(&aes->enc,16,aes->mem,aes->iv);
+		if(!aes->n)nttl_aes_encrypt(&aes->enc,16,aes->mem,aes->iv);
 		aes->iv[aes->n]=*d++=*s++^aes->mem[aes->n];
 		aes->n=(aes->n+1)&0xf;
 	}
@@ -2000,7 +2117,7 @@ static int nttl_aes_cfb_decrypt(void *ctx,void *src,int slen,void *dst)
 
 	while(slen--)
 	{
-		if(!aes->n)aes_encrypt(&aes->enc,16,aes->mem,aes->iv);
+		if(!aes->n)nttl_aes_encrypt(&aes->enc,16,aes->mem,aes->iv);
 		aes->iv[aes->n]=*s;
 		*d++=*s++^aes->mem[aes->n];
 		aes->n=(aes->n+1)&0xf;
@@ -2014,7 +2131,7 @@ static void *nttl_aes_cfb_init(void *ctx,void *key,int klen,void *iv)
 
 	if(U(klen&7))goto err1;
 	if(U(!(aes=malloc(sizeof(struct nttl_aes_xfb)))))goto err1;
-	aes_set_encrypt_key(&aes->enc,klen>>3,key);
+	nttl_aes_set_encrypt_key(&aes->enc,klen>>3,key);
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	aes->n=0;
 	if(iv)memcpy(aes->iv,iv,16);
@@ -2053,7 +2170,7 @@ static int nttl_aes_cfb8_encrypt(void *ctx,void *src,int slen,void *dst)
 
         while(slen--)
         {
-		aes_encrypt(&aes->enc,16,aes->mem,aes->iv);
+		nttl_aes_encrypt(&aes->enc,16,aes->mem,aes->iv);
                 memmove(aes->iv,aes->iv+1,15);
                 *d++=aes->iv[15]=*s++^aes->mem[0];
         }
@@ -2068,7 +2185,7 @@ static int nttl_aes_cfb8_decrypt(void *ctx,void *src,int slen,void *dst)
 
         while(slen--)
         {
-		aes_encrypt(&aes->enc,16,aes->mem,aes->iv);
+		nttl_aes_encrypt(&aes->enc,16,aes->mem,aes->iv);
                 memmove(aes->iv,aes->iv+1,15);
                 aes->iv[15]=*s;
                 *d++=*s++^aes->mem[0];
@@ -2083,7 +2200,7 @@ static void *nttl_aes_cfb8_init(void *ctx,void *key,int klen,void *iv)
         if(U(klen&7))goto err1;
         if(U(!(aes=malloc(sizeof(struct nttl_aes_cfb8)))))goto err1;
         aes->global=((struct usicrypt_thread *)ctx)->global;
-	aes_set_encrypt_key(&aes->enc,klen>>3,key);
+	nttl_aes_set_encrypt_key(&aes->enc,klen>>3,key);
 	if(iv)memcpy(aes->iv,iv,16);
 	else memset(aes->iv,0,16);
         ((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
@@ -2121,15 +2238,15 @@ static int nttl_aes_ofb_crypt(void *ctx,void *src,int slen,void *dst)
 
 	if(!s)while(slen--)
 	{
-		if(!aes->n)cbc_encrypt(&aes->enc,(void *)aes_encrypt,16,aes->iv,
-			16,aes->iv,aes->zero);
+		if(!aes->n)cbc_encrypt(&aes->enc,(void *)nttl_aes_encrypt,16,
+			aes->iv,16,aes->iv,aes->zero);
 		*d++=aes->iv[aes->n];
 		aes->n=(aes->n+1)&0xf;
 	}
 	else while(slen--)
 	{
-		if(!aes->n)cbc_encrypt(&aes->enc,(void *)aes_encrypt,16,aes->iv,
-			16,aes->iv,aes->zero);
+		if(!aes->n)cbc_encrypt(&aes->enc,(void *)nttl_aes_encrypt,16,
+			aes->iv,16,aes->iv,aes->zero);
 		*d++=*s++^aes->iv[aes->n];
 		aes->n=(aes->n+1)&0xf;
 	}
@@ -2142,7 +2259,7 @@ static void *nttl_aes_ofb_init(void *ctx,void *key,int klen,void *iv)
 
 	if(U(klen&7))goto err1;
 	if(U(!(aes=malloc(sizeof(struct nttl_aes_xfb)))))goto err1;
-	aes_set_encrypt_key(&aes->enc,klen>>3,key);
+	nttl_aes_set_encrypt_key(&aes->enc,klen>>3,key);
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	aes->n=0;
 	if(iv)memcpy(aes->iv,iv,16);
@@ -2190,7 +2307,7 @@ static int nttl_aes_ctr_crypt(void *ctx,void *src,int slen,void *dst)
 	}
 	while(slen>=16)
 	{
-		aes_encrypt(&aes->enc,16,d,aes->ctr);
+		nttl_aes_encrypt(&aes->enc,16,d,aes->ctr);
 		for(i=15;i>=0;i--)if(++(aes->ctr[i]))break;
 		if(s)for(i=0;i<16;i++)d[i]^=*s++;
 		d+=16;
@@ -2198,7 +2315,7 @@ static int nttl_aes_ctr_crypt(void *ctx,void *src,int slen,void *dst)
 	}
 	if(slen)
 	{
-		aes_encrypt(&aes->enc,16,aes->mem,aes->ctr);
+		nttl_aes_encrypt(&aes->enc,16,aes->mem,aes->ctr);
 		for(i=15;i>=0;i--)if(++(aes->ctr[i]))break;
 		if(s)for(i=0;i<slen;i++)d[i]=aes->mem[aes->n++]^*s++;
 		else for(i=0;i<slen;i++)d[i]=aes->mem[aes->n++];
@@ -2212,7 +2329,7 @@ static void *nttl_aes_ctr_init(void *ctx,void *key,int klen,void *iv)
 
 	if(U(klen&7))goto err1;
 	if(U(!(aes=malloc(sizeof(struct nttl_aes_ctr)))))goto err1;
-	aes_set_encrypt_key(&aes->enc,klen>>3,key);
+	nttl_aes_set_encrypt_key(&aes->enc,klen>>3,key);
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	aes->n=0;
 	if(iv)memcpy(aes->ctr,iv,16);
@@ -2253,12 +2370,12 @@ static int nttl_aes_xts_encrypt(void *ctx,void *iv,void *src,int slen,void *dst)
 
 	if(U(slen<16))return -1;
 
-	aes_encrypt(&aes->twe,16,aes->twk,iv);
+	nttl_aes_encrypt(&aes->twe,16,aes->twk,iv);
 
 	for(;slen>=16;slen-=16,s+=16,d+=16)
 	{
 		for(i=0;i<16;i++)aes->wrk[i]=s[i]^aes->twk[i];
-		aes_encrypt(&aes->enc,16,d,aes->wrk);
+		nttl_aes_encrypt(&aes->enc,16,d,aes->wrk);
 		for(n=0,i=0;i<16;i++,n>>=8)
 		{
 			d[i]^=aes->twk[i];
@@ -2274,7 +2391,7 @@ static int nttl_aes_xts_encrypt(void *ctx,void *iv,void *src,int slen,void *dst)
 		memcpy(aes->wrk,s,slen);
 		memcpy(aes->wrk+slen,d+slen,16-slen);
 		for(i=0;i<16;i++)aes->wrk[i]^=aes->twk[i];
-		aes_encrypt(&aes->enc,16,d,aes->wrk);
+		nttl_aes_encrypt(&aes->enc,16,d,aes->wrk);
 		for(i=0;i<16;i++)d[i]^=aes->twk[i];
 	}
 
@@ -2291,12 +2408,12 @@ static int nttl_aes_xts_decrypt(void *ctx,void *iv,void *src,int slen,void *dst)
 
 	if(U(slen<16))return -1;
 
-	aes_encrypt(&aes->twe,16,aes->twk,iv);
+	nttl_aes_encrypt(&aes->twe,16,aes->twk,iv);
 
 	for(slen-=(slen&0xf)?16:0;slen>=16;slen-=16,s+=16,d+=16)
 	{
 		for(i=0;i<16;i++)aes->wrk[i]=s[i]^aes->twk[i];
-		aes_decrypt(&aes->dec,16,d,aes->wrk);
+		nttl_aes_decrypt(&aes->dec,16,d,aes->wrk);
 		for(n=0,i=0;i<16;i++,n>>=8)
 		{
 			d[i]^=aes->twk[i];
@@ -2312,13 +2429,13 @@ static int nttl_aes_xts_decrypt(void *ctx,void *iv,void *src,int slen,void *dst)
 			aes->twk[i]=(unsigned char)(n|=(aes->twk[i]<<1));
 		if(n)aes->twk[0]^=0x87;
 		for(i=0;i<16;i++)aes->wrk[i]=s[i]^aes->twk[i];
-		aes_decrypt(&aes->dec,16,d,aes->wrk);
+		nttl_aes_decrypt(&aes->dec,16,d,aes->wrk);
 		for(i=0;i<16;i++)d[i]^=aes->twk[i];
 		memcpy(d+16,d,slen);
 		memcpy(aes->wrk,s+16,slen);
 		memcpy(aes->wrk+slen,d+slen,16-slen);
 		for(i=0;i<16;i++)aes->wrk[i]^=aes->mem[i];
-		aes_decrypt(&aes->dec,16,d,aes->wrk);
+		nttl_aes_decrypt(&aes->dec,16,d,aes->wrk);
 		for(i=0;i<16;i++)d[i]^=aes->mem[i];
 	}
 
@@ -2331,9 +2448,9 @@ static void *nttl_aes_xts_init(void *ctx,void *key,int klen)
 
 	if(U(klen!=256&&klen!=512))goto err1;
 	if(U(!(aes=malloc(sizeof(struct nttl_aes_xts)))))goto err1;
-	aes_set_encrypt_key(&aes->enc,klen>>4,key);
-	aes_set_decrypt_key(&aes->dec,klen>>4,key);
-	aes_set_encrypt_key(&aes->twe,klen>>4,key+(klen>>4));
+	nttl_aes_set_encrypt_key(&aes->enc,klen>>4,key);
+	nttl_aes_set_decrypt_key(&aes->dec,klen>>4,key);
+	nttl_aes_set_encrypt_key(&aes->twe,klen>>4,key+(klen>>4));
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
@@ -2359,8 +2476,8 @@ static int nttl_aes_essiv_encrypt(void *ctx,void *iv,void *src,int slen,
 	struct nttl_aes_essiv *aes=ctx;
 
 	if(U(slen&0xf))return -1;
-	aes_encrypt(&aes->aux,16,aes->iv,iv);
-	cbc_encrypt(&aes->enc,(void *)aes_encrypt,16,aes->iv,slen,dst,src);
+	nttl_aes_encrypt(&aes->aux,16,aes->iv,iv);
+	cbc_encrypt(&aes->enc,(void *)nttl_aes_encrypt,16,aes->iv,slen,dst,src);
 	return 0;
 }
 
@@ -2370,8 +2487,8 @@ static int nttl_aes_essiv_decrypt(void *ctx,void *iv,void *src,int slen,
 	struct nttl_aes_essiv *aes=ctx;
 
 	if(U(slen&0xf))return -1;
-	aes_encrypt(&aes->aux,16,aes->iv,iv);
-	cbc_decrypt(&aes->dec,(void *)aes_decrypt,16,aes->iv,slen,dst,src);
+	nttl_aes_encrypt(&aes->aux,16,aes->iv,iv);
+	cbc_decrypt(&aes->dec,(void *)nttl_aes_decrypt,16,aes->iv,slen,dst,src);
 	return 0;
 }
 
@@ -2384,12 +2501,12 @@ static void *nttl_aes_essiv_init(void *ctx,void *key,int klen)
 	if(U(klen&7))goto err1;
 	if(U(!(aes=malloc(sizeof(struct nttl_aes_essiv)))))goto err1;
 	aes->global=((struct usicrypt_thread *)ctx)->global;
-	aes_set_encrypt_key(&aes->enc,klen>>3,key);
-	aes_set_decrypt_key(&aes->dec,klen>>3,key);
+	nttl_aes_set_encrypt_key(&aes->enc,klen>>3,key);
+	nttl_aes_set_decrypt_key(&aes->dec,klen>>3,key);
 	sha256_init(&h);
 	sha256_update(&h,klen>>3,key);
 	sha256_digest(&h,SHA256_DIGEST_SIZE,tmp);
-	aes_set_encrypt_key(&aes->aux,SHA256_DIGEST_SIZE,tmp);
+	nttl_aes_set_encrypt_key(&aes->aux,SHA256_DIGEST_SIZE,tmp);
 	((struct usicrypt_thread *)ctx)->global->memclear(&h,sizeof(h));
 	((struct usicrypt_thread *)ctx)->global->memclear(tmp,sizeof(tmp));
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
@@ -2434,9 +2551,9 @@ static int nttl_aes_gcm_encrypt(void *ctx,void *iv,void *src,int slen,
 			aes->ctx.auth_size-=GCM_BLOCK_SIZE-rem;
 		}
 	}
-	gcm_encrypt(&aes->ctx,&aes->gcm,&aes->enc,(void *)aes_encrypt,
+	gcm_encrypt(&aes->ctx,&aes->gcm,&aes->enc,(void *)nttl_aes_encrypt,
 		slen,dst,src);
-	gcm_digest(&aes->ctx,&aes->gcm,&aes->enc,(void *)aes_encrypt,
+	gcm_digest(&aes->ctx,&aes->gcm,&aes->enc,(void *)nttl_aes_encrypt,
 		aes->tlen,tag);
 	return 0;
 }
@@ -2479,9 +2596,9 @@ static int nttl_aes_gcm_encrypt_iov(void *ctx,void *iv,void *src,int slen,
 		gcm_update(&aes->ctx,&aes->gcm,GCM_BLOCK_SIZE,aes->mem);
 		aes->ctx.auth_size-=GCM_BLOCK_SIZE-n;
 	}
-	gcm_encrypt(&aes->ctx,&aes->gcm,&aes->enc,(void *)aes_encrypt,
+	gcm_encrypt(&aes->ctx,&aes->gcm,&aes->enc,(void *)nttl_aes_encrypt,
 		slen,dst,src);
-	gcm_digest(&aes->ctx,&aes->gcm,&aes->enc,(void *)aes_encrypt,
+	gcm_digest(&aes->ctx,&aes->gcm,&aes->enc,(void *)nttl_aes_encrypt,
 		aes->tlen,tag);
 	return 0;
 }
@@ -2509,9 +2626,9 @@ static int nttl_aes_gcm_decrypt(void *ctx,void *iv,void *src,int slen,
 			aes->ctx.auth_size-=GCM_BLOCK_SIZE-rem;
 		}
 	}
-	gcm_decrypt(&aes->ctx,&aes->gcm,&aes->enc,(void *)aes_encrypt,
+	gcm_decrypt(&aes->ctx,&aes->gcm,&aes->enc,(void *)nttl_aes_encrypt,
 		slen,dst,src);
-	gcm_digest(&aes->ctx,&aes->gcm,&aes->enc,(void *)aes_encrypt,
+	gcm_digest(&aes->ctx,&aes->gcm,&aes->enc,(void *)nttl_aes_encrypt,
 		aes->tlen,cmp);
 	r=memcmp(cmp,tag,aes->tlen);
 	((struct nttl_aes_gcm *)ctx)->global->memclear(cmp,aes->tlen);
@@ -2558,9 +2675,9 @@ static int nttl_aes_gcm_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 		gcm_update(&aes->ctx,&aes->gcm,GCM_BLOCK_SIZE,aes->mem);
 		aes->ctx.auth_size-=GCM_BLOCK_SIZE-n;
 	}
-	gcm_decrypt(&aes->ctx,&aes->gcm,&aes->enc,(void *)aes_encrypt,
+	gcm_decrypt(&aes->ctx,&aes->gcm,&aes->enc,(void *)nttl_aes_encrypt,
 		slen,dst,src);
-	gcm_digest(&aes->ctx,&aes->gcm,&aes->enc,(void *)aes_encrypt,
+	gcm_digest(&aes->ctx,&aes->gcm,&aes->enc,(void *)nttl_aes_encrypt,
 		aes->tlen,cmp);
 	r=memcmp(cmp,tag,aes->tlen);
 	((struct nttl_aes_gcm *)ctx)->global->memclear(cmp,aes->tlen);
@@ -2578,8 +2695,8 @@ static void *nttl_aes_gcm_init(void *ctx,void *key,int klen,int ilen,int tlen)
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	aes->ilen=ilen;
 	aes->tlen=tlen;
-	aes_set_encrypt_key(&aes->enc,klen>>3,key);
-	gcm_set_key(&aes->gcm,&aes->enc,(void *)aes_encrypt);
+	nttl_aes_set_encrypt_key(&aes->enc,klen>>3,key);
+	gcm_set_key(&aes->gcm,&aes->enc,(void *)nttl_aes_encrypt);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
 
@@ -2608,12 +2725,12 @@ static int nttl_aes_ccm_encrypt(void *ctx,void *iv,void *src,int slen,
 {
 	struct nttl_aes_ccm *aes=ctx;
 
-	ccm_set_nonce(&aes->ctx,&aes->enc,(void *)aes_encrypt,aes->ilen,
+	ccm_set_nonce(&aes->ctx,&aes->enc,(void *)nttl_aes_encrypt,aes->ilen,
 		iv,alen,slen,aes->tlen);
-	if(aad&&alen)ccm_update(&aes->ctx,&aes->enc,(void *)aes_encrypt,
+	if(aad&&alen)ccm_update(&aes->ctx,&aes->enc,(void *)nttl_aes_encrypt,
 		alen,aad);
-	ccm_encrypt(&aes->ctx,&aes->enc,(void *)aes_encrypt,slen,dst,src);
-	ccm_digest(&aes->ctx,&aes->enc,(void *)aes_encrypt,aes->tlen,tag);
+	ccm_encrypt(&aes->ctx,&aes->enc,(void *)nttl_aes_encrypt,slen,dst,src);
+	ccm_digest(&aes->ctx,&aes->enc,(void *)nttl_aes_encrypt,aes->tlen,tag);
 	return 0;
 }
 
@@ -2627,12 +2744,12 @@ static int nttl_aes_ccm_encrypt_iov(void *ctx,void *iv,void *src,int slen,
 	struct nttl_aes_ccm *aes=ctx;
 
 	for(i=0,alen=0;i<niov;i++)alen+=iov[i].length;
-	ccm_set_nonce(&aes->ctx,&aes->enc,(void *)aes_encrypt,aes->ilen,
+	ccm_set_nonce(&aes->ctx,&aes->enc,(void *)nttl_aes_encrypt,aes->ilen,
 		iv,alen,slen,aes->tlen);
-	for(i=0;i<niov;i++)ccm_update(&aes->ctx,&aes->enc,(void *)aes_encrypt,
-		iov[i].length,iov[i].data);
-	ccm_encrypt(&aes->ctx,&aes->enc,(void *)aes_encrypt,slen,dst,src);
-	ccm_digest(&aes->ctx,&aes->enc,(void *)aes_encrypt,aes->tlen,tag);
+	for(i=0;i<niov;i++)ccm_update(&aes->ctx,&aes->enc,
+		(void *)nttl_aes_encrypt,iov[i].length,iov[i].data);
+	ccm_encrypt(&aes->ctx,&aes->enc,(void *)nttl_aes_encrypt,slen,dst,src);
+	ccm_digest(&aes->ctx,&aes->enc,(void *)nttl_aes_encrypt,aes->tlen,tag);
 	return 0;
 }
 
@@ -2645,12 +2762,12 @@ static int nttl_aes_ccm_decrypt(void *ctx,void *iv,void *src,int slen,
 	struct nttl_aes_ccm *aes=ctx;
 	unsigned char cmp[16];
 
-	ccm_set_nonce(&aes->ctx,&aes->enc,(void *)aes_encrypt,aes->ilen,
+	ccm_set_nonce(&aes->ctx,&aes->enc,(void *)nttl_aes_encrypt,aes->ilen,
 		iv,alen,slen,aes->tlen);
-	if(aad&&alen)ccm_update(&aes->ctx,&aes->enc,(void *)aes_encrypt,
+	if(aad&&alen)ccm_update(&aes->ctx,&aes->enc,(void *)nttl_aes_encrypt,
 		alen,aad);
-	ccm_decrypt(&aes->ctx,&aes->enc,(void *)aes_encrypt,slen,dst,src);
-	ccm_digest(&aes->ctx,&aes->enc,(void *)aes_encrypt,aes->tlen,cmp);
+	ccm_decrypt(&aes->ctx,&aes->enc,(void *)nttl_aes_encrypt,slen,dst,src);
+	ccm_digest(&aes->ctx,&aes->enc,(void *)nttl_aes_encrypt,aes->tlen,cmp);
 	r=memcmp(cmp,tag,aes->tlen);
 	((struct nttl_aes_ccm *)ctx)->global->memclear(cmp,aes->tlen);
 	return U(r)?-1:0;
@@ -2668,12 +2785,12 @@ static int nttl_aes_ccm_decrypt_iov(void *ctx,void *iv,void *src,int slen,
 	unsigned char cmp[16];
 
 	for(i=0,alen=0;i<niov;i++)alen+=iov[i].length;
-	ccm_set_nonce(&aes->ctx,&aes->enc,(void *)aes_encrypt,aes->ilen,
+	ccm_set_nonce(&aes->ctx,&aes->enc,(void *)nttl_aes_encrypt,aes->ilen,
 		iv,alen,slen,aes->tlen);
-	for(i=0;i<niov;i++)ccm_update(&aes->ctx,&aes->enc,(void *)aes_encrypt,
-		iov[i].length,iov[i].data);
-	ccm_decrypt(&aes->ctx,&aes->enc,(void *)aes_encrypt,slen,dst,src);
-	ccm_digest(&aes->ctx,&aes->enc,(void *)aes_encrypt,aes->tlen,cmp);
+	for(i=0;i<niov;i++)ccm_update(&aes->ctx,&aes->enc,
+		(void *)nttl_aes_encrypt,iov[i].length,iov[i].data);
+	ccm_decrypt(&aes->ctx,&aes->enc,(void *)nttl_aes_encrypt,slen,dst,src);
+	ccm_digest(&aes->ctx,&aes->enc,(void *)nttl_aes_encrypt,aes->tlen,cmp);
 	r=memcmp(cmp,tag,aes->tlen);
 	((struct nttl_aes_ccm *)ctx)->global->memclear(cmp,aes->tlen);
 	return U(r)?-1:0;
@@ -2690,7 +2807,7 @@ static void *nttl_aes_ccm_init(void *ctx,void *key,int klen,int ilen,int tlen)
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	aes->ilen=ilen;
 	aes->tlen=tlen;
-	aes_set_encrypt_key(&aes->enc,klen>>3,key);
+	nttl_aes_set_encrypt_key(&aes->enc,klen>>3,key);
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
 
@@ -5102,8 +5219,13 @@ void *USICRYPT(ec_generate)(void *ctx,int curve)
 	if(U(!nttl_ec_map[curve].curve))goto err1;
 	if(U(!(ec=malloc(sizeof(struct nttl_ec)))))goto err1;
 	ec->curve=curve;
+#ifdef NETTLE_USES_CURVE_FUNC
+	ecc_scalar_init(&ec->key,nttl_ec_map[curve].curve());
+	ecc_point_init(&ec->pub,nttl_ec_map[curve].curve());
+#else
 	ecc_scalar_init(&ec->key,nttl_ec_map[curve].curve);
 	ecc_point_init(&ec->pub,nttl_ec_map[curve].curve);
+#endif
 	ecdsa_generate_keypair(&ec->pub,&ec->key,ctx,nttl_cb_random);
 	return ec;
 
@@ -5137,11 +5259,19 @@ void *USICRYPT(ec_derive)(void *ctx,void *key,void *pub,int *klen)
 
 	if(U(k->curve!=p->curve))return NULL;
 	mpz_init(x);
+#ifdef NETTLE_USES_CURVE_FUNC
+	ecc_point_init(&r,nttl_ec_map[k->curve].curve());
+#else
 	ecc_point_init(&r,nttl_ec_map[k->curve].curve);
+#endif
 	ecc_point_mul(&r,&k->key,&p->pub);
 	ecc_point_get(&r,x,NULL);
 	l=nettle_mpz_sizeinbase_256_u(x);
+#ifdef NETTLE_USES_CURVE_FUNC
+	n=(ecc_bit_size(nttl_ec_map[k->curve].curve())+7)>>3;
+#else
 	n=(ecc_bit_size(nttl_ec_map[k->curve].curve)+7)>>3;
+#endif
 	if(U(!(sec=malloc(n))))goto err1;
 	*klen=n;
 	if(l<n)memset(sec,0,n-l);
@@ -5230,8 +5360,13 @@ void *USICRYPT(ec_set_pub)(void *ctx,void *key,int len)
 	if(U(l-1!=nttl_ec_map[idx].xylen)||U(pptr[h])||U(pptr[h+1]!=0x04))
 		goto err2;
 
+#ifdef NETTLE_USES_CURVE_FUNC
+	ecc_scalar_init(&ec->key,nttl_ec_map[idx].curve());
+	ecc_point_init(&ec->pub,nttl_ec_map[idx].curve());
+#else
 	ecc_scalar_init(&ec->key,nttl_ec_map[idx].curve);
 	ecc_point_init(&ec->pub,nttl_ec_map[idx].curve);
+#endif
 	nettle_mpz_init_set_str_256_u(x,nttl_ec_map[idx].xylen>>1,pptr+h+2);
 	nettle_mpz_init_set_str_256_u(y,nttl_ec_map[idx].xylen>>1,
 		pptr+h+2+(nttl_ec_map[idx].xylen>>1));
@@ -5380,8 +5515,13 @@ void *USICRYPT(ec_set_key)(void *ctx,void *key,int len)
 	}
 	else synth=1;
 
+#ifdef NETTLE_USES_CURVE_FUNC
+	ecc_scalar_init(&ec->key,nttl_ec_map[idx].curve());
+	ecc_point_init(&ec->pub,nttl_ec_map[idx].curve());
+#else
 	ecc_scalar_init(&ec->key,nttl_ec_map[idx].curve);
 	ecc_point_init(&ec->pub,nttl_ec_map[idx].curve);
+#endif
 	nettle_mpz_init_set_str_256_u(kk,klen,kptr);
 	if(!synth)
 	{
@@ -5395,7 +5535,11 @@ void *USICRYPT(ec_set_key)(void *ctx,void *key,int len)
 	{
 		mpz_init(x1);
 		mpz_init(y1);
+#ifdef NETTLE_USES_CURVE_FUNC
+		ecc_point_init(&tmp,nttl_ec_map[idx].curve());
+#else
 		ecc_point_init(&tmp,nttl_ec_map[idx].curve);
+#endif
 		ecc_point_mul_g(&tmp,&ec->key);
 		ecc_point_get(&tmp,x1,y1);
 		h=mpz_cmp(x,x1);
