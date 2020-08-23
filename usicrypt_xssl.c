@@ -50,12 +50,19 @@
 #include <openssl/pkcs12.h>
 #endif
 #include <openssl/camellia.h>
+#if defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER >= 0x3020000fL
+#include <openssl/hkdf.h>
+#endif
 #if defined(LIBRESSL_VERSION_NUMBER) || OPENSSL_VERSION_NUMBER < 0x10100000L
 #if defined(_WIN64) || defined(_WIN32)
 #include <windows.h>
 #else
 #include <pthread.h>
 #endif
+#endif
+
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L && !defined(LIBRESSL_VERSION_NUMBER)
+#define XSSL_HAS_CURVE448
 #endif
 
 #ifdef USICRYPT
@@ -491,6 +498,22 @@ static const unsigned char xssl_x25519_asn1_key[16]=
 #endif
 #endif
 
+#if !defined(USICRYPT_NO_X448) && defined(XSSL_HAS_CURVE448)
+
+static const unsigned char xssl_x448_asn1_pub[12]=
+{
+	0x30,0x42,0x30,0x05,0x06,0x03,0x2b,0x65,
+	0x6f,0x03,0x39,0x00
+};
+
+static const unsigned char xssl_x448_asn1_key[16]=
+{
+	0x30,0x46,0x02,0x01,0x00,0x30,0x05,0x06,
+	0x03,0x2b,0x65,0x6f,0x04,0x3a,0x04,0x38
+};
+
+#endif
+
 static int xssl_reseed(void *ctx)
 {
 	int r=-1;
@@ -603,7 +626,7 @@ err1:	return -1;
 #endif
 
 #ifndef USICRYPT_NO_RSA
-#if defined(LIBRESSL_VERSION_NUMBER)
+#if defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x3020000fL
 
 #define RSA_padding_add_PKCS1_OAEP_mgf1(a,b,c,d,e,f,g,h) \
 	xssl_add_oaep_mgf1(a,b,c,d,e,f,(void *)g)
@@ -3256,7 +3279,9 @@ int USICRYPT(hkdf)(void *ctx,int md,void *key,int klen,void *salt,int slen,
 	void *info,int ilen,void *out)
 {
 #ifndef USICRYPT_NO_HKDF
-#if defined(LIBRESSL_VERSION_NUMBER) || OPENSSL_VERSION_NUMBER < 0x10100000L
+#if defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER >= 0x3020000fL
+	unsigned char s[SHA512_DIGEST_LENGTH];
+#elif defined(LIBRESSL_VERSION_NUMBER) || OPENSSL_VERSION_NUMBER < 0x10100000L
 	HMAC_CTX hm;
 	unsigned char s[SHA512_DIGEST_LENGTH];
 #else
@@ -3294,7 +3319,19 @@ int USICRYPT(hkdf)(void *ctx,int md,void *key,int klen,void *salt,int slen,
 	default:goto err1;
 	}
 
-#if defined(LIBRESSL_VERSION_NUMBER) || OPENSSL_VERSION_NUMBER < 0x10100000L
+#if defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER >= 0x3020000fL
+
+	if(!salt||!slen)
+	{
+		slen=len;
+		salt=s;
+		memset(s,0,len);
+	}
+	if(!HKDF(out,len,type,key,klen,salt,slen,info,ilen))goto err1;
+	return 0;
+err1:	return -1;
+
+#elif defined(LIBRESSL_VERSION_NUMBER) || OPENSSL_VERSION_NUMBER < 0x10100000L
 	if(!salt||!slen)
 	{
 		slen=len;
@@ -4155,7 +4192,7 @@ void *USICRYPT(ed25519_generate)(void *ctx)
 {
 #ifndef USICRYPT_NO_ED25519
 	EVP_PKEY *pkey=NULL;
-	EVP_PKEY_CTX *pctx=EVP_PKEY_CTX_new_id(EVP_PKEY_ED25519, NULL);
+	EVP_PKEY_CTX *pctx=EVP_PKEY_CTX_new_id(EVP_PKEY_ED25519,NULL);
 
 	if(U(!pctx))goto err1;
 	if(U(EVP_PKEY_keygen_init(pctx)!=1))goto err2;
@@ -4334,6 +4371,199 @@ err1:	return err;
 void USICRYPT(ed25519_free)(void *ctx,void *key)
 {
 #ifndef USICRYPT_NO_ED25519
+	EVP_PKEY_free(key);
+#endif
+}
+
+#endif
+
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L && !defined(LIBRESSL_VERSION_NUMBER)
+
+void *USICRYPT(ed448_generate)(void *ctx)
+{
+#if !defined(USICRYPT_NO_ED448) && defined(XSSL_HAS_CURVE448)
+	EVP_PKEY *pkey=NULL;
+	EVP_PKEY_CTX *pctx=EVP_PKEY_CTX_new_id(EVP_PKEY_ED448,NULL);
+
+	if(U(!pctx))goto err1;
+	if(U(EVP_PKEY_keygen_init(pctx)!=1))goto err2;
+	if(U(EVP_PKEY_keygen(pctx,&pkey)!=1))goto err2;
+	EVP_PKEY_CTX_free(pctx);
+	return pkey;
+
+err2:	EVP_PKEY_CTX_free(pctx);
+err1:	return NULL;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed448_get_pub)(void *ctx,void *key,int *len)
+{
+#if !defined(USICRYPT_NO_ED448) && defined(XSSL_HAS_CURVE448)
+	int l;
+	unsigned char *p=NULL;
+	unsigned char *m;
+
+	if(U((l=i2d_PUBKEY(key,NULL))<=0))goto err1;
+	if(U(!(m=p=malloc(l))))goto err1;
+	if(U((*len=i2d_PUBKEY(key,&m))<=0))goto err2;
+	if(L(*len==l))goto err1;
+
+	((struct usicrypt_thread *)ctx)->global->memclear(p,l);
+err2:	free(p);
+	p=NULL;
+err1:	return p;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed448_set_pub)(void *ctx,void *key,int len)
+{
+#if !defined(USICRYPT_NO_ED448) && defined(XSSL_HAS_CURVE448)
+	return d2i_PUBKEY(NULL,(const unsigned char **)&key,len);
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed448_get_key)(void *ctx,void *key,int *len)
+{
+#if !defined(USICRYPT_NO_ED448) && defined(XSSL_HAS_CURVE448)
+	int l;
+	unsigned char *p=NULL;
+	unsigned char *m;
+
+	if(U((l=i2d_PrivateKey(key,NULL))<=0))goto err1;
+	if(U(!(m=p=malloc(l))))goto err1;
+	if(U((*len=i2d_PrivateKey(key,&m))<=0))goto err2;
+	if(L(*len==l))goto err1;
+
+	((struct usicrypt_thread *)ctx)->global->memclear(p,l);
+err2:	free(p);
+	p=NULL;
+err1:	return p;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed448_set_key)(void *ctx,void *key,int len)
+{
+#if !defined(USICRYPT_NO_ED448) && defined(XSSL_HAS_CURVE448)
+	return d2i_PrivateKey(NID_ED448,NULL,(const unsigned char **)&key,
+		len);
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed448_sign)(void *ctx,void *key,void *data,int dlen,int *slen)
+{
+#if !defined(USICRYPT_NO_ED448) && defined(XSSL_HAS_CURVE448)
+	size_t olen=114;
+	void *sig;
+	EVP_MD_CTX *c;
+	EVP_PKEY_CTX *pctx=EVP_PKEY_CTX_new_id(EVP_PKEY_ED448,NULL);
+	EVP_PKEY_CTX *pctxx=pctx;
+
+	if(U(!pctx))goto err1;
+	if(U(!(sig=malloc(olen))))goto err2;
+	if(U(!(c=EVP_MD_CTX_create())))goto err3;
+	if(U(EVP_DigestSignInit(c,&pctxx,NULL,NULL,key)!=1))goto err4;
+	if(U(EVP_DigestSign(c,sig,&olen,data,dlen)!=1))goto err4;
+	EVP_MD_CTX_destroy(c);
+	EVP_PKEY_CTX_free(pctx);
+	*slen=114;
+	return sig;
+
+err4:	EVP_MD_CTX_destroy(c);
+err3:	free(sig);
+err2:	EVP_PKEY_CTX_free(pctx);
+err1:	return NULL;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed448_sign_iov)(void *ctx,void *key,struct usicrypt_iov *iov,
+	int niov,int *slen)
+{
+#if !defined(USICRYPT_NO_ED448) && !defined(USICRYPT_NO_IOV) && \
+	defined(XSSL_HAS_CURVE448)
+	unsigned char *sig;
+	int i;
+	int len;
+	unsigned char *data;
+	unsigned char *p;
+
+	for(len=0,i=0;i<niov;i++)len+=iov[i].length;
+	if(U(!(sig=malloc(*slen))))goto err1;
+	if(U(!(data=malloc(len))))goto err2;
+	for(p=data,i=0;i<niov;p+=iov[i++].length)
+		memcpy(p,iov[i].data,iov[i].length);
+	sig=USICRYPT(ed448_sign)(ctx,key,data,len,slen);
+	((struct usicrypt_thread *)ctx)->global->memclear(data,len);
+	free(data);
+	return sig;
+
+err2:	free(sig);
+err1:	return NULL;
+#else
+	return NULL;
+#endif
+}
+
+int USICRYPT(ed448_verify)(void *ctx,void *key,void *data,int dlen,void *sig,
+	int slen)
+{
+#if !defined(USICRYPT_NO_ED448) && defined(XSSL_HAS_CURVE448)
+	int err=-1;
+	EVP_MD_CTX *c;
+	EVP_PKEY_CTX *pctx=EVP_PKEY_CTX_new_id(EVP_PKEY_ED448,NULL);
+	EVP_PKEY_CTX *pctxx=pctx;
+
+	if(U(!pctx))goto err1;
+	if(U(!(c=EVP_MD_CTX_create())))goto err2;
+	if(U(EVP_DigestVerifyInit(c,&pctxx,NULL,NULL,key)!=1))goto err3;
+	if(U(EVP_DigestVerify(c,sig,slen,data,dlen)!=1))goto err3;
+	err=0;
+err3:	EVP_MD_CTX_destroy(c);
+err2:	EVP_PKEY_CTX_free(pctx);
+err1:	return err;
+#else
+	return -1;
+#endif
+}
+
+int USICRYPT(ed448_verify_iov)(void *ctx,void *key,struct usicrypt_iov *iov,
+	int niov,void *sig,int slen)
+{
+#if !defined(USICRYPT_NO_ED448) && !defined(USICRYPT_NO_IOV) && \
+	defined(XSSL_HAS_CURVE448)
+	int err=-1;
+	int i;
+	int len;
+	unsigned char *data;
+	unsigned char *p;
+
+	for(len=0,i=0;i<niov;i++)len+=iov[i].length;
+	if(U(!(data=malloc(len))))goto err1;
+	for(p=data,i=0;i<niov;p+=iov[i++].length)
+		memcpy(p,iov[i].data,iov[i].length);
+	err=USICRYPT(ed448_verify)(ctx,key,data,len,sig,slen);
+	((struct usicrypt_thread *)ctx)->global->memclear(data,len);
+	free(data);
+err1:	return err;
+#else
+	return -1;
+#endif
+}
+
+void USICRYPT(ed448_free)(void *ctx,void *key)
+{
+#if !defined(USICRYPT_NO_ED448) && defined(XSSL_HAS_CURVE448)
 	EVP_PKEY_free(key);
 #endif
 }
@@ -4593,6 +4823,134 @@ void USICRYPT(x25519_free)(void *ctx,void *key)
 #endif
 #endif
 }
+
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L && !defined(LIBRESSL_VERSION_NUMBER)
+
+void *USICRYPT(x448_generate)(void *ctx)
+{
+#if !defined(USICRYPT_NO_X448) && defined(XSSL_HAS_CURVE448)
+	EVP_PKEY_CTX *c;
+	EVP_PKEY *key;
+
+	if(U(xssl_reseed(ctx)))goto err1;
+	if(U(!(c=EVP_PKEY_CTX_new_id(NID_X448,NULL))))goto err1;
+	if(U(EVP_PKEY_keygen_init(c)!=1))goto err2;
+	if(U(!(key=EVP_PKEY_new())))goto err2;
+	if(U(EVP_PKEY_keygen(c,&key)!=1))goto err3;
+	EVP_PKEY_CTX_free(c);
+	return key;
+
+err3:	EVP_PKEY_free(key);
+err2:	EVP_PKEY_CTX_free(c);
+err1:	return NULL;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(x448_derive)(void *ctx,void *key,void *pub,int *klen)
+{
+#if !defined(USICRYPT_NO_X448) && defined(XSSL_HAS_CURVE448)
+	size_t len;
+	EVP_PKEY_CTX *c;
+	unsigned char *data;
+
+	if(U(!(c=EVP_PKEY_CTX_new(key,NULL))))goto err1;
+	if(U(EVP_PKEY_derive_init(c)!=1))goto err2;
+	if(U(EVP_PKEY_derive_set_peer(c,pub)!=1))goto err2;
+	if(U(EVP_PKEY_derive(c,NULL,&len)!=1))goto err2;
+	if(U(!(data=malloc(len))))goto err2;
+	if(U(EVP_PKEY_derive(c,data,&len)!=1))goto err3;
+	EVP_PKEY_CTX_free(c);
+	*klen=len;
+	return data;
+
+err3:	((struct usicrypt_thread *)ctx)->global->memclear(data,len);
+	free(data);
+err2:	EVP_PKEY_CTX_free(c);
+err1:	return NULL;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(x448_get_pub)(void *ctx,void *key,int *len)
+{
+#if !defined(USICRYPT_NO_X448) && defined(XSSL_HAS_CURVE448)
+	unsigned char *data;
+	unsigned char *p;
+
+	*len=sizeof(xssl_x448_asn1_pub)+56;
+	if(U(!(p=data=malloc(*len))))goto err1;
+	if(U(i2d_PUBKEY(key,&p)!=*len))goto err2;
+	return data;
+
+err2:	((struct usicrypt_thread *)ctx)->global->memclear(data,*len);
+	free(data);
+err1:	return NULL;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(x448_set_pub)(void *ctx,void *key,int len)
+{
+#if !defined(USICRYPT_NO_X448) && defined(XSSL_HAS_CURVE448)
+	if(U(len<sizeof(xssl_x448_asn1_pub)+56)||
+	    U(memcmp(key,xssl_x448_asn1_pub,sizeof(xssl_x448_asn1_pub))))
+		return NULL;
+	return d2i_PUBKEY(NULL,(const unsigned char **)&key,len);
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(x448_get_key)(void *ctx,void *key,int *len)
+{
+#if !defined(USICRYPT_NO_X448) && defined(XSSL_HAS_CURVE448)
+	int l;
+	unsigned char *p=NULL;
+	unsigned char *m;
+
+	if(U((l=i2d_PrivateKey(key,NULL))<=0))goto err1;
+	if(U(!(m=p=malloc(l))))goto err1;
+	if(U((*len=i2d_PrivateKey(key,&m))<=0))goto err2;
+	if(L(*len==l))goto err1;
+
+err2:	((struct usicrypt_thread *)ctx)->global->memclear(p,l);
+	free(p);
+	p=NULL;
+err1:	return p;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(x448_set_key)(void *ctx,void *key,int len)
+{
+#if !defined(USICRYPT_NO_X448) && defined(XSSL_HAS_CURVE448)
+	void *mem=key;
+	void *r=NULL;
+
+	if(U(len<sizeof(xssl_x448_asn1_key)+56)||
+	    U(memcmp(key,xssl_x448_asn1_key,sizeof(xssl_x448_asn1_key))))
+		goto err1;
+	r=d2i_PrivateKey(NID_X448,NULL,(const unsigned char **)&key,len);
+err1:	((struct usicrypt_thread *)ctx)->global->memclear(mem,len);
+	return r;
+#else
+	return NULL;
+#endif
+}
+
+void USICRYPT(x448_free)(void *ctx,void *key)
+{
+#if !defined(USICRYPT_NO_X448) && defined(XSSL_HAS_CURVE448)
+	EVP_PKEY_free((EVP_PKEY *)key);
+#endif
+}
+
+#endif
 
 int USICRYPT(cipher_block_size)(void *ctx,int cipher)
 {

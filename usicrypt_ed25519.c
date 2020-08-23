@@ -55,6 +55,8 @@
 #define USICRYPT(a) usicrypt_##a
 #endif
 
+#define USICRYPT_ORLP_SOURCE
+
 #include "usicrypt_internal.h"
 #include "usicrypt.h"
 #include "usicrypt_common.c"

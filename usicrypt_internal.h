@@ -39,6 +39,8 @@
 #undef USICRYPT_NO_EC
 #undef USICRYPT_NO_X25519
 #undef USICRYPT_NO_ED25519
+#undef USICRYPT_NO_X448
+#undef USICRYPT_NO_ED448
 #undef USICRYPT_NO_DIGEST
 #undef USICRYPT_NO_HMAC
 #undef USICRYPT_NO_PBKDF2
@@ -68,7 +70,8 @@
 #undef USICRYPT_NO_POLY
 #elif !defined(USICRYPT_GCRY) && !defined(USICRYPT_MBED) && \
 	!defined(USICRYPT_NTTL) && !defined(USICRYPT_WOLF) && \
-	!defined(USICRYPT_XSSL) && !defined(USICRYPT_UTIL)
+	!defined(USICRYPT_XSSL) && !defined(USICRYPT_UTIL) && \
+	!defined(USICRYPT_DCAF_SOURCE)
 #error You need to select the target library in the Makefile
 #endif
 

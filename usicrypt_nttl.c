@@ -28,6 +28,12 @@
 
 #if NETTLE_VERSION_MAJOR > 3
 #define NETTLE_HAS_ED25519
+#define NETTLE_HAS_X448
+#define NETTLE_HAS_ED448
+#elif NETTLE_VERSION_MAJOR == 3 && NETTLE_VERSION_MINOR >= 6
+#define NETTLE_HAS_ED25519
+#define NETTLE_HAS_X448
+#define NETTLE_HAS_ED448
 #elif NETTLE_VERSION_MAJOR == 3 && NETTLE_VERSION_MINOR >= 4
 #define NETTLE_HAS_ED25519
 #endif
@@ -35,9 +41,11 @@
 #if NETTLE_VERSION_MAJOR > 3
 #define NETTLE_USES_CURVE_FUNC
 #define NETTLE_AES_WORKAROUND
+#define NETTLE_HAS_XTS
 #elif NETTLE_VERSION_MAJOR == 3 && NETTLE_VERSION_MINOR >= 5
 #define NETTLE_USES_CURVE_FUNC
 #define NETTLE_AES_WORKAROUND
+#define NETTLE_HAS_XTS
 #endif
 
 #include <nettle/yarrow.h>
@@ -52,8 +60,11 @@
 #include <nettle/ecc.h>
 #include <nettle/dsa.h>
 #include <nettle/ecdsa.h>
-#ifdef NETTLE_HAS_ED25519
+#if defined(NETTLE_HAS_ED25519) || defined(NETTLE_HAS_ED448)
 #include <nettle/eddsa.h>
+#endif
+#ifdef NETTLE_HAS_X448
+#include <nettle/curve448.h>
 #endif
 #include <nettle/curve25519.h>
 #include <nettle/aes.h>
@@ -63,6 +74,9 @@
 #include <nettle/cbc.h>
 #include <nettle/gcm.h>
 #include <nettle/ccm.h>
+#ifdef NETTLE_HAS_XTS
+#include <nettle/xts.h>
+#endif
 #include <gmp.h>
 
 #ifdef USICRYPT
@@ -110,23 +124,40 @@ struct nttl_ed25519
 };
 #endif
 
+#ifdef NETTLE_HAS_ED448
+struct nttl_ed448
+{
+	unsigned char key[ED448_KEY_SIZE];
+	unsigned char pub[ED448_KEY_SIZE];
+};
+#endif
+
 struct nttl_x25519
 {
 	unsigned char pub[CURVE25519_SIZE];
 	unsigned char key[CURVE25519_SIZE];
 };
 
+#ifdef NETTLE_HAS_X448
+struct nttl_x448
+{
+	unsigned char pub[CURVE448_SIZE];
+	unsigned char key[CURVE448_SIZE];
+};
+#endif
+
 #ifdef NETTLE_AES_WORKAROUND
 
 struct usicrypt_aes_ctx
 {
-	unsigned key_size;
 	union
 	{
 		struct aes128_ctx ctx128;
 		struct aes192_ctx ctx192;
 		struct aes256_ctx ctx256;
 	};
+	/* keep at end for xts */
+	unsigned key_size;
 };
 
 static inline void usicrypt_aes_set_encrypt_key(struct usicrypt_aes_ctx *ctx,
@@ -275,9 +306,14 @@ struct nttl_aes_xts
 	struct aes_ctx enc;
 	struct aes_ctx dec;
 	struct aes_ctx twe;
+#ifdef NETTLE_HAS_XTS
+	nettle_cipher_func *encrypt;
+	nettle_cipher_func *decrypt;
+#else
 	unsigned char twk[16];
 	unsigned char wrk[16];
 	unsigned char mem[16];
+#endif
 };
 
 struct nttl_aes_essiv
@@ -434,7 +470,8 @@ struct nttl_camellia_xts
 {
 	struct usicrypt_dskcipher cipher;
 	struct usicrypt_global *global;
-	void (*crypt)(void *ctx,size_t length,uint8_t *dst,const uint8_t *src);
+	void (*crypt)(const void *ctx,size_t length,uint8_t *dst,
+		const uint8_t *src);
 	union
 	{
 		struct camellia128_ctx enc128;
@@ -980,8 +1017,7 @@ static const struct
 };
 
 #endif
-#ifdef NETTLE_HAS_ED25519
-#ifndef USICRYPT_NO_ED25519
+#if !defined(USICRYPT_NO_ED25519) && defined(NETTLE_HAS_ED25519)
 
 static const unsigned char nttl_ed25519_asn1_pub[12]=
 {
@@ -996,6 +1032,20 @@ static const unsigned char nttl_ed25519_asn1_key[16]=
 };
 
 #endif
+#if !defined(USICRYPT_NO_ED448) && defined(NETTLE_HAS_ED448)
+
+static const unsigned char nttl_ed448_asn1_pub[12]=
+{
+	0x30,0x43,0x30,0x05,0x06,0x03,0x2b,0x65,
+	0x71,0x03,0x3a,0x00
+};
+
+static const unsigned char nttl_ed448_asn1_key[16]=
+{
+	0x30,0x47,0x02,0x01,0x00,0x30,0x05,0x06,
+	0x03,0x2b,0x65,0x71,0x04,0x3b,0x04,0x39
+};
+
 #endif
 #ifndef USICRYPT_NO_X25519
 
@@ -1009,6 +1059,21 @@ static const unsigned char nttl_x25519_asn1_key[16]=
 {
 	0x30,0x2e,0x02,0x01,0x00,0x30,0x05,0x06,
 	0x03,0x2b,0x65,0x6e,0x04,0x22,0x04,0x20
+};
+
+#endif
+#if !defined(USICRYPT_NO_X448) && defined(NETTLE_HAS_X448)
+
+static const unsigned char nttl_x448_asn1_pub[12]=
+{
+	0x30,0x42,0x30,0x05,0x06,0x03,0x2b,0x65,
+	0x6f,0x03,0x39,0x00
+};
+
+static const unsigned char nttl_x448_asn1_key[16]=
+{
+	0x30,0x46,0x02,0x01,0x00,0x30,0x05,0x06,
+	0x03,0x2b,0x65,0x6f,0x04,0x3a,0x04,0x38
 };
 
 #endif
@@ -2362,6 +2427,13 @@ static void nttl_aes_ctr_exit(void *ctx)
 
 static int nttl_aes_xts_encrypt(void *ctx,void *iv,void *src,int slen,void *dst)
 {
+#ifdef NETTLE_HAS_XTS
+	struct nttl_aes_xts *aes=ctx;
+
+	if(U(slen<16))return -1;
+	xts_encrypt_message(&aes->enc,&aes->twe,aes->encrypt,iv,slen,dst,src);
+	return 0;
+#else
 	int i;
 	int n;
 	struct nttl_aes_xts *aes=ctx;
@@ -2396,10 +2468,19 @@ static int nttl_aes_xts_encrypt(void *ctx,void *iv,void *src,int slen,void *dst)
 	}
 
 	return 0;
+#endif
 }
 
 static int nttl_aes_xts_decrypt(void *ctx,void *iv,void *src,int slen,void *dst)
 {
+#ifdef NETTLE_HAS_XTS
+	struct nttl_aes_xts *aes=ctx;
+
+	if(U(slen<16))return -1;
+	xts_decrypt_message(&aes->dec,&aes->twe,aes->decrypt,aes->encrypt,iv,
+		slen,dst,src);
+	return 0;
+#else
 	int i;
 	int n;
 	struct nttl_aes_xts *aes=ctx;
@@ -2440,6 +2521,7 @@ static int nttl_aes_xts_decrypt(void *ctx,void *iv,void *src,int slen,void *dst)
 	}
 
 	return 0;
+#endif
 }
 
 static void *nttl_aes_xts_init(void *ctx,void *key,int klen)
@@ -2451,6 +2533,18 @@ static void *nttl_aes_xts_init(void *ctx,void *key,int klen)
 	nttl_aes_set_encrypt_key(&aes->enc,klen>>4,key);
 	nttl_aes_set_decrypt_key(&aes->dec,klen>>4,key);
 	nttl_aes_set_encrypt_key(&aes->twe,klen>>4,key+(klen>>4));
+#ifdef NETTLE_HAS_XTS
+	if(klen==512)
+	{
+		aes->encrypt=(nettle_cipher_func *)aes256_encrypt;
+		aes->decrypt=(nettle_cipher_func *)aes256_decrypt;
+	}
+	else
+	{
+		aes->encrypt=(nettle_cipher_func *)aes128_encrypt;
+		aes->decrypt=(nettle_cipher_func *)aes128_decrypt;
+	}
+#endif
 	aes->global=((struct usicrypt_thread *)ctx)->global;
 	((struct usicrypt_thread *)ctx)->global->memclear(key,klen>>3);
 	return aes;
@@ -3725,6 +3819,15 @@ static void nttl_camellia_ctr_exit(void *ctx)
 static int nttl_camellia_xts_encrypt(void *ctx,void *iv,void *src,int slen,
 	void *dst)
 {
+#ifdef NETTLE_HAS_XTS
+	struct nttl_camellia_xts *camellia=ctx;
+
+	if(U(slen<16))return -1;
+
+	xts_encrypt_message(&camellia->enc,&camellia->twe,camellia->crypt,iv,
+		slen,dst,src);
+	return 0;
+#else
 	int i;
 	int n;
 	struct nttl_camellia_xts *camellia=ctx;
@@ -3760,11 +3863,21 @@ static int nttl_camellia_xts_encrypt(void *ctx,void *iv,void *src,int slen,
 	}
 
 	return 0;
+#endif
 }
 
 static int nttl_camellia_xts_decrypt(void *ctx,void *iv,void *src,int slen,
 	void *dst)
 {
+#ifdef NETTLE_HAS_XTS
+	struct nttl_camellia_xts *camellia=ctx;
+
+	if(U(slen<16))return -1;
+
+	xts_decrypt_message(&camellia->dec,&camellia->twe,camellia->crypt,
+		camellia->crypt,iv,slen,dst,src);
+	return 0;
+#else
 	int i;
 	int n;
 	struct nttl_camellia_xts *camellia=ctx;
@@ -3806,6 +3919,7 @@ static int nttl_camellia_xts_decrypt(void *ctx,void *iv,void *src,int slen,
 	}
 
 	return 0;
+#endif
 }
 
 static void *nttl_camellia_xts_init(void *ctx,void *key,int klen)
@@ -5799,6 +5913,182 @@ void USICRYPT(ed25519_free)(void *ctx,void *key)
 
 #endif
 
+#ifdef NETTLE_HAS_ED448
+
+void *USICRYPT(ed448_generate)(void *ctx)
+{
+#ifndef USICRYPT_NO_ED448
+	struct nttl_ed448 *key;
+
+	if(U(!(key=malloc(sizeof(struct nttl_ed448)))))goto err1;
+	yarrow256_random(&((struct usicrypt_thread *)ctx)->rng,
+		sizeof(key->key),key->key);
+	ed448_shake256_public_key(key->pub,key->key);
+err1:	return key;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed448_get_pub)(void *ctx,void *key,int *len)
+{
+#ifndef USICRYPT_NO_ED448
+	unsigned char *data=NULL;
+	struct nttl_ed448 *k=key;
+
+	*len=sizeof(nttl_ed448_asn1_pub)+57;
+	if(U(!(data=malloc(*len))))goto err1;
+	memcpy(data,nttl_ed448_asn1_pub,sizeof(nttl_ed448_asn1_pub));
+	memcpy(data+sizeof(nttl_ed448_asn1_pub),k->pub,57);
+err1:	return data;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed448_set_pub)(void *ctx,void *key,int len)
+{
+#ifndef USICRYPT_NO_ED448
+	struct nttl_ed448 *k=NULL;
+
+	if(U(len<sizeof(nttl_ed448_asn1_pub)+57)||
+	    U(memcmp(key,nttl_ed448_asn1_pub,sizeof(nttl_ed448_asn1_pub))))
+		 goto err1;
+	if(U(!(k=malloc(sizeof(struct nttl_ed448)))))goto err1;
+	USICRYPT(do_memclear)(k->key,sizeof(k->key));
+	memcpy(k->pub,key+sizeof(nttl_ed448_asn1_pub),sizeof(k->pub));
+err1:	return k;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed448_get_key)(void *ctx,void *key,int *len)
+{
+#ifndef USICRYPT_NO_ED448
+	unsigned char *data=NULL;
+	struct nttl_ed448 *k=key;
+	
+	*len=sizeof(nttl_ed448_asn1_key)+57;
+	if(U(!(data=malloc(*len))))goto err1;
+	memcpy(data,nttl_ed448_asn1_key,sizeof(nttl_ed448_asn1_key));
+	memcpy(data+sizeof(nttl_ed448_asn1_key),k->key,57);
+err1:	return data;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed448_set_key)(void *ctx,void *key,int len)
+{
+#ifndef USICRYPT_NO_ED448
+	struct nttl_ed448 *k=NULL;
+
+	if(U(len<sizeof(nttl_ed448_asn1_key)+57)||
+	    U(memcmp(key,nttl_ed448_asn1_key,sizeof(nttl_ed448_asn1_key))))
+		 goto err1;
+	if(U(!(k=malloc(sizeof(struct nttl_ed448)))))goto err1;
+	memcpy(k->key,key+sizeof(nttl_ed448_asn1_key),sizeof(k->key));
+	ed448_shake256_public_key(k->pub,k->key);
+err1:	return k;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed448_sign)(void *ctx,void *key,void *data,int dlen,int *slen)
+{
+#ifndef USICRYPT_NO_ED448
+	unsigned char *sig=NULL;
+
+	*slen=114;
+	if(U(!(sig=malloc(*slen))))goto err1;
+	ed448_shake256_sign(((struct nttl_ed448 *)key)->pub,
+		((struct nttl_ed448 *)key)->key,dlen,data,sig);
+err1:	return sig;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(ed448_sign_iov)(void *ctx,void *key,struct usicrypt_iov *iov,
+	int niov,int *slen)
+{
+#if !defined(USICRYPT_NO_ED448) && !defined(USICRYPT_NO_IOV)
+	unsigned char *sig;
+	int i;
+	int len; 
+	unsigned char *data;
+	unsigned char *p;
+	
+	*slen=114;
+	for(len=0,i=0;i<niov;i++)len+=iov[i].length;
+	if(U(!(sig=malloc(*slen))))goto err1;
+	if(U(!(data=malloc(len))))goto err2;
+	for(p=data,i=0;i<niov;p+=iov[i++].length)
+		memcpy(p,iov[i].data,iov[i].length);
+	ed448_shake256_sign(((struct nttl_ed448 *)key)->pub,
+		((struct nttl_ed448 *)key)->key,len,data,sig);
+	((struct usicrypt_thread *)ctx)->global->memclear(data,len);
+	free(data);
+	return sig;
+
+err2:	free(sig);
+err1:	return NULL;
+#else
+	return NULL;
+#endif
+}
+
+int USICRYPT(ed448_verify)(void *ctx,void *key,void *data,int dlen,void *sig,
+	int slen)
+{
+#ifndef USICRYPT_NO_ED448
+	if(slen!=114)return -1;
+	if(!ed448_shake256_verify(((struct nttl_ed448 *)key)->pub,dlen,data,
+		sig))return -1;
+	return 0;
+#else
+	return -1;
+#endif
+}
+
+int USICRYPT(ed448_verify_iov)(void *ctx,void *key,struct usicrypt_iov *iov,
+	int niov,void *sig,int slen)
+{
+#if !defined(USICRYPT_NO_ED448) && !defined(USICRYPT_NO_IOV)
+	int err=-1;
+	int i;
+	int len; 
+	unsigned char *data;
+	unsigned char *p;
+	
+	if(slen!=114)return -1;
+	for(len=0,i=0;i<niov;i++)len+=iov[i].length;
+	if(U(!(data=malloc(len))))goto err1;
+	for(p=data,i=0;i<niov;p+=iov[i++].length)
+		memcpy(p,iov[i].data,iov[i].length);
+	if(ed448_shake256_verify(((struct nttl_ed448 *)key)->pub,len,data,
+		sig))err=0;
+	((struct usicrypt_thread *)ctx)->global->memclear(data,len);
+	free(data);
+err1:	return err;
+#else
+	return -1;
+#endif
+}
+
+void USICRYPT(ed448_free)(void *ctx,void *key)
+{
+#ifndef USICRYPT_NO_ED448
+	((struct usicrypt_thread *)ctx)->global->memclear(key,
+		sizeof(struct nttl_ed448));
+	free(key);
+#endif
+}
+
+#endif
+
 void *USICRYPT(x25519_generate)(void *ctx)
 {
 #ifndef USICRYPT_NO_X25519
@@ -5913,6 +6203,124 @@ void USICRYPT(x25519_free)(void *ctx,void *key)
 	free(key);
 #endif
 }
+
+#ifdef NETTLE_HAS_X448
+
+void *USICRYPT(x448_generate)(void *ctx)
+{
+#ifndef USICRYPT_NO_X448
+	struct nttl_x448 *x;
+
+	if(U(nttl_reseed(ctx)))return NULL;
+	if(U(!(x=malloc(sizeof(struct nttl_x448)))))return NULL;
+	yarrow256_random(&((struct usicrypt_thread *)ctx)->rng,
+		CURVE448_SIZE,x->key);
+	x->key[0]&=0xfc;
+	x->key[CURVE448_SIZE-1]|=0x80;
+	curve448_mul_g(x->pub,x->key);
+	return x;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(x448_derive)(void *ctx,void *key,void *pub,int *klen)
+{
+#ifndef USICRYPT_NO_X448
+	struct nttl_x448 *k=key;
+	struct nttl_x448 *p=pub;
+	unsigned char *out;
+
+	*klen=CURVE448_SIZE;
+	if(U(!(out=malloc(*klen))))return NULL;
+	curve448_mul(out,k->key,p->pub);
+	return out;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(x448_get_pub)(void *ctx,void *key,int *len)
+{
+#ifndef USICRYPT_NO_X448
+	unsigned char *data;
+
+	*len=sizeof(nttl_x448_asn1_pub)+CURVE448_SIZE;
+	if(U(!(data=malloc(*len))))return NULL;
+	memcpy(data,nttl_x448_asn1_pub,sizeof(nttl_x448_asn1_pub));
+	memcpy(data+sizeof(nttl_x448_asn1_pub),
+		((struct nttl_x448 *)key)->pub,CURVE448_SIZE);
+	return data;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(x448_set_pub)(void *ctx,void *key,int len)
+{
+#ifndef USICRYPT_NO_X448
+	struct nttl_x448 *x;
+
+	if(U(len<sizeof(nttl_x448_asn1_pub)+CURVE448_SIZE)||
+	    U(memcmp(key,nttl_x448_asn1_pub,sizeof(nttl_x448_asn1_pub))))
+		goto err1;
+	if(U(!(x=malloc(sizeof(struct nttl_x448)))))goto err1;
+	memcpy(x->pub,((unsigned char *)key)+sizeof(nttl_x448_asn1_pub),
+		CURVE448_SIZE);
+	return x;
+
+err1:	return NULL;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(x448_get_key)(void *ctx,void *key,int *len)
+{
+#ifndef USICRYPT_NO_X448
+	unsigned char *data;
+
+	*len=sizeof(nttl_x448_asn1_key)+CURVE448_SIZE;
+	if(U(!(data=malloc(*len))))return NULL;
+	memcpy(data,nttl_x448_asn1_key,sizeof(nttl_x448_asn1_key));
+	memcpy(data+sizeof(nttl_x448_asn1_key),
+		((struct nttl_x448 *)key)->key,CURVE448_SIZE);
+	return data;
+#else
+	return NULL;
+#endif
+}
+
+void *USICRYPT(x448_set_key)(void *ctx,void *key,int len)
+{
+#ifndef USICRYPT_NO_X448
+	struct nttl_x448 *x;
+
+	if(U(len<sizeof(nttl_x448_asn1_key)+CURVE448_SIZE)||
+	    U(memcmp(key,nttl_x448_asn1_key,sizeof(nttl_x448_asn1_key))))
+		goto err1;
+	if(U(!(x=malloc(sizeof(struct nttl_x448)))))goto err1;
+	memcpy(x->key,((unsigned char *)key)+sizeof(nttl_x448_asn1_key),
+		CURVE448_SIZE);
+	curve448_mul_g(x->pub,x->key);
+	((struct usicrypt_thread *)ctx)->global->memclear(key,len);
+	return x;
+
+err1:	((struct usicrypt_thread *)ctx)->global->memclear(key,len);
+#endif
+	return NULL;
+}
+
+void USICRYPT(x448_free)(void *ctx,void *key)
+{
+#ifndef USICRYPT_NO_X448
+	((struct usicrypt_thread *)ctx)->global->
+		memclear(key,sizeof(struct nttl_x448));
+	free(key);
+#endif
+}
+
+#endif
 
 void *USICRYPT(encrypt_p8)(void *ctx,void *key,int klen,void *data,int dlen,
 	int cipher,int mode,int bits,int digest,int iter,int *rlen)

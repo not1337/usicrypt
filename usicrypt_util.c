@@ -342,10 +342,22 @@ static const struct
 		3,USICRYPT_X25519,0,USICRYPT_X25519
 	},
 #endif
+#ifndef USICRYPT_NO_X448
+	{
+		{0x2b,0x65,0x6f},
+		3,USICRYPT_X448,0,USICRYPT_X448
+	},
+#endif
 #ifndef USICRYPT_NO_ED25519
 	{
 		{0x2b,0x65,0x70},
 		3,USICRYPT_ED25519,0,USICRYPT_ED25519
+	},
+#endif
+#ifndef USICRYPT_NO_ED448
+	{
+		{0x2b,0x65,0x71},
+		3,USICRYPT_ED448,0,USICRYPT_ED448
 	},
 #endif
 	{

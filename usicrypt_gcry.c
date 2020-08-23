@@ -83,6 +83,8 @@ struct gcry_cipher
 	unsigned char extra[0];
 };
 
+#if GCRYPT_VERSION_NUMBER < 0x010806
+
 struct gcry_cipher_cfb8
 {
 	struct usicrypt_cipher cipher;
@@ -91,6 +93,8 @@ struct gcry_cipher_cfb8
 	unsigned char iv[16];
 	unsigned char mem[16];
 };
+
+#endif
 
 struct gcry_cipher_xts
 {
@@ -2652,6 +2656,29 @@ static void *gcry_cipher_init(void *ctx,int type,int mode,int flags,
 			len=8;
 			break;
 		}
+		goto err1;
+	case 3:	switch(klen)
+		{
+		case 256:
+			id=GCRY_CIPHER_AES;
+			break;
+		case 512:
+			id=GCRY_CIPHER_AES256;
+			break;
+		default:goto err1;
+		}
+		break;
+	case 4:	switch(klen)
+		{
+		case 256:
+			id=GCRY_CIPHER_CAMELLIA128;
+			break;
+		case 512:
+			id=GCRY_CIPHER_CAMELLIA256;
+			break;
+		default:goto err1;
+		}
+		break;
 	default:goto err1;
 	}
 	if(extra)extra+=sizeof(struct usicrypt_global *);
@@ -2795,6 +2822,7 @@ static int gcry_cipher_1_decrypt(void *ctx,void *src,int slen,void *dst)
 
 #endif
 #if !defined(USICRYPT_NO_CFB8)
+#if GCRYPT_VERSION_NUMBER < 0x010806
 
 static int gcry_cipher_cfb8_encrypt(void *ctx,void *src,int slen,void *dst)
 {
@@ -2845,6 +2873,7 @@ static void gcry_cipher_cfb8_exit(void *ctx)
 }
 
 #endif
+#endif
 #if !defined(USICRYPT_NO_OFB) || !defined(USICRYPT_NO_CTR)
 
 static int gcry_cipher_zero_crypt(void *ctx,void *src,int slen,void *dst)
@@ -2886,6 +2915,7 @@ static void gcry_cipher_ctr_reset(void *ctx,void *iv)
 static int gcry_cipher_xts_encrypt(void *ctx,void *iv,void *src,int slen,
 	void *dst)
 {
+#if GCRYPT_VERSION_NUMBER < 0x010806
 	int i;
 	int n;
 	struct gcry_cipher_xts *cipher=ctx;
@@ -2922,11 +2952,23 @@ static int gcry_cipher_xts_encrypt(void *ctx,void *iv,void *src,int slen,
 	}
 
 	return 0;
+#else
+	gcry_cipher_setiv(((struct gcry_cipher *)ctx)->h,iv,16);
+	if(src==dst)
+	{
+		if(U(gcry_cipher_encrypt(((struct gcry_cipher *)ctx)->h,dst,
+			slen,NULL,0)))return -1;
+	}
+	else if(U(gcry_cipher_encrypt(((struct gcry_cipher *)ctx)->h,dst,slen,
+		src,slen)))return -1;
+	return 0;
+#endif
 }
 
 static int gcry_cipher_xts_decrypt(void *ctx,void *iv,void *src,int slen,
 	void *dst)
 {
+#if GCRYPT_VERSION_NUMBER < 0x010806
 	int i;
 	int n;
 	struct gcry_cipher_xts *cipher=ctx;
@@ -2970,7 +3012,20 @@ static int gcry_cipher_xts_decrypt(void *ctx,void *iv,void *src,int slen,
 	}
 
 	return 0;
+#else
+	gcry_cipher_setiv(((struct gcry_cipher *)ctx)->h,iv,16);
+	if(src==dst)
+	{
+		if(U(gcry_cipher_decrypt(((struct gcry_cipher *)ctx)->h,dst,
+			slen,NULL,0)))return -1;
+	}
+	else if(U(gcry_cipher_decrypt(((struct gcry_cipher *)ctx)->h,dst,slen,
+		src,slen)))return -1;
+	return 0;
+#endif
 }
+
+#if GCRYPT_VERSION_NUMBER < 0x010806
 
 static void *gcry_cipher_xts_init(void *ctx,int type,void *key,int klen)
 {
@@ -3018,6 +3073,7 @@ static void gcry_cipher_xts_exit(void *ctx)
 	free(ctx);
 }
 
+#endif
 #endif
 #ifndef USICRYPT_NO_ESSIV
 
@@ -5363,12 +5419,21 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CFB8
 	case USICRYPT_AES|USICRYPT_CFB8:
+#if GCRYPT_VERSION_NUMBER < 0x010806
 		if(U(!(c=gcry_cipher_init(ctx,0,GCRY_CIPHER_MODE_ECB,
 			0,key,klen,iv,NULL,32))))break;
 		c->encrypt=gcry_cipher_cfb8_encrypt;
 		c->decrypt=gcry_cipher_cfb8_decrypt;
 		c->reset=gcry_cipher_cfb8_reset;
 		c->exit=gcry_cipher_cfb8_exit;
+#else
+		if(U(!(c=gcry_cipher_init(ctx,0,GCRY_CIPHER_MODE_CFB8,
+			0,key,klen,iv,NULL,0))))break;
+		c->encrypt=gcry_cipher_1_encrypt;
+		c->decrypt=gcry_cipher_1_decrypt;
+		c->reset=gcry_cipher_iv16_reset;
+		c->exit=gcry_cipher_exit;
+#endif
 		break;
 #endif
 #ifndef USICRYPT_NO_OFB
@@ -5435,12 +5500,21 @@ void *USICRYPT(blkcipher_init)(void *ctx,int cipher,int mode,void *key,int klen,
 #endif
 #ifndef USICRYPT_NO_CFB8
 	case USICRYPT_CAMELLIA|USICRYPT_CFB8:
+#if GCRYPT_VERSION_NUMBER < 0x010806
 		if(U(!(c=gcry_cipher_init(ctx,1,GCRY_CIPHER_MODE_ECB,
 			0,key,klen,iv,NULL,32))))break;
 		c->encrypt=gcry_cipher_cfb8_encrypt;
 		c->decrypt=gcry_cipher_cfb8_decrypt;
 		c->reset=gcry_cipher_cfb8_reset;
 		c->exit=gcry_cipher_cfb8_exit;
+#else
+		if(U(!(c=gcry_cipher_init(ctx,1,GCRY_CIPHER_MODE_CFB8,
+			0,key,klen,iv,NULL,0))))break;
+		c->encrypt=gcry_cipher_1_encrypt;
+		c->decrypt=gcry_cipher_1_decrypt;
+		c->reset=gcry_cipher_iv16_reset;
+		c->exit=gcry_cipher_exit;
+#endif
 		break;
 #endif
 #ifndef USICRYPT_NO_OFB
@@ -5511,10 +5585,18 @@ void *USICRYPT(dskcipher_init)(void *ctx,int cipher,int mode,void *key,int klen)
 #ifndef USICRYPT_NO_AES
 #ifndef USICRYPT_NO_XTS
 	case USICRYPT_AES|USICRYPT_XTS:
+#if GCRYPT_VERSION_NUMBER < 0x010806
 		if(U(!(c=gcry_cipher_xts_init(ctx,0,key,klen))))break;
 		c->encrypt=gcry_cipher_xts_encrypt;
 		c->decrypt=gcry_cipher_xts_decrypt;
 		c->exit=gcry_cipher_xts_exit;
+#else
+		if(U(!(c=gcry_cipher_init(ctx,3,GCRY_CIPHER_MODE_XTS,
+			0,key,klen,NULL,NULL,0))))break;
+		c->encrypt=gcry_cipher_xts_encrypt;
+		c->decrypt=gcry_cipher_xts_decrypt;
+		c->exit=gcry_cipher_exit;
+#endif
 		break;
 #endif
 #ifndef USICRYPT_NO_ESSIV
@@ -5529,10 +5611,18 @@ void *USICRYPT(dskcipher_init)(void *ctx,int cipher,int mode,void *key,int klen)
 #ifndef USICRYPT_NO_CAMELLIA
 #ifndef USICRYPT_NO_XTS
 	case USICRYPT_CAMELLIA|USICRYPT_XTS:
+#if GCRYPT_VERSION_NUMBER < 0x010806
 		if(U(!(c=gcry_cipher_xts_init(ctx,1,key,klen))))break;
 		c->encrypt=gcry_cipher_xts_encrypt;
 		c->decrypt=gcry_cipher_xts_decrypt;
 		c->exit=gcry_cipher_xts_exit;
+#else
+		if(U(!(c=gcry_cipher_init(ctx,4,GCRY_CIPHER_MODE_XTS,
+			0,key,klen,NULL,NULL,0))))break;
+		c->encrypt=gcry_cipher_xts_encrypt;
+		c->decrypt=gcry_cipher_xts_decrypt;
+		c->exit=gcry_cipher_exit;
+#endif
 		break;
 #endif
 #ifndef USICRYPT_NO_ESSIV

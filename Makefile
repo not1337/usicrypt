@@ -1,6 +1,6 @@
 # usicrypt, a unifying crypto library wrapper for low level functions
 #
-# (c) 2017 Andreas Steinmetz
+# (c) 2017-2020 Andreas Steinmetz
 #
 # Any OSI approved license of your choice applies, see the file LICENSE
 # for details.
@@ -21,6 +21,14 @@ ARFLAGS=
 #TARGET=-DUSICRYPT_NTTL
 #TARGET=-DUSICRYPT_WOLF
 TARGET=-DUSICRYPT_XSSL
+#
+# if you know that the selected crypto library natively supports ED25519,
+# you can define the following to prevent external source build
+#USICRYPT_NO_ED25519=1
+#
+# if you know that the selected crypto library natively supports X448 as
+# well as ED448, you can define the following to prevent external source build
+#USICRYPT_NO_DECAF=1
 #
 # Enable the following and add '-Wl,-gc-sections' to your link command
 # which links against the usicrypt library to actually remove all
@@ -47,6 +55,8 @@ CFLAGS+=-mrdrnd -mrdseed
 #CFLAGS+=-DUSICRYPT_NO_EC
 #CFLAGS+=-DUSICRYPT_NO_X25519
 #CFLAGS+=-DUSICRYPT_NO_ED25519
+#CFLAGS+=-DUSICRYPT_NO_X448
+#CFLAGS+=-DUSICRYPT_NO_ED448
 #CFLAGS+=-DUSICRYPT_NO_DIGEST
 #CFLAGS+=-DUSICRYPT_NO_HMAC
 #CFLAGS+=-DUSICRYPT_NO_PBKDF2
@@ -97,12 +107,19 @@ else
 ED25519OBJS=
 ED25519SHOBJS=
 endif
+ifndef USICRYPT_NO_DECAF
+DECAFOBJS=decaf-448/usicrypt_dcaf.o
+DECAFSHOBJS=decaf-448/usicrypt_dcaf.lo
+else
+DECAFOBJS=
+DECAFSHOBJS=
+endif
 
 all: libusicrypt.a libusicrypt-pic.a
 
 libusicrypt.a: usicrypt_gcry.o usicrypt_mbed.o usicrypt_nttl.o \
 	usicrypt_wolf.o usicrypt_util.o usicrypt_xssl.o usicrypt_ed25519.o \
-	$(ED25519OBJS)
+	$(ED25519OBJS) $(DECAFOBJS)
 	$(AR) rcu $(ARFLAGS) $@ $^
 
 usicrypt_gcry.o: usicrypt_gcry.c usicrypt_internal.h usicrypt.h \
@@ -117,9 +134,12 @@ usicrypt_util.o: usicrypt_util.c usicrypt_internal.h usicrypt.h
 usicrypt_xssl.o: usicrypt_xssl.c usicrypt_internal.h usicrypt.h \
 	usicrypt_common.c
 
+decaf-448/usicrypt_dcaf.o:
+	make -C decaf-448
+
 libusicrypt-pic.a: usicrypt_gcry.po usicrypt_mbed.po usicrypt_nttl.po \
 	usicrypt_wolf.po usicrypt_util.po usicrypt_xssl.po usicrypt_ed25519.po \
-	$(ED25519SHOBJS)
+	$(ED25519SHOBJS) $(DECAFSHOBJS)
 	$(AR) rcu $(ARFLAGS) $@ $^
 
 usicrypt_gcry.po: usicrypt_gcry.c usicrypt_internal.h usicrypt.h \
@@ -134,8 +154,12 @@ usicrypt_util.po: usicrypt_util.c usicrypt_internal.h usicrypt.h
 usicrypt_xssl.po: usicrypt_xssl.c usicrypt_internal.h usicrypt.h \
 	usicrypt_common.c
 
+decaf-448/usicrypt_dcaf.lo:
+	make -C decaf-448
+
 usicrypt_test: usicrypt_test.to usicrypt_gcry.to usicrypt_nttl.to \
-	usicrypt_mbed.to usicrypt_wolf.to usicrypt_util.to usicrypt_xssl.to
+	usicrypt_mbed.to usicrypt_wolf.to usicrypt_util.to usicrypt_xssl.to \
+	usicrypt_ed25519.to $(ED25519OBJS) decaf-448/usicrypt_dcaf.to
 	$(CC) $(LDFLAGS) -o $@ $^ -lcrypto -lmbedcrypto -lwolfssl -lgcrypt \
 		-lhogweed -lnettle -lgmp
 
@@ -151,8 +175,14 @@ usicrypt_wolf.to: usicrypt_wolf.c usicrypt_internal.h usicrypt.h \
 usicrypt_util.to: usicrypt_util.c usicrypt_internal.h usicrypt.h
 usicrypt_xssl.to: usicrypt_xssl.c usicrypt_internal.h usicrypt.h \
 	usicrypt_common.c
+usicrypt_ed25519.to: usicrypt_ed25519.c usicrypt_internal.h usicrypt.h \
+	usicrypt_common.c github-orlp-ed25519/src/ed25519.h
+
+decaf-448/usicrypt_dcaf.to:
+	make -C decaf-448
 
 clean:
+	make -C decaf-448 clean
 	rm -f usicrypt_test *.to *.po *.o *.eo *.epo *.a core
 
 %.to : %.c

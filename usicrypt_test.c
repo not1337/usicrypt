@@ -36,10 +36,17 @@
 #define USICRYPT(a) nttl_##a
 #include "usicrypt.h"
 #undef USICRYPT
+#define USICRYPT(a) orlp_##a
+#include "usicrypt.h"
+#undef USICRYPT
+#define USICRYPT(a) dcaf_##a
+#include "usicrypt.h"
+#undef USICRYPT
 
 #include <openssl/opensslv.h>
 #include <mbedtls/version.h>
 #include <wolfssl/version.h>
+#include <nettle/version.h>
 
 static int expensive=0;
 
@@ -1278,8 +1285,12 @@ static int test_rsa(void **ctx)
 	memset(err,0,sizeof(err));
 	for(i=0;i<5;i++)for(j=i+1;j<5;j++)
 	{
+#if LIBWOLFSSL_VERSION_HEX < 0x04003000
 		if(i==2||j==2)x=1;
 		else x=0;
+#else
+		x=0;
+#endif
 		test_rsa_pair(ctx[i],ctx[j],&cerr,&err[i],&err[j],x,
 			&rsaops[i],&rsaops[j]);
 	}
@@ -2107,6 +2118,719 @@ static int test_ec(void **ctx)
 	return printres("usicrypt_ec_...()",cerr,err);
 }
 
+static struct ed25519ops
+{
+	void *(*ed25519_generate)(void *);
+	void *(*ed25519_get_pub)(void *,void *,int *);
+	void *(*ed25519_set_pub)(void *,void *,int);
+	void *(*ed25519_get_key)(void *,void *,int *);
+	void *(*ed25519_set_key)(void *,void *,int);
+	void *(*ed25519_sign)(void *,void *,void *,int,int *);
+	int (*ed25519_verify)(void *,void *,void *,int,void *,int);
+	void *(*ed25519_sign_iov)(void *,void *,struct usicrypt_iov *,
+		int,int *);
+	int (*ed25519_verify_iov)(void *,void *,struct usicrypt_iov *,
+		int,void *,int);
+	void (*ed25519_free)(void *,void *);
+	void *(*encrypt_p8)(void *,void *,int,void *,int,int,int,int,int,int,
+		int *);
+	void *(*decrypt_p8)(void *,void *,int,void *,int,int *);
+	void *(*p8_to_pem)(void *,void *,int,int *);
+	void *(*pem_to_p8)(void *,void *,int,int *);
+} ed25519ops[5]=
+{
+#ifndef LIBRESSL_VERSION_NUMBER
+	{
+		xssl_ed25519_generate,xssl_ed25519_get_pub,xssl_ed25519_set_pub,
+		xssl_ed25519_get_key,xssl_ed25519_set_key,xssl_ed25519_sign,
+		xssl_ed25519_verify,xssl_ed25519_sign_iov,
+		xssl_ed25519_verify_iov,xssl_ed25519_free,xssl_encrypt_p8,
+		xssl_decrypt_p8,xssl_p8_to_pem,xssl_pem_to_p8,
+	},
+#else
+	{
+		orlp_ed25519_generate,orlp_ed25519_get_pub,orlp_ed25519_set_pub,
+		orlp_ed25519_get_key,orlp_ed25519_set_key,orlp_ed25519_sign,
+		orlp_ed25519_verify,orlp_ed25519_sign_iov,
+		orlp_ed25519_verify_iov,orlp_ed25519_free,xssl_encrypt_p8,
+		xssl_decrypt_p8,xssl_p8_to_pem,xssl_pem_to_p8,
+	},
+#endif
+	{
+		orlp_ed25519_generate,orlp_ed25519_get_pub,orlp_ed25519_set_pub,
+		orlp_ed25519_get_key,orlp_ed25519_set_key,orlp_ed25519_sign,
+		orlp_ed25519_verify,orlp_ed25519_sign_iov,
+		orlp_ed25519_verify_iov,orlp_ed25519_free,mbed_encrypt_p8,
+		mbed_decrypt_p8,mbed_p8_to_pem,mbed_pem_to_p8,
+	},
+	{
+		wolf_ed25519_generate,wolf_ed25519_get_pub,wolf_ed25519_set_pub,
+		wolf_ed25519_get_key,wolf_ed25519_set_key,wolf_ed25519_sign,
+		wolf_ed25519_verify,wolf_ed25519_sign_iov,
+		wolf_ed25519_verify_iov,wolf_ed25519_free,wolf_encrypt_p8,
+		wolf_decrypt_p8,wolf_p8_to_pem,wolf_pem_to_p8,
+	},
+	{
+		orlp_ed25519_generate,orlp_ed25519_get_pub,orlp_ed25519_set_pub,
+		orlp_ed25519_get_key,orlp_ed25519_set_key,orlp_ed25519_sign,
+		orlp_ed25519_verify,orlp_ed25519_sign_iov,
+		orlp_ed25519_verify_iov,orlp_ed25519_free,gcry_encrypt_p8,
+		gcry_decrypt_p8,gcry_p8_to_pem,gcry_pem_to_p8,
+	},
+	{
+		nttl_ed25519_generate,nttl_ed25519_get_pub,nttl_ed25519_set_pub,
+		nttl_ed25519_get_key,nttl_ed25519_set_key,nttl_ed25519_sign,
+		nttl_ed25519_verify,nttl_ed25519_sign_iov,
+		nttl_ed25519_verify_iov,nttl_ed25519_free,nttl_encrypt_p8,
+		nttl_decrypt_p8,nttl_p8_to_pem,nttl_pem_to_p8,
+	},
+};
+
+static void test_ed25519_pair(void *ctx1,void *ctx2,int *err,int *err1,
+	int *err2,struct ed25519ops *a,struct ed25519ops *b)
+{
+	int j;
+	int k;
+	int l;
+	int m;
+	int n;
+	int p1;
+	int p2;
+	int p3;
+	int p4;
+	int bits;
+	int size;
+	int em1;
+	int em2;
+	int slen;
+	int elen;
+	int dlen;
+	int pe1len;
+	int pe2len;
+	int de1len;
+	int de2len;
+	int plen1;
+	int plen2;
+	int klen1;
+	int klen2;
+	void *sig;
+	void *enc;
+	void *dec;
+	void *pe1;
+	void *pe2;
+	void *de1;
+	void *de2;
+	void *ed1=NULL;
+	void *ed2=NULL;
+	void *ed3=NULL;
+	void *ed4=NULL;
+	void *ed5=NULL;
+	void *ed6=NULL;
+	void *ed7=NULL;
+	void *ed8=NULL;
+	void *pub1=NULL;
+	void *pub2=NULL;
+	void *key1=NULL;
+	void *key2=NULL;
+	struct usicrypt_iov iov[3];
+	unsigned char data[32];
+	unsigned char data1[32];
+	unsigned char data2[32];
+
+	em1=*err1;
+	em2=*err2;
+
+	if(!(ed1=a->ed25519_generate(ctx1)))(*err1)++;
+	else if(!(pub1=a->ed25519_get_pub(ctx1,ed1,&plen1)))(*err1)++;
+	else if(!(key1=a->ed25519_get_key(ctx1,ed1,&klen1)))(*err1)++;
+
+	if(!(ed2=b->ed25519_generate(ctx2)))(*err2)++;
+	else if(!(pub2=b->ed25519_get_pub(ctx2,ed2,&plen2)))(*err2)++;
+	else if(!(key2=b->ed25519_get_key(ctx2,ed2,&klen2)))(*err2)++;
+
+	if(usicrypt_pub_type_from_p8(ctx1,pub1,plen1)!=USICRYPT_ED25519)
+		(*err)++;
+	if(usicrypt_pub_type_from_p8(ctx2,pub2,plen2)!=USICRYPT_ED25519)
+		(*err)++;
+
+	if(*err1!=em1||*err2!=em2)goto out;
+
+	if(!(ed3=a->ed25519_set_pub(ctx1,pub2,plen2)))(*err1)++;
+	if(!(ed7=a->ed25519_set_pub(ctx1,pub1,plen1)))(*err1)++;
+	if(!(ed5=a->ed25519_set_key(ctx1,key2,klen2)))(*err1)++;
+
+	if(!(ed4=b->ed25519_set_pub(ctx2,pub1,plen1)))(*err2)++;
+	if(!(ed8=b->ed25519_set_pub(ctx2,pub2,plen2)))(*err2)++;
+	if(!(ed6=b->ed25519_set_key(ctx2,key1,klen1)))(*err2)++;
+
+	if(*err1!=em1||*err2!=em2)goto out;
+
+	for(j=0;j<4;j++)for(k=0;k<2;k++)for(l=0;l<3;l++)
+		for(m=0;m<4;m++)for(n=0;n<5;n++)
+	{
+		if(!j&&l)continue;
+
+		switch(j)
+		{
+		case 0:	p1=USICRYPT_SHA1;
+			break;
+		case 1:	p1=USICRYPT_SHA256;
+			break;
+		case 2:	p1=USICRYPT_SHA384;
+			break;
+		case 3:	p1=USICRYPT_SHA512;
+			break;
+		}
+
+		switch(k)
+		{
+		case 0:	p2=USICRYPT_AES;
+			break;
+		case 1:	p2=USICRYPT_CAMELLIA;
+			break;
+		}
+
+		switch(l)
+		{
+		case 0:	bits=128;
+			break;
+		case 1:	bits=192;
+			break;
+		case 2:	bits=256;
+			break;
+		}
+
+		switch(m)
+		{
+		case 0:	p3=USICRYPT_ECB;
+			break;
+		case 1:	p3=USICRYPT_CBC;
+			break;
+		case 2:	p3=USICRYPT_CFB;
+			break;
+		case 3:	p3=USICRYPT_OFB;
+			break;
+		}
+
+		switch(n)
+		{
+		case 0:	p4=1;
+			break;
+		case 1:	p4=0x7f;
+			break;
+		case 2:	p4=0x80;
+			break;
+		case 3:	p4=0x7fff;
+			break;
+		case 4:	p4=0x8000;
+			break;
+		}
+
+		usicrypt_random(NULL,data,sizeof(data));
+		memcpy(data1,data,sizeof(data));
+		memcpy(data2,data,sizeof(data));
+
+		sig=NULL;
+		enc=NULL;
+		dec=NULL;
+		pe1=NULL;
+		de1=NULL;
+		if(!(sig=a->ed25519_get_key(ctx1,ed1,&slen)))(*err)++;
+		else if(!(enc=a->encrypt_p8(ctx1,data1,sizeof(data1),sig,slen,
+			p2,p3,bits,p1,p4,&elen)))(*err1)++;
+		else if(!(pe1=b->p8_to_pem(ctx1,enc,elen,&pe1len)))(*err1)++;
+		else if(!(de1=b->pem_to_p8(ctx1,pe1,pe1len,&de1len)))(*err1)++;
+		else if(de1len!=elen||memcmp(de1,enc,de1len))(*err1)++;
+		else if(!(dec=b->decrypt_p8(ctx2,data2,sizeof(data2),enc,elen,
+			&dlen)))(*err2)++;
+		else if(slen!=dlen||memcmp(sig,dec,slen))(*err)++;
+		else if(usicrypt_key_type_from_p8(ctx1,enc,elen)!=
+			USICRYPT_PBES2)(*err)++;
+		if(sig)free(sig);
+		if(enc)free(enc);
+		if(dec)free(dec);
+		if(pe1)free(pe1);
+		if(de1)free(de1);
+
+		usicrypt_random(NULL,data,sizeof(data));
+		memcpy(data1,data,sizeof(data));
+		memcpy(data2,data,sizeof(data));
+
+		sig=NULL;
+		enc=NULL;
+		dec=NULL;
+		pe2=NULL;
+		de2=NULL;
+		if(!(sig=b->ed25519_get_key(ctx2,ed1,&slen)))(*err)++;
+		else if(!(enc=b->encrypt_p8(ctx2,data1,sizeof(data1),sig,slen,
+			p2,p3,bits,p1,p4,&elen)))(*err2)++;
+		else if(!(pe2=a->p8_to_pem(ctx2,enc,elen,&pe2len)))(*err2)++;
+		else if(!(de2=a->pem_to_p8(ctx2,pe2,pe2len,&de2len)))(*err2)++;
+		else if(de2len!=elen||memcmp(de2,enc,de2len))(*err2)++;
+		else if(!(dec=a->decrypt_p8(ctx1,data2,sizeof(data2),enc,elen,
+			&dlen)))(*err1)++;
+		else if(slen!=dlen||memcmp(sig,dec,slen))(*err)++;
+		else if(usicrypt_key_type_from_p8(ctx2,enc,elen)!=
+			USICRYPT_PBES2)(*err)++;
+		if(sig)free(sig);
+		if(enc)free(enc);
+		if(dec)free(dec);
+		if(pe2)free(pe2);
+		if(de2)free(de2);
+	}
+
+	usicrypt_random(NULL,data,sizeof(data));
+
+	sig=NULL;
+	if(!(sig=a->ed25519_sign(ctx1,ed1,data,sizeof(data),&size)))(*err1)++;
+	else if(b->ed25519_verify(ctx2,ed4,data,sizeof(data),sig,size))
+		(*err2)++;
+	if(sig)free(sig);
+
+	sig=NULL;
+	if(!(sig=b->ed25519_sign(ctx2,ed2,data,sizeof(data),&size)))(*err2)++;
+	else if(a->ed25519_verify(ctx1,ed3,data,sizeof(data),sig,size))
+		(*err1)++;
+	if(sig)free(sig);
+
+	sig=NULL;
+	if(!(sig=a->ed25519_sign(ctx1,ed5,data,sizeof(data),&size)))(*err1)++;
+	else if(b->ed25519_verify(ctx2,ed2,data,sizeof(data),sig,size))
+		(*err2)++;
+	if(sig)free(sig);
+
+	sig=NULL;
+	if(!(sig=b->ed25519_sign(ctx2,ed6,data,sizeof(data),&size)))(*err2)++;
+	else if(a->ed25519_verify(ctx1,ed1,data,sizeof(data),sig,size))
+		(*err1)++;
+	if(sig)free(sig);
+
+	iov[0].data=data;
+	iov[0].length=4;
+	iov[1].data=data+4;
+	iov[1].length=8;
+	iov[2].data=data+12;
+	iov[2].length=sizeof(data)-12;
+
+	usicrypt_random(NULL,data,sizeof(data));
+
+	sig=NULL;
+	if(!(sig=a->ed25519_sign_iov(ctx1,ed1,iov,3,&size)))(*err1)++;
+	else if(b->ed25519_verify_iov(ctx2,ed4,iov,3,sig,size))(*err2)++;
+	if(sig)free(sig);
+
+	sig=NULL;
+	if(!(sig=b->ed25519_sign_iov(ctx2,ed2,iov,3,&size)))(*err2)++;
+	else if(a->ed25519_verify_iov(ctx1,ed3,iov,3,sig,size))(*err1)++;
+	if(sig)free(sig);
+
+	sig=NULL;
+	if(!(sig=a->ed25519_sign_iov(ctx1,ed5,iov,3,&size)))(*err1)++;
+	else if(b->ed25519_verify_iov(ctx2,ed2,iov,3,sig,size))(*err2)++;
+	if(sig)free(sig);
+
+	sig=NULL;
+	if(!(sig=b->ed25519_sign_iov(ctx2,ed6,iov,3,&size)))(*err2)++;
+	else if(a->ed25519_verify_iov(ctx1,ed1,iov,3,sig,size))(*err1)++;
+	if(sig)free(sig);
+
+out:	if(ed1)a->ed25519_free(ctx1,ed1);
+	if(ed2)b->ed25519_free(ctx2,ed2);
+	if(ed3)a->ed25519_free(ctx1,ed3);
+	if(ed4)b->ed25519_free(ctx2,ed4);
+	if(ed5)a->ed25519_free(ctx1,ed5);
+	if(ed6)b->ed25519_free(ctx2,ed6);
+	if(ed7)a->ed25519_free(ctx1,ed7);
+	if(ed8)b->ed25519_free(ctx2,ed8);
+	if(pub1)free(pub1);
+	if(pub2)free(pub2);
+	if(key1)free(key1);
+	if(key2)free(key2);
+}
+
+static int test_ed25519(void **ctx)
+{
+	int i;
+	int j;
+	int cerr=0;
+	int err[5];
+
+	memset(err,0,sizeof(err));
+	for(i=0;i<5;i++)for(j=i+1;j<5;j++)
+	{
+		test_ed25519_pair(ctx[i],ctx[j],&cerr,&err[i],&err[j],
+			&ed25519ops[i],&ed25519ops[j]);
+	}
+	return printres("usicrypt_ed25519_...()",cerr,err);
+}
+
+static struct ed448ops
+{
+	void *(*ed448_generate)(void *);
+	void *(*ed448_get_pub)(void *,void *,int *);
+	void *(*ed448_set_pub)(void *,void *,int);
+	void *(*ed448_get_key)(void *,void *,int *);
+	void *(*ed448_set_key)(void *,void *,int);
+	void *(*ed448_sign)(void *,void *,void *,int,int *);
+	int (*ed448_verify)(void *,void *,void *,int,void *,int);
+	void *(*ed448_sign_iov)(void *,void *,struct usicrypt_iov *,
+		int,int *);
+	int (*ed448_verify_iov)(void *,void *,struct usicrypt_iov *,
+		int,void *,int);
+	void (*ed448_free)(void *,void *);
+	void *(*encrypt_p8)(void *,void *,int,void *,int,int,int,int,int,int,
+		int *);
+	void *(*decrypt_p8)(void *,void *,int,void *,int,int *);
+	void *(*p8_to_pem)(void *,void *,int,int *);
+	void *(*pem_to_p8)(void *,void *,int,int *);
+} ed448ops[5]=
+{
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L && !defined(LIBRESSL_VERSION_NUMBER)
+	{
+		xssl_ed448_generate,xssl_ed448_get_pub,xssl_ed448_set_pub,
+		xssl_ed448_get_key,xssl_ed448_set_key,xssl_ed448_sign,
+		xssl_ed448_verify,xssl_ed448_sign_iov,
+		xssl_ed448_verify_iov,xssl_ed448_free,xssl_encrypt_p8,
+		xssl_decrypt_p8,xssl_p8_to_pem,xssl_pem_to_p8,
+	},
+#else
+	{
+		dcaf_ed448_generate,dcaf_ed448_get_pub,dcaf_ed448_set_pub,
+		dcaf_ed448_get_key,dcaf_ed448_set_key,dcaf_ed448_sign,
+		dcaf_ed448_verify,dcaf_ed448_sign_iov,
+		dcaf_ed448_verify_iov,dcaf_ed448_free,xssl_encrypt_p8,
+		xssl_decrypt_p8,xssl_p8_to_pem,xssl_pem_to_p8,
+	},
+#endif
+	{
+		dcaf_ed448_generate,dcaf_ed448_get_pub,dcaf_ed448_set_pub,
+		dcaf_ed448_get_key,dcaf_ed448_set_key,dcaf_ed448_sign,
+		dcaf_ed448_verify,dcaf_ed448_sign_iov,
+		dcaf_ed448_verify_iov,dcaf_ed448_free,mbed_encrypt_p8,
+		mbed_decrypt_p8,mbed_p8_to_pem,mbed_pem_to_p8,
+	},
+#if LIBWOLFSSL_VERSION_HEX >= 0x04004000
+	{
+		wolf_ed448_generate,wolf_ed448_get_pub,wolf_ed448_set_pub,
+		wolf_ed448_get_key,wolf_ed448_set_key,wolf_ed448_sign,
+		wolf_ed448_verify,wolf_ed448_sign_iov,
+		wolf_ed448_verify_iov,wolf_ed448_free,wolf_encrypt_p8,
+		wolf_decrypt_p8,wolf_p8_to_pem,wolf_pem_to_p8,
+	},
+#else
+	{
+		dcaf_ed448_generate,dcaf_ed448_get_pub,dcaf_ed448_set_pub,
+		dcaf_ed448_get_key,dcaf_ed448_set_key,dcaf_ed448_sign,
+		dcaf_ed448_verify,dcaf_ed448_sign_iov,
+		dcaf_ed448_verify_iov,dcaf_ed448_free,wolf_encrypt_p8,
+		wolf_decrypt_p8,wolf_p8_to_pem,wolf_pem_to_p8,
+	},
+#endif
+	{
+		dcaf_ed448_generate,dcaf_ed448_get_pub,dcaf_ed448_set_pub,
+		dcaf_ed448_get_key,dcaf_ed448_set_key,dcaf_ed448_sign,
+		dcaf_ed448_verify,dcaf_ed448_sign_iov,
+		dcaf_ed448_verify_iov,dcaf_ed448_free,gcry_encrypt_p8,
+		gcry_decrypt_p8,gcry_p8_to_pem,gcry_pem_to_p8,
+	},
+#if NETTLE_VERSION_MAJOR > 3 || \
+	( NETTLE_VERSION_MAJOR == 3 && NETTLE_VERSION_MINOR >= 6 )
+	{
+		nttl_ed448_generate,nttl_ed448_get_pub,nttl_ed448_set_pub,
+		nttl_ed448_get_key,nttl_ed448_set_key,nttl_ed448_sign,
+		nttl_ed448_verify,nttl_ed448_sign_iov,
+		nttl_ed448_verify_iov,nttl_ed448_free,nttl_encrypt_p8,
+		nttl_decrypt_p8,nttl_p8_to_pem,nttl_pem_to_p8,
+	},
+#else
+	{
+		dcaf_ed448_generate,dcaf_ed448_get_pub,dcaf_ed448_set_pub,
+		dcaf_ed448_get_key,dcaf_ed448_set_key,dcaf_ed448_sign,
+		dcaf_ed448_verify,dcaf_ed448_sign_iov,
+		dcaf_ed448_verify_iov,dcaf_ed448_free,nttl_encrypt_p8,
+		nttl_decrypt_p8,nttl_p8_to_pem,nttl_pem_to_p8,
+	},
+#endif
+};
+
+static void test_ed448_pair(void *ctx1,void *ctx2,int *err,int *err1,
+	int *err2,struct ed448ops *a,struct ed448ops *b)
+{
+	int j;
+	int k;
+	int l;
+	int m;
+	int n;
+	int p1;
+	int p2;
+	int p3;
+	int p4;
+	int bits;
+	int size;
+	int em1;
+	int em2;
+	int slen;
+	int elen;
+	int dlen;
+	int pe1len;
+	int pe2len;
+	int de1len;
+	int de2len;
+	int plen1;
+	int plen2;
+	int klen1;
+	int klen2;
+	void *sig;
+	void *enc;
+	void *dec;
+	void *pe1;
+	void *pe2;
+	void *de1;
+	void *de2;
+	void *ed1=NULL;
+	void *ed2=NULL;
+	void *ed3=NULL;
+	void *ed4=NULL;
+	void *ed5=NULL;
+	void *ed6=NULL;
+	void *ed7=NULL;
+	void *ed8=NULL;
+	void *pub1=NULL;
+	void *pub2=NULL;
+	void *key1=NULL;
+	void *key2=NULL;
+	struct usicrypt_iov iov[3];
+	unsigned char data[32];
+	unsigned char data1[32];
+	unsigned char data2[32];
+
+	em1=*err1;
+	em2=*err2;
+
+	if(!(ed1=a->ed448_generate(ctx1)))(*err1)++;
+	else if(!(pub1=a->ed448_get_pub(ctx1,ed1,&plen1)))(*err1)++;
+	else if(!(key1=a->ed448_get_key(ctx1,ed1,&klen1)))(*err1)++;
+
+	if(!(ed2=b->ed448_generate(ctx2)))(*err2)++;
+	else if(!(pub2=b->ed448_get_pub(ctx2,ed2,&plen2)))(*err2)++;
+	else if(!(key2=b->ed448_get_key(ctx2,ed2,&klen2)))(*err2)++;
+
+	if(usicrypt_pub_type_from_p8(ctx1,pub1,plen1)!=USICRYPT_ED448)
+		(*err)++;
+	if(usicrypt_pub_type_from_p8(ctx2,pub2,plen2)!=USICRYPT_ED448)
+		(*err)++;
+
+	if(*err1!=em1||*err2!=em2)goto out;
+
+	if(!(ed3=a->ed448_set_pub(ctx1,pub2,plen2)))(*err1)++;
+	if(!(ed7=a->ed448_set_pub(ctx1,pub1,plen1)))(*err1)++;
+	if(!(ed5=a->ed448_set_key(ctx1,key2,klen2)))(*err1)++;
+
+	if(!(ed4=b->ed448_set_pub(ctx2,pub1,plen1)))(*err2)++;
+	if(!(ed8=b->ed448_set_pub(ctx2,pub2,plen2)))(*err2)++;
+	if(!(ed6=b->ed448_set_key(ctx2,key1,klen1)))(*err2)++;
+
+	if(*err1!=em1||*err2!=em2)goto out;
+
+	for(j=0;j<4;j++)for(k=0;k<2;k++)for(l=0;l<3;l++)
+		for(m=0;m<4;m++)for(n=0;n<5;n++)
+	{
+		if(!j&&l)continue;
+
+		switch(j)
+		{
+		case 0:	p1=USICRYPT_SHA1;
+			break;
+		case 1:	p1=USICRYPT_SHA256;
+			break;
+		case 2:	p1=USICRYPT_SHA384;
+			break;
+		case 3:	p1=USICRYPT_SHA512;
+			break;
+		}
+
+		switch(k)
+		{
+		case 0:	p2=USICRYPT_AES;
+			break;
+		case 1:	p2=USICRYPT_CAMELLIA;
+			break;
+		}
+
+		switch(l)
+		{
+		case 0:	bits=128;
+			break;
+		case 1:	bits=192;
+			break;
+		case 2:	bits=256;
+			break;
+		}
+
+		switch(m)
+		{
+		case 0:	p3=USICRYPT_ECB;
+			break;
+		case 1:	p3=USICRYPT_CBC;
+			break;
+		case 2:	p3=USICRYPT_CFB;
+			break;
+		case 3:	p3=USICRYPT_OFB;
+			break;
+		}
+
+		switch(n)
+		{
+		case 0:	p4=1;
+			break;
+		case 1:	p4=0x7f;
+			break;
+		case 2:	p4=0x80;
+			break;
+		case 3:	p4=0x7fff;
+			break;
+		case 4:	p4=0x8000;
+			break;
+		}
+
+		usicrypt_random(NULL,data,sizeof(data));
+		memcpy(data1,data,sizeof(data));
+		memcpy(data2,data,sizeof(data));
+
+		sig=NULL;
+		enc=NULL;
+		dec=NULL;
+		pe1=NULL;
+		de1=NULL;
+		if(!(sig=a->ed448_get_key(ctx1,ed1,&slen)))(*err)++;
+		else if(!(enc=a->encrypt_p8(ctx1,data1,sizeof(data1),sig,slen,
+			p2,p3,bits,p1,p4,&elen)))(*err1)++;
+		else if(!(pe1=b->p8_to_pem(ctx1,enc,elen,&pe1len)))(*err1)++;
+		else if(!(de1=b->pem_to_p8(ctx1,pe1,pe1len,&de1len)))(*err1)++;
+		else if(de1len!=elen||memcmp(de1,enc,de1len))(*err1)++;
+		else if(!(dec=b->decrypt_p8(ctx2,data2,sizeof(data2),enc,elen,
+			&dlen)))(*err2)++;
+		else if(slen!=dlen||memcmp(sig,dec,slen))(*err)++;
+		else if(usicrypt_key_type_from_p8(ctx1,enc,elen)!=
+			USICRYPT_PBES2)(*err)++;
+		if(sig)free(sig);
+		if(enc)free(enc);
+		if(dec)free(dec);
+		if(pe1)free(pe1);
+		if(de1)free(de1);
+
+		usicrypt_random(NULL,data,sizeof(data));
+		memcpy(data1,data,sizeof(data));
+		memcpy(data2,data,sizeof(data));
+
+		sig=NULL;
+		enc=NULL;
+		dec=NULL;
+		pe2=NULL;
+		de2=NULL;
+		if(!(sig=b->ed448_get_key(ctx2,ed1,&slen)))(*err)++;
+		else if(!(enc=b->encrypt_p8(ctx2,data1,sizeof(data1),sig,slen,
+			p2,p3,bits,p1,p4,&elen)))(*err2)++;
+		else if(!(pe2=a->p8_to_pem(ctx2,enc,elen,&pe2len)))(*err2)++;
+		else if(!(de2=a->pem_to_p8(ctx2,pe2,pe2len,&de2len)))(*err2)++;
+		else if(de2len!=elen||memcmp(de2,enc,de2len))(*err2)++;
+		else if(!(dec=a->decrypt_p8(ctx1,data2,sizeof(data2),enc,elen,
+			&dlen)))(*err1)++;
+		else if(slen!=dlen||memcmp(sig,dec,slen))(*err)++;
+		else if(usicrypt_key_type_from_p8(ctx2,enc,elen)!=
+			USICRYPT_PBES2)(*err)++;
+		if(sig)free(sig);
+		if(enc)free(enc);
+		if(dec)free(dec);
+		if(pe2)free(pe2);
+		if(de2)free(de2);
+	}
+
+	usicrypt_random(NULL,data,sizeof(data));
+
+	sig=NULL;
+	if(!(sig=a->ed448_sign(ctx1,ed1,data,sizeof(data),&size)))(*err1)++;
+	else if(b->ed448_verify(ctx2,ed4,data,sizeof(data),sig,size))
+		(*err2)++;
+	if(sig)free(sig);
+
+	sig=NULL;
+	if(!(sig=b->ed448_sign(ctx2,ed2,data,sizeof(data),&size)))(*err2)++;
+	else if(a->ed448_verify(ctx1,ed3,data,sizeof(data),sig,size))
+		(*err1)++;
+	if(sig)free(sig);
+
+	sig=NULL;
+	if(!(sig=a->ed448_sign(ctx1,ed5,data,sizeof(data),&size)))(*err1)++;
+	else if(b->ed448_verify(ctx2,ed2,data,sizeof(data),sig,size))
+		(*err2)++;
+	if(sig)free(sig);
+
+	sig=NULL;
+	if(!(sig=b->ed448_sign(ctx2,ed6,data,sizeof(data),&size)))(*err2)++;
+	else if(a->ed448_verify(ctx1,ed1,data,sizeof(data),sig,size))
+		(*err1)++;
+	if(sig)free(sig);
+
+	iov[0].data=data;
+	iov[0].length=4;
+	iov[1].data=data+4;
+	iov[1].length=8;
+	iov[2].data=data+12;
+	iov[2].length=sizeof(data)-12;
+
+	usicrypt_random(NULL,data,sizeof(data));
+
+	sig=NULL;
+	if(!(sig=a->ed448_sign_iov(ctx1,ed1,iov,3,&size)))(*err1)++;
+	else if(b->ed448_verify_iov(ctx2,ed4,iov,3,sig,size))(*err2)++;
+	if(sig)free(sig);
+
+	sig=NULL;
+	if(!(sig=b->ed448_sign_iov(ctx2,ed2,iov,3,&size)))(*err2)++;
+	else if(a->ed448_verify_iov(ctx1,ed3,iov,3,sig,size))(*err1)++;
+	if(sig)free(sig);
+
+	sig=NULL;
+	if(!(sig=a->ed448_sign_iov(ctx1,ed5,iov,3,&size)))(*err1)++;
+	else if(b->ed448_verify_iov(ctx2,ed2,iov,3,sig,size))(*err2)++;
+	if(sig)free(sig);
+
+	sig=NULL;
+	if(!(sig=b->ed448_sign_iov(ctx2,ed6,iov,3,&size)))(*err2)++;
+	else if(a->ed448_verify_iov(ctx1,ed1,iov,3,sig,size))(*err1)++;
+	if(sig)free(sig);
+
+out:	if(ed1)a->ed448_free(ctx1,ed1);
+	if(ed2)b->ed448_free(ctx2,ed2);
+	if(ed3)a->ed448_free(ctx1,ed3);
+	if(ed4)b->ed448_free(ctx2,ed4);
+	if(ed5)a->ed448_free(ctx1,ed5);
+	if(ed6)b->ed448_free(ctx2,ed6);
+	if(ed7)a->ed448_free(ctx1,ed7);
+	if(ed8)b->ed448_free(ctx2,ed8);
+	if(pub1)free(pub1);
+	if(pub2)free(pub2);
+	if(key1)free(key1);
+	if(key2)free(key2);
+}
+
+static int test_ed448(void **ctx)
+{
+	int i;
+	int j;
+	int cerr=0;
+	int err[5];
+
+	memset(err,0,sizeof(err));
+	for(i=0;i<5;i++)for(j=i+1;j<5;j++)
+	{
+		test_ed448_pair(ctx[i],ctx[j],&cerr,&err[i],&err[j],
+			&ed448ops[i],&ed448ops[j]);
+	}
+	return printres("usicrypt_ed448_...()",cerr,err);
+}
+
 static struct x25519ops
 {
 	void *(*x25519_generate)(void *);
@@ -2445,6 +3169,373 @@ static int test_x25519(void **ctx)
 			&x25519ops[i],&x25519ops[j]);
 	}
 	return printres("usicrypt_x25519_...:()",cerr,err);
+}
+
+static struct x448ops
+{
+	void *(*x448_generate)(void *);
+	void *(*x448_derive)(void *,void *,void *,int *);
+	void *(*x448_get_pub)(void *,void *,int *);
+	void *(*x448_set_pub)(void *,void *,int);
+	void *(*x448_get_key)(void *,void *,int *);
+	void *(*x448_set_key)(void *,void *,int);
+	void (*x448_free)(void *,void *);
+	void *(*encrypt_p8)(void *,void *,int,void *,int,int,int,int,int,int,
+		int *);
+	void *(*decrypt_p8)(void *,void *,int,void *,int,int *);
+	void *(*p8_to_pem)(void *,void *,int,int *);
+	void *(*pem_to_p8)(void *,void *,int,int *);
+} x448ops[5]=
+{
+#if !defined(LIBRESSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER >= 0x10101000L
+	{
+		xssl_x448_generate,xssl_x448_derive,xssl_x448_get_pub,
+		xssl_x448_set_pub,xssl_x448_get_key,xssl_x448_set_key,
+		xssl_x448_free,xssl_encrypt_p8,xssl_decrypt_p8,
+		xssl_p8_to_pem,xssl_pem_to_p8,
+	},
+#else
+	{
+		dcaf_x448_generate,dcaf_x448_derive,dcaf_x448_get_pub,
+		dcaf_x448_set_pub,dcaf_x448_get_key,dcaf_x448_set_key,
+		dcaf_x448_free,xssl_encrypt_p8,xssl_decrypt_p8,
+		xssl_p8_to_pem,xssl_pem_to_p8,
+	},
+#endif
+#if MBEDTLS_VERSION_NUMBER >= 0x02090000
+	{
+		mbed_x448_generate,mbed_x448_derive,mbed_x448_get_pub,
+		mbed_x448_set_pub,mbed_x448_get_key,mbed_x448_set_key,
+		mbed_x448_free,mbed_encrypt_p8,mbed_decrypt_p8,
+		mbed_p8_to_pem,mbed_pem_to_p8,
+	},
+#else
+	{
+		dcaf_x448_generate,dcaf_x448_derive,dcaf_x448_get_pub,
+		dcaf_x448_set_pub,dcaf_x448_get_key,dcaf_x448_set_key,
+		dcaf_x448_free,mbed_encrypt_p8,mbed_decrypt_p8,
+		mbed_p8_to_pem,mbed_pem_to_p8,
+	},
+#endif
+#if LIBWOLFSSL_VERSION_HEX >= 0x04004000
+	{
+		wolf_x448_generate,wolf_x448_derive,wolf_x448_get_pub,
+		wolf_x448_set_pub,wolf_x448_get_key,wolf_x448_set_key,
+		wolf_x448_free,wolf_encrypt_p8,wolf_decrypt_p8,
+		wolf_p8_to_pem,wolf_pem_to_p8,
+	},
+#else
+	{
+		dcaf_x448_generate,dcaf_x448_derive,dcaf_x448_get_pub,
+		dcaf_x448_set_pub,dcaf_x448_get_key,dcaf_x448_set_key,
+		dcaf_x448_free,wolf_encrypt_p8,wolf_decrypt_p8,
+		wolf_p8_to_pem,wolf_pem_to_p8,
+	},
+#endif
+	{
+		dcaf_x448_generate,dcaf_x448_derive,dcaf_x448_get_pub,
+		dcaf_x448_set_pub,dcaf_x448_get_key,dcaf_x448_set_key,
+		dcaf_x448_free,gcry_encrypt_p8,gcry_decrypt_p8,
+		gcry_p8_to_pem,gcry_pem_to_p8,
+	},
+#if NETTLE_VERSION_MAJOR > 3 || \
+	( NETTLE_VERSION_MAJOR == 3 && NETTLE_VERSION_MINOR >= 6 )
+	{
+		nttl_x448_generate,nttl_x448_derive,nttl_x448_get_pub,
+		nttl_x448_set_pub,nttl_x448_get_key,nttl_x448_set_key,
+		nttl_x448_free,nttl_encrypt_p8,nttl_decrypt_p8,
+		nttl_p8_to_pem,nttl_pem_to_p8,
+	},
+#else
+	{
+		dcaf_x448_generate,dcaf_x448_derive,dcaf_x448_get_pub,
+		dcaf_x448_set_pub,dcaf_x448_get_key,dcaf_x448_set_key,
+		dcaf_x448_free,nttl_encrypt_p8,nttl_decrypt_p8,
+		nttl_p8_to_pem,nttl_pem_to_p8,
+	},
+#endif
+};
+
+static void test_x448_pair(void *ctx1,void *ctx2,int *err,int *err1,int *err2,
+	struct x448ops *a,struct x448ops *b)
+{
+	int j;
+	int k;
+	int l;
+	int m;
+	int n;
+	int pr1;
+	int pr2;
+	int pr3;
+	int pr4;
+	int bits;
+	int em1;
+	int em2;
+	int elen;
+	int dlen;
+	int plen1;
+	int plen2;
+	int plen3;
+	int plen4;
+	int klen1;
+	int klen2;
+	int rlen1;
+	int rlen2;
+	int rlen3;
+	int rlen4;
+	int pe1len;
+	int pe2len;
+	int pe3len;
+	int pe4len;
+	int de1len;
+	int de2len;
+	int de3len;
+	int de4len;
+	void *enc;
+	void *dec;
+	void *x1;
+	void *x2;
+	void *x3;
+	void *x4;
+	void *pub1;
+	void *pub2;
+	void *pub3;
+	void *pub4;
+	void *p1;
+	void *p2;
+	void *k1;
+	void *k2;
+	void *r1;
+	void *r2;
+	void *r3;
+	void *r4;
+	void *pe1;
+	void *pe2;
+	void *pe3;
+	void *pe4;
+	void *de1;
+	void *de2;
+	void *de3;
+	void *de4;
+	unsigned char data[32];
+	unsigned char data1[32];
+	unsigned char data2[32];
+
+	em1=*err1;
+	em2=*err2;
+
+	k1=NULL;
+	k2=NULL;
+	x3=NULL;
+	x4=NULL;
+	pub1=NULL;
+	pub2=NULL;
+	pub3=NULL;
+	pub4=NULL;
+	p1=NULL;
+	p2=NULL;
+	r1=NULL;
+	r2=NULL;
+	r3=NULL;
+	r4=NULL;
+	pe1=NULL;
+	pe2=NULL;
+	pe3=NULL;
+	pe4=NULL;
+	de1=NULL;
+	de2=NULL;
+	de3=NULL;
+	de4=NULL;
+
+	if(!(x1=a->x448_generate(ctx1)))(*err1)++;
+	else if(!(pub1=a->x448_get_pub(ctx1,x1,&plen1)))(*err1)++;
+	else if(usicrypt_pub_type_from_p8(ctx1,pub1,plen1)!=USICRYPT_X448)
+		(*err)++;
+	if(!(x2=b->x448_generate(ctx2)))(*err2)++;
+	else if(!(pub2=b->x448_get_pub(ctx2,x2,&plen2)))(*err2)++;
+	else if(usicrypt_pub_type_from_p8(ctx2,pub2,plen2)!=USICRYPT_X448)
+		(*err)++;
+	if(*err1!=em1||*err2!=em2)goto out;
+
+	if(!(k1=a->x448_get_key(ctx1,x1,&klen1)))(*err1)++;
+	else if(usicrypt_key_type_from_p8(ctx1,k1,klen1)!=USICRYPT_X448)
+		(*err)++;
+	else if(!(x3=a->x448_set_key(ctx1,k1,klen1)))(*err1)++;
+	else if(!(pub3=a->x448_get_pub(ctx1,x3,&plen3)))(*err1)++;
+	else if(plen1!=plen3||memcmp(pub1,pub3,plen1))(*err1)++;
+	if(!(k2=b->x448_get_key(ctx2,x2,&klen2)))(*err2)++;
+	else if(usicrypt_key_type_from_p8(ctx2,k2,klen2)!=USICRYPT_X448)
+		(*err)++;
+	else if(!(x4=b->x448_set_key(ctx2,k2,klen2)))(*err2)++;
+	else if(!(pub4=b->x448_get_pub(ctx2,x4,&plen4)))(*err2)++;
+	else if(plen2!=plen4||memcmp(pub2,pub4,plen2))(*err2)++;
+
+	if(k1)free(k1);
+	if(k2)free(k2);
+	if(!(k1=a->x448_get_key(ctx1,x1,&klen1)))(*err1)++;
+	if(!(k2=b->x448_get_key(ctx2,x2,&klen2)))(*err2)++;
+
+	if(!(pe1=a->p8_to_pem(ctx1,pub1,plen1,&pe1len)))(*err1)++;
+	else if(!(de1=a->pem_to_p8(ctx1,pe1,pe1len,&de1len)))(*err1)++;
+	else if(de1len!=plen1||memcmp(de1,pub1,de1len))(*err1)++;
+	if(!(pe2=b->p8_to_pem(ctx2,pub2,plen2,&pe2len)))(*err2)++;
+	else if(!(de2=b->pem_to_p8(ctx2,pe2,pe2len,&de2len)))(*err2)++;
+	else if(de2len!=plen2||memcmp(de2,pub2,de2len))(*err2)++;
+
+	if(!(pe3=a->p8_to_pem(ctx1,k1,klen1,&pe3len)))(*err1)++;
+	else if(!(de3=a->pem_to_p8(ctx1,pe3,pe3len,&de3len)))(*err1)++;
+	else if(de3len!=klen1||memcmp(de3,k1,de3len))(*err1)++;
+	if(!(pe4=b->p8_to_pem(ctx2,k2,klen2,&pe4len)))(*err2)++;
+	else if(!(de4=b->pem_to_p8(ctx2,pe4,pe4len,&de4len)))(*err2)++;
+	else if(de4len!=klen2||memcmp(de4,k2,de4len))(*err2)++;
+
+	if(!(p1=a->x448_set_pub(ctx1,pub2,plen2)))(*err1)++;
+	if(!(p2=b->x448_set_pub(ctx2,pub1,plen1)))(*err2)++;
+	if(*err1!=em1||*err2!=em2)goto out;
+
+	if(!(r1=a->x448_derive(ctx1,x1,p1,&rlen1)))(*err1)++;
+	else if(!(r2=b->x448_derive(ctx2,x2,p2,&rlen2)))(*err2)++;
+	else if(!(r3=a->x448_derive(ctx1,x3,p1,&rlen3)))(*err1)++;
+	else if(!(r4=b->x448_derive(ctx2,x4,p2,&rlen4)))(*err2)++;
+	else if(rlen1!=rlen2||memcmp(r1,r2,rlen1))(*err)++;
+	else if(rlen2!=rlen3||memcmp(r2,r3,rlen3))(*err)++;
+	else if(rlen3!=rlen4||memcmp(r3,r4,rlen3))(*err)++;
+
+	if(k1&&k2)for(j=0;j<4;j++)for(k=0;k<2;k++)for(l=0;l<3;l++)
+		for(m=0;m<4;m++)for(n=0;n<5;n++)
+	{
+		if(!j&&l)continue;
+		if(!expensive&&n)continue;
+
+		switch(j)
+		{
+		case 0:	pr1=USICRYPT_SHA1;
+			break;
+		case 1:	pr1=USICRYPT_SHA256;
+			break;
+		case 2:	pr1=USICRYPT_SHA384;
+			break;
+		case 3:	pr1=USICRYPT_SHA512;
+			break;
+		}
+
+		switch(k)
+		{
+		case 0:	pr2=USICRYPT_AES;
+			break;
+		case 1:	pr2=USICRYPT_CAMELLIA;
+			break;
+		}
+
+		switch(l)
+		{
+		case 0:	bits=128;
+			break;
+		case 1:	bits=192;
+			break;
+		case 2:	bits=256;
+			break;
+		}
+
+		switch(m)
+		{
+		case 0:	pr3=USICRYPT_ECB;
+			break;
+		case 1:	pr3=USICRYPT_CBC;
+			break;
+		case 2:	pr3=USICRYPT_CFB;
+			break;
+		case 3:	pr3=USICRYPT_OFB;
+			break;
+		}
+
+		switch(n)
+		{
+		case 0:	pr4=1;
+			break;
+		case 1:	pr4=0x7f;
+			break;
+		case 2:	pr4=0x80;
+			break;
+		case 3:	pr4=0x7fff;
+			break;
+		case 4:	pr4=0x8000;
+			break;
+		}
+
+		usicrypt_random(NULL,data,sizeof(data));
+		memcpy(data1,data,sizeof(data));
+		memcpy(data2,data,sizeof(data));
+
+		enc=NULL;
+		dec=NULL;
+		if(!(enc=a->encrypt_p8(ctx1,data1,sizeof(data1),k1,klen1,
+			pr2,pr3,bits,pr1,pr4,&elen)))(*err1)++;
+		else if(!(dec=b->decrypt_p8(ctx2,data2,sizeof(data2),enc,elen,
+			&dlen)))(*err2)++;
+		else if(klen1!=dlen||memcmp(k1,dec,klen1))(*err)++;
+		else if(usicrypt_key_type_from_p8(ctx1,enc,elen)!=
+			USICRYPT_PBES2)(*err)++;
+		if(enc)free(enc);
+		if(dec)free(dec);
+
+		usicrypt_random(NULL,data,sizeof(data));
+		memcpy(data1,data,sizeof(data));
+		memcpy(data2,data,sizeof(data));
+
+		enc=NULL;
+		dec=NULL;
+		if(!(enc=b->encrypt_p8(ctx2,data1,sizeof(data1),k2,klen2,
+			pr2,pr3,bits,pr1,pr4,&elen)))(*err2)++;
+		else if(!(dec=a->decrypt_p8(ctx1,data2,sizeof(data2),enc,elen,
+			&dlen)))(*err1)++;
+		else if(klen2!=dlen||memcmp(k2,dec,klen2))(*err)++;
+		else if(usicrypt_key_type_from_p8(ctx2,enc,elen)!=
+			USICRYPT_PBES2)(*err)++;
+		if(enc)free(enc);
+		if(dec)free(dec);
+	}
+
+out:	if(x1)a->x448_free(ctx1,x1);
+	if(x2)b->x448_free(ctx2,x2);
+	if(x3)a->x448_free(ctx1,x3);
+	if(x4)b->x448_free(ctx2,x4);
+	if(p1)a->x448_free(ctx1,p1);
+	if(p2)b->x448_free(ctx2,p2);
+	if(pub1)free(pub1);
+	if(pub2)free(pub2);
+	if(pub3)free(pub3);
+	if(pub4)free(pub4);
+	if(k1)free(k1);
+	if(k2)free(k2);
+	if(r1)free(r1);
+	if(r2)free(r2);
+	if(r3)free(r3);
+	if(r4)free(r4);
+	if(pe1)free(pe1);
+	if(pe2)free(pe2);
+	if(pe3)free(pe3);
+	if(pe4)free(pe4);
+	if(de1)free(de1);
+	if(de2)free(de2);
+	if(de3)free(de3);
+	if(de4)free(de4);
+}
+
+static int test_x448(void **ctx)
+{
+	int i;
+	int j;
+	int cerr=0;
+	int err[5];
+
+	memset(err,0,sizeof(err));
+	for(i=0;i<5;i++)for(j=i+1;j<5;j++)
+	{
+		test_x448_pair(ctx[i],ctx[j],&cerr,&err[i],&err[j],
+			&x448ops[i],&x448ops[j]);
+	}
+	return printres("usicrypt_x448_...:()",cerr,err);
 }
 
 static struct cmacops
@@ -3815,7 +4906,10 @@ int main(int argc,char *argv[])
 		err+=test_rsa(ctx);
 		err+=test_dh(ctx);
 		err+=test_ec(ctx);
+		err+=test_ed25519(ctx);
+		err+=test_ed448(ctx);
 		err+=test_x25519(ctx);
+		err+=test_x448(ctx);
 		err+=test_cmac(ctx);
 		err+=test_cipher_block_size(ctx);
 		err+=test_blkcipher(ctx);

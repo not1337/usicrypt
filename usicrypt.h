@@ -87,7 +87,9 @@ extern "C" {
 #define USICRYPT_RSA			0x0100
 #define USICRYPT_DH			0x0101
 #define USICRYPT_X25519			0x0200
+#define USICRYPT_X448			0x0201
 #define USICRYPT_ED25519		0x0400
+#define USICRYPT_ED448			0x0401
 #define USICRYPT_PBES2			0x0fff
 
 /* io vector array */
@@ -1072,6 +1074,137 @@ extern int USICRYPT(ed25519_verify_iov)(void *ctx,void *key,
 extern void USICRYPT(ed25519_free)(void *ctx,void *key);
 
 /*
+ * generate an ED448 keypair
+ *
+ * ctx		a thread context
+ *
+ * returns the allocated key or NULL in case of an error
+ */
+
+extern void *USICRYPT(ed448_generate)(void *ctx);
+
+/*
+ * export an ED448 public key in SubjectPublicKeyInfo DER format
+ *
+ * ctx		a thread context
+ * k		an allocated key
+ * len		the exported data length in bytes
+ *
+ * returns the allocated exported data or NULL in case of an error
+ */
+
+extern void *USICRYPT(ed448_get_pub)(void *ctx,void *key,int *len);
+
+/*
+ * import an ED448 public key in SubjectPublicKeyInfo DER format
+ *
+ * ctx		a thread context
+ * key		the key data
+ * len		the key data length in bytes
+ *
+ * returns an allocated key or NULL in case of an error
+ */
+
+extern void *USICRYPT(ed448_set_pub)(void *ctx,void *key,int len);
+
+/*
+ * export an ED448 key in PKCS#1 DER format
+ *
+ * ctx		a thread context
+ * k		an allocated key
+ * len		the exported data length in bytes
+ *
+ * returns the allocated exported data or NULL in case of an error
+ */
+
+extern void *USICRYPT(ed448_get_key)(void *ctx,void *key,int *len);
+
+/*
+ * import an ED448 key in PKCS#1 DER format
+ *
+ * ctx		a thread context
+ * key		the key data
+ * len		the key data length in bytes
+ *
+ * returns an allocated key or NULL in case of an error
+ *
+ * Note: the key data will always be cleared.
+ */
+
+extern void *USICRYPT(ed448_set_key)(void *ctx,void *key,int len);
+
+/*
+ * sign data with a private ED448 key using EdDSA
+ *
+ * ctx		a thread context
+ * key		an allocated key
+ * data		the data to be signed
+ * dlen		the data length in bytes
+ * slen		the signature length in bytes
+ *
+ * returns the allocated signature or NULL in case of an error
+ */
+
+extern void *USICRYPT(ed448_sign)(void *ctx,void *key,void *data,int dlen,
+	int *slen);
+
+/*
+ * sign data with a private ED448 key using EdDSA
+ *
+ * ctx		a thread context
+ * key		an allocated key
+ * iov		pointer to an iov array defining the data to be signed
+ * niov		total elements of the iov array
+ * slen		the signature length in bytes
+ *
+ * returns the allocated signature or NULL in case of an error
+ */
+
+extern void *USICRYPT(ed448_sign_iov)(void *ctx,void *key,
+	struct usicrypt_iov *iov,int niov,int *slen);
+
+/*
+ * verify signature with a public ED448 key using EdDSA
+ *
+ * ctx		a thread context
+ * key		an allocated key
+ * data		the data to be verified
+ * dlen		the data length in bytes
+ * sig		the signature
+ * slen		the signature length in bytes
+ *
+ * returns 0 in case of success and -1 in case of an error
+ */
+
+extern int USICRYPT(ed448_verify)(void *ctx,void *key,void *data,int dlen,
+	void *sig,int slen);
+
+/*
+ * verify signature with a public ED448 key using EdDSA
+ *
+ * ctx		a thread context
+ * key		an allocated key
+ * iov		pointer to an iov array defining the data to be verified
+ * niov		total elements of the iov array
+ * sig		the signature
+ * slen		the signature length in bytes
+ *
+ * returns 0 in case of success and -1 in case of an error
+ */
+
+extern int USICRYPT(ed448_verify_iov)(void *ctx,void *key,
+	struct usicrypt_iov *iov,int niov,void *sig,int slen);
+
+/*
+ * release an allocated ED448 key
+ *
+ * ctx		a thread context
+ * key		an allocated key
+ */
+
+extern void USICRYPT(ed448_free)(void *ctx,void *key);
+
+/*
  * generate an X25519 keypair
  *
  * ctx		a thread context
@@ -1152,6 +1285,88 @@ extern void *USICRYPT(x25519_set_key)(void *ctx,void *key,int len);
  */
 
 extern void USICRYPT(x25519_free)(void *ctx,void *key);
+
+/*
+ * generate an X448 keypair
+ *
+ * ctx		a thread context
+ *
+ * returns the allocated key or NULL in case of an error
+ */
+
+extern void *USICRYPT(x448_generate)(void *ctx);
+
+/*
+ * derive an X448 shared secret
+ *
+ * ctx		a thread context
+ * key		the allocated local key pair
+ * pub		the allocated public key of the peer
+ * klen		the length of the shared secret in bytes
+ *
+ * returns the allocated shared secret or NULL in case of an error
+ */
+
+extern void *USICRYPT(x448_derive)(void *ctx,void *key,void *pub,int *klen);
+
+/*
+ * export an X448 public key in SubjectPublicKeyInfo DER format
+ *
+ * ctx		a thread context
+ * key		an allocated key
+ * len		the exported data length in bytes
+ *
+ * returns the allocated data or NULL in case of an error
+ */
+
+extern void *USICRYPT(x448_get_pub)(void *ctx,void *key,int *len);
+
+/*
+ * import an X448 public key in SubjectPublicKeyInfo DER format
+ *
+ * ctx		a thread context
+ * key		the key data
+ * len		the key data length in bytes
+ *
+ * returns an allocated key or NULL in case of an error
+ */
+
+extern void *USICRYPT(x448_set_pub)(void *ctx,void *key,int len);
+
+/*
+ * export an X448 private key in PKCS#8 DER format
+ *
+ * ctx		a thread context
+ * key		an allocated key
+ * len		the exported data length in bytes
+ *
+ * returns the allocated data or NULL in case of an error
+ */
+
+extern void *USICRYPT(x448_get_key)(void *ctx,void *key,int *len);
+
+/*
+ * import an X448 private key in PKCS#8 DER format
+ *
+ * ctx		a thread context
+ * key		the key data
+ * len		the key data length in bytes
+ *
+ * returns an allocated key or NULL in case of an error
+ *
+ * Note: the key data will always be cleared.
+ */
+
+extern void *USICRYPT(x448_set_key)(void *ctx,void *key,int len);
+
+/*
+ * release an allocated X448 key
+ *
+ * ctx		a thread context
+ * key		an allocated key
+ */
+
+extern void USICRYPT(x448_free)(void *ctx,void *key);
 
 /*
  * determine the type of a public key in SubjectPublicKeyInfo DER format

@@ -41,8 +41,9 @@
 /*                            Common Support Stuff                            */
 /******************************************************************************/
 
+#ifndef USICRYPT_ORLP_SOURCE
 
-#if !defined(USICRYPT_NO_BASE64) && !defined(USICRYPT_ORLP25519)
+#if !defined(USICRYPT_NO_BASE64)
 
 static const struct
 {
@@ -55,7 +56,8 @@ static const struct
 	{
 #if !defined(USICRYPT_NO_RSA) || !defined(USICRYPT_NO_DH) || \
 	!defined(USICRYPT_NO_EC) || !defined(USICRYPT_NO_X25519) || \
-	!defined(USICRYPT_NO_ED25519)
+	!defined(USICRYPT_NO_X448) || !defined(USICRYPT_NO_ED25519) || \
+	!defined(USICRYPT_NO_ED448)
 		"-----BEGIN PUBLIC KEY-----",
 		"-----END PUBLIC KEY-----",
 		26,24,
@@ -63,14 +65,15 @@ static const struct
 	},
 	{
 #if !defined(USICRYPT_NO_RSA) || !defined(USICRYPT_NO_EC) || \
-	!defined(USICRYPT_NO_ED25519)
+	!defined(USICRYPT_NO_ED25519) || !defined(USICRYPT_NO_ED448)
 		"-----BEGIN PRIVATE KEY-----",
 		"-----END PRIVATE KEY-----",
 		27,25,
 #endif
 	},
 	{
-#if !defined(USICRYPT_NO_RSA) || !defined(USICRYPT_NO_EC)
+#if !defined(USICRYPT_NO_RSA) || !defined(USICRYPT_NO_EC) || \
+	!defined(USICRYPT_NO_ED25519) || !defined(USICRYPT_NO_ED448)
 		"-----BEGIN ENCRYPTED PRIVATE KEY-----",
 		"-----END ENCRYPTED PRIVATE KEY-----",
 		37,35,
@@ -84,6 +87,8 @@ static const struct
 #endif
 	},
 };
+
+#endif
 
 #endif
 
@@ -207,7 +212,7 @@ static void USICRYPT(do_memclear)(void *data,int len)
 	memset(data,0,len);
 }
 
-#ifndef USICRYPT_ORLP25519
+#if !defined(USICRYPT_ORLP_SOURCE) && !defined(USICRYPT_DCAF_SOURCE)
 
 static void *USICRYPT(do_realloc)(void *ctx,void *data,int olen,int nlen)
 {
@@ -334,7 +339,8 @@ void *USICRYPT(p8_to_pem)(void *ctx,void *data,int dlen,int *rlen)
 #ifndef USICRYPT_NO_BASE64
 #if !defined(USICRYPT_NO_RSA) || !defined(USICRYPT_NO_DH) || \
 	!defined(USICRYPT_NO_EC) || !defined(USICRYPT_NO_X25519) || \
-	!defined(USICRYPT_NO_ED25519)
+	!defined(USICRYPT_NO_ED25519) || !defined(USICRYPT_NO_X448) || \
+	!defined(USICRYPT_NO_ED448)
 	int l;
 	int idx=0;
 	int b64len;
@@ -394,7 +400,8 @@ void *USICRYPT(pem_to_p8)(void *ctx,void *data,int dlen,int *rlen)
 #ifndef USICRYPT_NO_BASE64
 #if !defined(USICRYPT_NO_RSA) || !defined(USICRYPT_NO_DH) || \
 	!defined(USICRYPT_NO_EC) || !defined(USICRYPT_NO_X25519) || \
-	!defined(USICRYPT_NO_ED25519)
+	!defined(USICRYPT_NO_X448) || !defined(USICRYPT_NO_ED25519) || \
+	!defined(USICRYPT_NO_ED448)
 	int i;
 	int mode;
 	int start;
