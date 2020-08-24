@@ -88,19 +88,19 @@ obj/usicrypt_dcaf.o: usicrypt_dcaf.c goldilocks-$(VER)/nonpic/lib/libdecaf.a \
 	include/decaf/ed448.h include/decaf/shake.h include/decaf/sha512.h \
 	include/decaf/point_448.h include/decaf/common.h
 	mkdir -p obj
-	gcc -Wall $(USIFLAGS) -I.. -Iinclude -c -o $@ $<
+	gcc -Wall $(USIFLAGS) $(TARGET) -I.. -Iinclude -c -o $@ $<
 
 obj/usicrypt_dcaf.to: usicrypt_dcaf.c goldilocks-$(VER)/nonpic/lib/libdecaf.a \
 	include/decaf/ed448.h include/decaf/shake.h include/decaf/sha512.h \
 	include/decaf/point_448.h include/decaf/common.h
 	mkdir -p obj
-	gcc -Wall $(USIFLAGS) -I.. -Iinclude -DUSICRYPT_TEST -c -o $@ $<
+	gcc -Wall $(USIFLAGS) -DUSICRYPT_TEST -I.. -Iinclude -c -o $@ $<
 
 obj/usicrypt_dcaf.lo: usicrypt_dcaf.c goldilocks-$(VER)/build/lib/libdecaf.a \
 	include/decaf/ed448.h include/decaf/shake.h include/decaf/sha512.h \
 	include/decaf/point_448.h include/decaf/common.h
 	mkdir -p obj
-	gcc -Wall $(USIFLAGS) -I.. -Iinclude -fPIC -c -o $@ $<
+	gcc -Wall $(USIFLAGS) $(TARGET) -I.. -Iinclude -fPIC -c -o $@ $<
 
 include/decaf/ed448.h: goldilocks-$(VER)/nonpic/lib/libdecaf.a \
 	goldilocks-$(VER)/build/lib/libdecaf.a
