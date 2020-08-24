@@ -101,16 +101,36 @@ CFLAGS+=-mrdrnd -mrdseed
 #LDFLAGS+=-L/usr/local/test/openssl11/lib -Wl,-rpath,/usr/local/test/openssl11/lib
 
 ifndef USICRYPT_NO_ED25519
+USIED25519=usicrypt_ed25519.o
+USITED25519=usicrypt_ed25519.to
+USISHED25519=usicrypt_ed25519.po
 ED25519OBJS=add_scalar.eo fe.eo ge.eo key_exchange.eo keypair.eo sc.eo seed.eo sha512.eo sign.eo verify.eo
 ED25519SHOBJS=add_scalar.epo fe.epo ge.epo key_exchange.epo keypair.epo sc.epo seed.epo sha512.epo sign.epo verify.epo
 else
+USIED25519=
+USITED25519=
+USISHED25519=
 ED25519OBJS=
 ED25519SHOBJS=
 endif
 ifndef USICRYPT_NO_DECAF
-DECAFOBJS=decaf-448/usicrypt_dcaf.o
-DECAFSHOBJS=decaf-448/usicrypt_dcaf.lo
+USIDECAF=decaf-448/obj/usicrypt_dcaf.o
+USITDECAF=decaf-448/obj/usicrypt_dcaf.to
+USISHDECAF=decaf-448/obj/usicrypt_dcaf.lo
+DECAFOBJS=decaf-448/obj/decaf.o decaf-448/obj/decaf_tables.o
+DECAFOBJS+=decaf-448/obj/eddsa.o decaf-448/obj/scalar.o 
+DECAFOBJS+=decaf-448/obj/f_arithmetic.o decaf-448/obj/f_generic.o
+DECAFOBJS+=decaf-448/obj/f_impl.o decaf-448/obj/shake.o
+DECAFOBJS+=decaf-448/obj/utils.o
+DECASHFOBJS=decaf-448/obj/decaf.lo decaf-448/obj/decaf_tables.lo
+DECASHFOBJS+=decaf-448/obj/eddsa.lo decaf-448/obj/scalar.lo 
+DECASHFOBJS+=decaf-448/obj/f_arithmetic.lo decaf-448/obj/f_generic.lo
+DECASHFOBJS+=decaf-448/obj/f_impl.lo decaf-448/obj/shake.lo
+DECASHFOBJS+=decaf-448/obj/utils.lo
 else
+USIDECAF=
+USITDECAF=
+USISHDECAF=
 DECAFOBJS=
 DECAFSHOBJS=
 endif
@@ -118,8 +138,8 @@ endif
 all: libusicrypt.a libusicrypt-pic.a
 
 libusicrypt.a: usicrypt_gcry.o usicrypt_mbed.o usicrypt_nttl.o \
-	usicrypt_wolf.o usicrypt_util.o usicrypt_xssl.o usicrypt_ed25519.o \
-	$(ED25519OBJS) $(DECAFOBJS)
+	usicrypt_wolf.o usicrypt_util.o usicrypt_xssl.o $(USIED25519) \
+	$(ED25519OBJS) $(USIDECAF) $(DECAFOBJS)
 	$(AR) rcu $(ARFLAGS) $@ $^
 
 usicrypt_gcry.o: usicrypt_gcry.c usicrypt_internal.h usicrypt.h \
@@ -134,12 +154,12 @@ usicrypt_util.o: usicrypt_util.c usicrypt_internal.h usicrypt.h
 usicrypt_xssl.o: usicrypt_xssl.c usicrypt_internal.h usicrypt.h \
 	usicrypt_common.c
 
-decaf-448/usicrypt_dcaf.o:
-	make -C decaf-448
+decaf-448/obj/usicrypt_dcaf.o:
+	make -C decaf-448 USIARFLAGS="$(ARFLAGS)"
 
 libusicrypt-pic.a: usicrypt_gcry.po usicrypt_mbed.po usicrypt_nttl.po \
-	usicrypt_wolf.po usicrypt_util.po usicrypt_xssl.po usicrypt_ed25519.po \
-	$(ED25519SHOBJS) $(DECAFSHOBJS)
+	usicrypt_wolf.po usicrypt_util.po usicrypt_xssl.po $(USISHED25519) \
+	$(ED25519SHOBJS) $(USISHDECAF) $(DECAFSHOBJS)
 	$(AR) rcu $(ARFLAGS) $@ $^
 
 usicrypt_gcry.po: usicrypt_gcry.c usicrypt_internal.h usicrypt.h \
@@ -154,12 +174,12 @@ usicrypt_util.po: usicrypt_util.c usicrypt_internal.h usicrypt.h
 usicrypt_xssl.po: usicrypt_xssl.c usicrypt_internal.h usicrypt.h \
 	usicrypt_common.c
 
-decaf-448/usicrypt_dcaf.lo:
-	make -C decaf-448
+decaf-448/obj/usicrypt_dcaf.lo:
+	make -C decaf-448 USIARFLAGS="$(ARFLAGS)"
 
 usicrypt_test: usicrypt_test.to usicrypt_gcry.to usicrypt_nttl.to \
 	usicrypt_mbed.to usicrypt_wolf.to usicrypt_util.to usicrypt_xssl.to \
-	usicrypt_ed25519.to $(ED25519OBJS) decaf-448/usicrypt_dcaf.to
+	$(USITED25519) $(ED25519OBJS) $(USITDECAF) $(DECAFOBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ -lcrypto -lmbedcrypto -lwolfssl -lgcrypt \
 		-lhogweed -lnettle -lgmp
 
@@ -178,8 +198,8 @@ usicrypt_xssl.to: usicrypt_xssl.c usicrypt_internal.h usicrypt.h \
 usicrypt_ed25519.to: usicrypt_ed25519.c usicrypt_internal.h usicrypt.h \
 	usicrypt_common.c github-orlp-ed25519/src/ed25519.h
 
-decaf-448/usicrypt_dcaf.to:
-	make -C decaf-448
+decaf-448/obj/usicrypt_dcaf.to:
+	make -C decaf-448 USIARFLAGS="$(ARFLAGS)"
 
 clean:
 	make -C decaf-448 clean
