@@ -27,6 +27,11 @@
 #define __DISABLE_RDSEED__
 #endif
 #endif
+#ifndef __AES__
+#ifndef __DISABLE_AES__
+#define __DISABLE_AES__
+#endif
+#endif
 #elif defined(_WIN64) || defined(_WIN32)
 #include <Ntsecapi.h>
 #include <intrin.h>
@@ -92,6 +97,8 @@ static const struct
 
 #endif
 
+#if defined(__x86_64) || defined(__i386) || defined(_WIN64) || defined(_WIN32)
+
 static int USICRYPT(get_features)(void)
 {
 	int features=0;
@@ -132,7 +139,6 @@ static int USICRYPT(get_features)(void)
 
 static int USICRYPT(rdrand)(void *data)
 {
-#if defined(__x86_64) || defined(__i386) || defined(_WIN64) || defined(_WIN32)
 #ifndef __DISABLE_RDRND__
 #if !defined(__x86_64) && !defined(_WIN64)
 	if(L(_rdrand32_step(data)&&_rdrand32_step(data+4)))return 0;
@@ -140,13 +146,11 @@ static int USICRYPT(rdrand)(void *data)
 	if(L(_rdrand64_step(data)))return 0;
 #endif
 #endif
-#endif
 	return -1;
 }
 
 static int USICRYPT(rdseed)(void *data)
 {
-#if defined(__x86_64) || defined(__i386) || defined(_WIN64) || defined(_WIN32)
 #ifndef __DISABLE_RDSEED__
 #if !defined(__x86_64) && !defined(_WIN64)
 	if(L(_rdseed32_step(data)&&_rdseed32_step(data+4)))return 0;
@@ -154,9 +158,10 @@ static int USICRYPT(rdseed)(void *data)
 	if(L(_rdseed64_step(data)))return 0;
 #endif
 #endif
-#endif
 	return -1;
 }
+
+#endif
 
 static int USICRYPT(osrandom)(void *data,int len)
 {
@@ -177,19 +182,56 @@ static int USICRYPT(osrandom)(void *data,int len)
 	close(fd);
 	if(L(l==len))return 0;
 #elif defined(_WIN64) || defined(_WIN32)
-#warning Somebody needs to implement CryptGenRandom or RtlGenRandom
+#warning Somebody needs to implement CryptGenRandom/RtlGenRandom/BCryptGenRandom
 #endif
 	return -1;
 }
 
 static int USICRYPT(get_random)(void *data,int len)
 {
-	static int features=-1;
 	unsigned char *ptr=data;
+#if defined(__x86_64) || defined(__i386) || defined(_WIN64) || defined(_WIN32)
 	unsigned long long tmp;
+	static int features=-1;
+#ifndef __DISABLE_AES__
+	unsigned char *p;
+	__m128i v;
+	__m128i r;
+#endif
 
 	if(U(features==-1))features=USICRYPT(get_features)();
 
+#ifndef __DISABLE_AES__
+	if((features&5)==5)
+	{
+		p=(void *)&v;
+		if(!USICRYPT(rdseed)(p)&&!USICRYPT(rdseed)(p+8))
+		{
+			for(p=(void *)&r;len>=16;len-=16,ptr+=16)
+			{
+				if(USICRYPT(rdseed)(p)||USICRYPT(rdseed)(p+8))
+					goto out;
+				v=_mm_aesdec_si128(v,r);
+				r=_mm_aesenc_si128(r,v);
+				r=_mm_aesenc_si128(r,v);
+				r=_mm_aesenc_si128(r,v);
+				r=_mm_aesdeclast_si128(r,v);
+				memcpy(ptr,p,16);
+			}
+			if(!len)return 0;
+			if(USICRYPT(rdseed)(p)||USICRYPT(rdseed)(p+8))goto out;
+			v=_mm_aesdec_si128(v,r);
+			r=_mm_aesenc_si128(r,v);
+			r=_mm_aesenc_si128(r,v);
+			r=_mm_aesenc_si128(r,v);
+			r=_mm_aesdeclast_si128(r,v);
+			memcpy(ptr,p,len);
+			return 0;
+		}
+out:;
+	}
+	else
+#endif
 	if(features&4)for(;len>=8;len-=8,ptr+=8)
 		if(USICRYPT(rdseed)(ptr))break;
 	if(features&2)for(;len>=8;len-=8,ptr+=8)
@@ -197,13 +239,21 @@ static int USICRYPT(get_random)(void *data,int len)
 	if(!len)return 0;
 	if(len<8)
 	{
+#ifndef __DISABLE_AES__
+		if(!(features&1))
+#endif
 		if((features&4)&&!USICRYPT(rdseed)(&tmp))
+		{
 			for(;len;len--,tmp>>=8)*ptr++=(unsigned char)tmp;
-		if(!len)return 0;
+			if(!len)return 0;
+		}
 		if((features&2)&&!USICRYPT(rdrand)(&tmp))
+		{
 			for(;len;len--,tmp>>=8)*ptr++=(unsigned char)tmp;
-		if(!len)return 0;
+			if(!len)return 0;
+		}
 	}
+#endif
 	return USICRYPT(osrandom)(ptr,len);
 }
 

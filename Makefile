@@ -49,6 +49,10 @@ TARGET=-DUSICRYPT_XSSL
 # support of RDRAND/RDSEED instructions:
 CFLAGS+=-mrdrnd -mrdseed
 #
+# If you use gcc on x86_64 or x86 enable the following to enable runtime
+# support of shuffling RDSEED random output for better random quality
+CFLAGS+=-maes
+#
 # Uncomment any of the following options if you don't require some feature:
 #CFLAGS+=-DUSICRYPT_NO_RSA
 #CFLAGS+=-DUSICRYPT_NO_DH
